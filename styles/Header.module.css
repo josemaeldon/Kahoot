@@ -1,0 +1,11 @@
+.container {
+  height: 56px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px;
+  position: fixed;
+  padding-left: 16px;
+  padding-right: 16px;
+}
