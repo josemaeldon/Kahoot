@@ -1,5 +1,5 @@
 // Create WebSocket connection.
-const socket = WebSocket('localhost:8000');
+const socket = new WebSocket('wss://ws.postman-echo.com/raw');
 
 // Connection opened
 socket.addEventListener('open', function (event) {
