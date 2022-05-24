@@ -2,31 +2,31 @@
 
 # dependencies
 /kahoot-clone-frontend/node_modules
-/kahoot_frontend/.pnp
-/kahoot_frontend/.pnp.js
+/kahoot-clone-frontend/.pnp
+/kahoot-clone-frontend/.pnp.js
 
 # testing
-/kahoot_frontend/coverage
+/kahoot-clone-frontend/coverage
 
 # next.js
-/kahoot_frontend/.next/
-/kahoot_frontend/out/
+/kahoot-clone-frontend/.next/
+/kahoot-clone-frontend/out/
 
 # production
-/kahoot_frontend/build
+/kahoot-clone-frontend/build
 
 # misc
-/kahoot_frontend.DS_Store
-/kahoot_frontend*.pem
+/kahoot-clone-frontend/.DS_Store
+/kahoot-clone-frontend/*.pem
 
 # debug
-/kahoot_frontendnpm-debug.log*
-/kahoot_frontendyarn-debug.log*
-/kahoot_frontendyarn-error.log*
-/kahoot_frontend.pnpm-debug.log*
+/kahoot-clone-frontend/npm-debug.log*
+/kahoot-clone-frontend/yarn-debug.log*
+/kahoot-clone-frontend/yarn-error.log*
+/kahoot-clone-frontend/.pnpm-debug.log*
 
 # local env files
-/kahoot_frontend.env*.local
+/kahoot-clone-frontend/.env*.local
 
 # vercel
-/kahoot_frontend.vercel
+/kahoot-clone-frontend/.vercel

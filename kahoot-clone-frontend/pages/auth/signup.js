@@ -1,5 +1,5 @@
 import React from "react";
-import Header from "../../Components/header.js";
+import Header from "../../Components/header.js.js.js";
 import styles from "../../styles/signup.module.css";
 import Link from "next/link";
 function Signup() {
@@ -10,7 +10,7 @@ function Signup() {
         <div className={`${styles.card}`}>
           <form>
             <p>Log in</p>
-            <label htmlFor="username">Username or email</label>
+            <label htmlFor="username">Username</label>
             <input type="text" id="username"></input>
             <label htmlFor="password">Password</label>
             <input type="password" id="password"></input>
