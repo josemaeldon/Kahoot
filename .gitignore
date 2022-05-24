@@ -1,32 +1,32 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
-/.pnp
-.pnp.js
+/kahoot_frontend/node_modules
+/kahoot_frontend/.pnp
+/kahoot_frontend/.pnp.js
 
 # testing
-/coverage
+/kahoot_frontend/coverage
 
 # next.js
-/.next/
-/out/
+/kahoot_frontend/.next/
+/kahoot_frontend/out/
 
 # production
-/build
+/kahoot_frontend/build
 
 # misc
-.DS_Store
-*.pem
+/kahoot_frontend.DS_Store
+/kahoot_frontend*.pem
 
 # debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+/kahoot_frontendnpm-debug.log*
+/kahoot_frontendyarn-debug.log*
+/kahoot_frontendyarn-error.log*
+/kahoot_frontend.pnpm-debug.log*
 
 # local env files
-.env*.local
+/kahoot_frontend.env*.local
 
 # vercel
-.vercel
+/kahoot_frontend.vercel
