@@ -3,8 +3,10 @@ import styles from "../styles/index.module.css";
 import Image from "next/image";
 import GameButton from "../Components/GameButton";
 import Link from "next/link";
+import { useRouter } from "next/router";
 
 function index() {
+  const router = useRouter();
   return (
     <div className={`vh100 ${styles.lightGrey} ${styles.center}`}>
       <div className={`${styles.card}`}>
@@ -16,6 +18,9 @@ function index() {
           ></Image>
         </div>
         <GameButton
+          onClick={() => {
+            router.push("/play");
+          }}
           backgroundStyle={{
             backgroundColor: "rgb(14,78,154)",
           }}
@@ -24,9 +29,12 @@ function index() {
             padding: "10px 16px 10px 16px",
           }}
         >
-          <Link href={"/play"}>Play</Link>
+          Play
         </GameButton>
         <GameButton
+          onClick={() => {
+            router.push("/create");
+          }}
           backgroundStyle={{
             backgroundColor: "rgb(14,78,154)",
           }}
@@ -35,7 +43,7 @@ function index() {
             padding: "10px 16px 10px 16px",
           }}
         >
-          <Link href={"/create"}>Create</Link>
+          Create
         </GameButton>
       </div>
     </div>
