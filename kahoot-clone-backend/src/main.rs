@@ -3,7 +3,6 @@ mod ws;
 mod ext;
 
 // Standard library stuffs
-use std::io;
 use std::sync::{Arc, Mutex};
 use std::net::SocketAddr;
 use std::collections::HashMap;
@@ -13,12 +12,7 @@ use ws::state::State;
 
 // `axum` is a Rust web server framework
 use axum::{Extension, Router};
-use axum::routing::{MethodRouter, get_service, get};
-use axum::http::StatusCode;
-
-// `axum` is built on top of `tower_http`, so we can use some of its tools and
-// integrate it with the `axum` server.
-use tower_http::services::ServeDir;
+use axum::routing::get;
 
 /**
  * Note: You may notice that some functions end with a naked expression without
@@ -71,20 +65,6 @@ fn app() -> Router {
     Router::new()
         // GET /ws
         .route("/ws", get(handle_ws_connection))
-        // If no route matches, try to serve a static file
-        .fallback(dir_service())
         // Includes the shared state in routes
         .layer(Extension(state))
 }
-
-/// Service for serving files.
-fn dir_service() -> MethodRouter {
-    get_service(ServeDir::new("static/")
-        .append_index_html_on_directories(true))
-        .handle_error(|err: io::Error| async move {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Unhandled internal error: {err}"),
-            )
-        })
-} 
