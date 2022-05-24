@@ -2,7 +2,7 @@ import React from "react";
 import Header from "../../Components/header.js";
 import styles from "../../styles/signup.module.css";
 import Link from "next/link";
-function Signup() {
+function Login() {
   return (
     <div className={`vh100`}>
       <Header></Header>
@@ -28,4 +28,4 @@ function Signup() {
   );
 }
 
-export default Signup;
+export default Login;

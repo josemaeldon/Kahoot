@@ -5,7 +5,7 @@ import GameButton from "../Components/GameButton";
 import Link from "next/link";
 import { useRouter } from "next/router";
 
-function index() {
+function Index() {
   const router = useRouter();
   return (
     <div className={`vh100 ${styles.lightGrey} ${styles.center}`}>
@@ -50,4 +50,4 @@ function index() {
   );
 }
 
-export default index;
+export default Index;
