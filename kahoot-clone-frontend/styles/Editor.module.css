@@ -1,0 +1,95 @@
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  height: 232px;
+  gap: 15px;
+}
+
+.grid > div {
+  background-color: white;
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.grid svg {
+  color: white;
+}
+
+.grid > div > span:nth-child(1) {
+  padding: 16px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  margin-right: 10px;
+}
+
+.grid > div > div {
+  display: flex;
+  align-items: center;
+  flex: 1 0 auto;
+  width: 100px;
+}
+
+.grid > div > div > p {
+  font-size: 1.75vw;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  outline: none;
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+
+.grid > div:nth-child(1) > span:nth-child(1) {
+  background-color: rgb(233, 29, 63);
+}
+
+.grid > div:nth-child(2) > span:nth-child(1) {
+  background-color: rgb(20, 112, 224);
+}
+.grid > div:nth-child(3) > span:nth-child(1) {
+  background-color: rgb(221, 163, 2);
+}
+.grid > div:nth-child(4) > span:nth-child(1) {
+  background-color: rgb(47, 172, 16);
+}
+
+.container {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.question {
+  text-align: center;
+  outline: none;
+  background-color: white;
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px;
+  padding: 24px;
+  font-size: 2vw;
+  width: 100%;
+  overflow-wrap: break-word;
+
+  word-break: break-all;
+}
+
+.question[contenteditable][placeholder]:empty:before {
+  content: attr(placeholder);
+  color: gray;
+  background-color: transparent;
+}
+
+.answer[contenteditable][placeholder]:empty:before {
+  content: attr(placeholder);
+  color: gray;
+  background-color: transparent;
+}
