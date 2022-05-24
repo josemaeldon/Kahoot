@@ -2,18 +2,12 @@
 mod ws;
 mod ext;
 
-// Standard library stuffs
-use std::sync::{Arc, Mutex};
 use std::net::SocketAddr;
-use std::collections::HashMap;
-
-use ws::handle_ws_connection;
-use ws::state::State;
 
 // `axum` is a Rust web server framework
-use axum::{Extension, Router};
-use axum::routing::get;
+use axum::Router;
 
+// `axum` is a we
 /**
  * Note: You may notice that some functions end with a naked expression without
  * and no return statement.
@@ -59,12 +53,7 @@ async fn main() {
 
 /// The server router
 fn app() -> Router {
-    let rooms = Mutex::new(HashMap::new());
-    let state = Arc::new(State { rooms });
-
     Router::new()
         // GET /ws
-        .route("/ws", get(handle_ws_connection))
-        // Includes the shared state in routes
-        .layer(Extension(state))
+        .nest("/ws", ws::router())
 }

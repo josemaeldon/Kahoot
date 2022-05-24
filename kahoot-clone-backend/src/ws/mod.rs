@@ -19,25 +19,40 @@ use state::{SharedState, Room, Users, PlayerAnswer, GameEvent};
 
 use crate::ext::ToMessageExt;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
-use axum::Extension;
-use axum::extract::{ws::WebSocket, WebSocketUpgrade};
-use axum::extract::ws::Message;
+use axum::{Extension, Router};
+use axum::extract::WebSocketUpgrade;
+use axum::extract::ws::{WebSocket, Message};
 use axum::response::Response;
+use axum::routing::get;
 
 use tokio::sync::{mpsc, watch};
 
 use futures::{StreamExt, SinkExt, Stream};
+
+use self::state::State;
+
+/// Websocket api router.
+pub fn router() -> Router {
+    let rooms = Mutex::new(HashMap::new());
+    let state = Arc::new(State { rooms });
+
+    Router::new()
+        // GET /
+        .route("/", get(handle_ws_connection))
+        // Includes the shared state in routes
+        .layer(Extension(state))
+}
 
 /// Passes an upgraded websocket to `handle_socket`.
 //
 // Here, `WebSocketUpgrade` and `Extension` are "extractors" from the `axum`
 // framework, and they allow `axum` to automatically detect how to parse web
 // requests based on the type parameters of the function.
-pub async fn handle_ws_connection(
+async fn handle_ws_connection(
     // Since this function has a `WebSocketUpgrade` paremeter, `axum` knows it
     // should accept websocket connections on this route.
     ws: WebSocketUpgrade,
