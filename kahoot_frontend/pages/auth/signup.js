@@ -10,9 +10,9 @@ function Signup() {
         <div className={`${styles.card}`}>
           <form>
             <p>Log in</p>
-            <label for="username">Username or email</label>
+            <label htmlFor="username">Username or email</label>
             <input type="text" id="username"></input>
-            <label for="password">Password</label>
+            <label htmlFor="password">Password</label>
             <input type="password" id="password"></input>
             <p>
               Forgot Password?{" "}
