@@ -1,4 +1,4 @@
-use crate::api::RoomId;
+use super::api::RoomId;
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
