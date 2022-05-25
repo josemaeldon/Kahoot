@@ -17,7 +17,7 @@ var sendMessage = (e) => {
 
 // sends value on click
 var sendAnswer = (e) => {
-	const answer = event.target.value;
+	const answer = event.target.innerHTML;
 	console.log("Sending: ", answer);
 	socket.send(answer);
 }
