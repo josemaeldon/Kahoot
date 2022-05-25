@@ -43,8 +43,12 @@ pub struct PlayerAnswer {
 #[derive(Clone)]
 pub enum GameEvent {
     InLobby,
-    RoundBegin { choice_count: usize },
-    RoundEnd { point_gains: Arc<HashMap<String, u32>> },
+    RoundBegin {
+        choice_count: usize,
+    },
+    RoundEnd {
+        point_gains: Arc<HashMap<String, u32>>,
+    },
     GameEnd,
 }
 
@@ -72,10 +76,7 @@ impl State {
     }
 
     pub fn find_room(&self, room_id: &RoomId) -> Option<Arc<Room>> {
-        self.rooms
-            .lock().unwrap()
-            .get(room_id)
-            .map(Arc::clone)
+        self.rooms.lock().unwrap().get(room_id).map(Arc::clone)
     }
 }
 
@@ -87,7 +88,7 @@ impl Users {
 
         let users = Self {
             users,
-            event_stream: tx
+            event_stream: tx,
         };
 
         (users, rx)
@@ -140,10 +141,8 @@ impl UserPresence {
 
             user_map.remove(&name);
         }
-        
+
         // Emit event and ignore any errors
-        let _ = event_stream
-            .send(PlayerEvent::Left(name.clone()))
-            .await;
+        let _ = event_stream.send(PlayerEvent::Left(name.clone())).await;
     }
 }

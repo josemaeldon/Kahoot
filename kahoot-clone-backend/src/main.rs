@@ -1,6 +1,6 @@
+mod ext;
 /// Module for handling the websocket api.
 mod ws;
-mod ext;
 
 use std::net::SocketAddr;
 
@@ -11,7 +11,7 @@ use axum::Router;
 /**
  * Note: You may notice that some functions end with a naked expression without
  * and no return statement.
- * 
+ *
  * When a block of code (ie. code surrounded by curly braces `{}`) ends with
  * an expression without a semicolon, it is implicitly "resolved" to that value.
  *
@@ -26,7 +26,7 @@ use axum::Router;
  * ```
  * let x = 8 * 8;
  * ```
- * 
+ *
  * Relevant: https://doc.rust-lang.org/reference/expressions/block-expr.html
  */
 

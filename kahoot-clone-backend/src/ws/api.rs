@@ -5,17 +5,14 @@ use axum::extract::ws::Message;
 // from various data representations, namely JSON.
 //
 // Relevant: https://serde.rs/
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Messages sent by the client to "do" something.
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Action {
     CreateRoom { questions: Vec<Question> },
-    JoinRoom {
-        room_id: RoomId,
-        username: String,
-    },
+    JoinRoom { room_id: RoomId, username: String },
 
     // Player only
     Answer { choice: usize },
@@ -29,17 +26,27 @@ pub enum Action {
 #[derive(Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum HostEvent {
-    RoomCreated { room_id: RoomId },
-    UserJoined { username: String },
-    UserLeft { username: String },
-    UserAnswered { username: String },
-    RoundBegin { question: Question },
+    RoomCreated {
+        room_id: RoomId,
+    },
+    UserJoined {
+        username: String,
+    },
+    UserLeft {
+        username: String,
+    },
+    UserAnswered {
+        username: String,
+    },
+    RoundBegin {
+        question: Question,
+    },
     RoundEnd {
         /// The amount of points each player gains.
         ///
         /// If they aren't in the object, they got the question wrong or
         /// didn't answer.
-        point_gains: HashMap<String, u32>
+        point_gains: HashMap<String, u32>,
     },
     GameEnd,
 }

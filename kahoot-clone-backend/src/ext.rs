@@ -7,11 +7,10 @@ pub trait ToMessageExt {
 
 impl<T> ToMessageExt for T
 where
-    T: Serialize
+    T: Serialize,
 {
     fn to_message(&self) -> Message {
-        let text = serde_json::to_string(self)
-            .unwrap();
+        let text = serde_json::to_string(self).unwrap();
 
         Message::Text(text)
     }

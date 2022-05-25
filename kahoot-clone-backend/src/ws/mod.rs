@@ -6,32 +6,32 @@
 ///     "type": "<message_type>",
 ///     "<field>": "<value>",
 ///     ...
-/// } 
+/// }
 /// ```
 pub mod api;
 
 /// Contains data for representing game states.
 pub mod state;
 
-use api::{Question, RoomId, Action, HostEvent, UserEvent};
+use api::{Action, HostEvent, Question, RoomId, UserEvent};
 
-use state::{SharedState, Room, Users, PlayerAnswer, GameEvent};
+use state::{GameEvent, PlayerAnswer, Room, SharedState, Users};
 
 use crate::ext::ToMessageExt;
 
-use std::sync::{Arc, Mutex};
 use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use axum::{Extension, Router};
+use axum::extract::ws::{Message, WebSocket};
 use axum::extract::WebSocketUpgrade;
-use axum::extract::ws::{WebSocket, Message};
 use axum::response::Response;
 use axum::routing::get;
+use axum::{Extension, Router};
 
 use tokio::sync::{mpsc, watch};
 
-use futures::{StreamExt, SinkExt, Stream};
+use futures::{SinkExt, Stream, StreamExt};
 
 use self::state::State;
 
@@ -86,11 +86,7 @@ async fn handle_ws(mut socket: WebSocket, state: SharedState) {
 /// Handles room creation.
 ///
 /// The websocket will be treated as the "host" from now on.
-async fn create_room(
-    mut host: WebSocket,
-    state: SharedState,
-    questions: Vec<Question>,
-) {
+async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Question>) {
     eprintln!("Creating room...");
 
     let (action_tx, action_rx) = mpsc::channel(20);
@@ -124,10 +120,7 @@ async fn create_room(
 
         tokio::spawn(async move {
             while let Some(event) = rx.recv().await {
-                if host_tx.send(event.to_message())
-                    .await
-                    .is_err()
-                {
+                if host_tx.send(event.to_message()).await.is_err() {
                     return;
                 }
             }
@@ -200,15 +193,16 @@ async fn create_room(
                     answered.insert(username.clone());
 
                     // Tell host user answered
-                    let _ = host_tx.send(HostEvent::UserAnswered {
-                        username: username.clone()
-                    }).await;
+                    let _ = host_tx
+                        .send(HostEvent::UserAnswered {
+                            username: username.clone(),
+                        })
+                        .await;
 
                     eprintln!("`{username}` answered {choice}");
 
                     // If the choice is correct
                     if choice == correct_choice {
-
                         // Update points log
                         eprintln!("`{username}` +{points}");
                         point_gains.insert(username, points);
@@ -218,8 +212,11 @@ async fn create_room(
                     }
 
                     // Has every player answered
-                    let all_answered = room.users.users
-                        .lock().unwrap()
+                    let all_answered = room
+                        .users
+                        .users
+                        .lock()
+                        .unwrap()
                         .iter()
                         .all(|name| answered.contains(name));
 
@@ -241,8 +238,7 @@ async fn create_room(
 
         // Alert players a round began
         eprintln!("Alerting players that round began...");
-        let _ = result_tx
-            .send(GameEvent::RoundBegin { choice_count });
+        let _ = result_tx.send(GameEvent::RoundBegin { choice_count });
 
         // Wait for the time duration or for the task to fully complete
         let time_task = tokio::time::sleep(Duration::from_secs(question_time));
@@ -258,12 +254,17 @@ async fn create_room(
 
         // Tell host that the round ended
         eprintln!("Alerting host that round ended...");
-        let _ = host_tx.send(HostEvent::RoundEnd { point_gains: point_gains.clone() }).await;
+        let _ = host_tx
+            .send(HostEvent::RoundEnd {
+                point_gains: point_gains.clone(),
+            })
+            .await;
 
         // Alert players round ended
         eprintln!("Alerting players that round ended...");
-        let _ = result_tx
-            .send(GameEvent::RoundEnd { point_gains: Arc::new(point_gains) });
+        let _ = result_tx.send(GameEvent::RoundEnd {
+            point_gains: Arc::new(point_gains),
+        });
 
         // Wait until host begins next round
         match next_action(&mut host_rx).await {
@@ -286,21 +287,15 @@ async fn create_room(
     drop(room);
 
     state.remove_room(&room_id).await;
-        
+
     // Alert players game ended
-    let _ = result_tx
-        .send(GameEvent::GameEnd);
+    let _ = result_tx.send(GameEvent::GameEnd);
 }
 
 /// Handles room joining.
 ///
 /// The websocket will be treated as a "player" from now on.
-async fn join_room(
-    socket: WebSocket,
-    state: SharedState,
-    room_id: RoomId,
-    username: String,
-) {
+async fn join_room(socket: WebSocket, state: SharedState, room_id: RoomId, username: String) {
     eprintln!("Finding room `{room_id}`...");
     let room = if let Some(room) = state.find_room(&room_id) {
         room
@@ -316,7 +311,7 @@ async fn join_room(
         presence
     } else {
         eprintln!("User `{username}` already exists, disconnecting...");
-        return
+        return;
     };
 
     // Watch for game status updates
@@ -353,7 +348,11 @@ async fn join_room(
         tokio::spawn(async move {
             while let Some(action) = next_action(&mut user_rx).await {
                 if let Action::Answer { choice } = action {
-                    let _ = action_stream.send(PlayerAnswer { username: username.clone(), choice })
+                    let _ = action_stream
+                        .send(PlayerAnswer {
+                            username: username.clone(),
+                            choice,
+                        })
                         .await;
                 }
             }
@@ -370,7 +369,9 @@ async fn join_room(
     presence.leave().await;
 }
 
-async fn next_action<E>(stream: &mut (impl Stream<Item = Result<Message, E>> + Unpin)) -> Option<Action> {
+async fn next_action<E>(
+    stream: &mut (impl Stream<Item = Result<Message, E>> + Unpin),
+) -> Option<Action> {
     let msg = stream.next().await?.ok()?;
     eprintln!("Recieved message: {msg:?}");
 
