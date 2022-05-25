@@ -15,5 +15,17 @@ var sendMessage = (e) => {
   socket.send(message);
 };
 
+// sends value on click
+var sendAnswer = (e) => {
+	const answer = event.target.value;
+	console.log("Sending: ", answer);
+	socket.send(answer);
+}
+
+/*
 var sendButton = document.getElementById("send");
 sendButton.addEventListener("click", sendMessage);
+*/
+
+var choices = document.getElementsByClassName("choice");
+choices.forEach(choice => choice.addEventListener(sendAnswer))

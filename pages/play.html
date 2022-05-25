@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+	<head>
+		<meta charset="utf-8">
+		<title>Kahoot Game</title>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/foundation-sites@6.7.4/dist/css/foundation.min.css" crossorigin="anonymous">
+		<style media="screen">
+			div.choice {
+				background-color: yellow;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="grid-x">
+			<div class="small-6 choice">
+				1
+			</div>
+			<div class="small-6 choice">
+				2
+			</div>
+			<div class="small-6 choice">
+				3
+			</div>
+			<div class="small-6 choice">
+				4
+			</div>
+		</div>
+	</body>
+
+	<script type="text/javascript">
+	// Create WebSocket connection.
+	const socket = new WebSocket("wss://ws.postman-echo.com/raw");
+
+	//  Listen for messages
+	var receiveMessage = (e) => {
+	  console.log("Message from server: ", event.data);
+	};
+
+	socket.addEventListener("message", receiveMessage);
+
+	// Send messages
+	var sendMessage = (e) => {
+	  const message = document.getElementById("message").value;
+	  console.log("Sending: ", message);
+	  socket.send(message);
+	};
+
+	// sends value on click
+	var sendAnswer = (e) => {
+		const answer = event.target.value;
+		console.log("Sending: ", answer);
+		socket.send(answer);
+	}
+
+	/*
+	var sendButton = document.getElementById("send");
+	sendButton.addEventListener("click", sendMessage);
+	*/
+
+	var choices = document.querySelectorAll("choice");
+	console.log(choices);
+	choices.forEach((index, value) => value.addEventListener(sendAnswer));
+	</script>
+</html>
