@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 /// Messages sent by the client to "do" something.
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum Action {
     CreateRoom { questions: Vec<Question> },
     JoinRoom { room_id: RoomId, username: String },
@@ -24,7 +24,7 @@ pub enum Action {
 
 /// Messages sent by the server to the room host.
 #[derive(Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum HostEvent {
     RoomCreated {
         room_id: RoomId,
@@ -53,7 +53,7 @@ pub enum HostEvent {
 
 /// Messages sent by the server to a player.
 #[derive(Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum UserEvent {
     RoundBegin { choice_count: usize },
     RoundEnd { point_gain: Option<u32> },
