@@ -21,18 +21,26 @@ interface Question {
 function Header() {
   return (
     <div className={`${styles.container}`}>
-      <div>
+      <div className={`${styles.flex1}`}>
         <Image
           src={"/kahootLogo.svg"}
           width={"96px"}
           height={"32.72px"}
           alt="Kahoot Logo"
         ></Image>
-        <input type={"text"} placeholder="Enter Kahoot title..."></input>
+        <input
+          className={`${styles.titleInput}`}
+          type={"text"}
+          placeholder="Enter Kahoot title..."
+        ></input>
       </div>
       <div>
-        <button type="button">Exit</button>
-        <button type="button">Save</button>
+        <button type="button" className={`${styles.exitButton}`}>
+          Exit
+        </button>
+        <button type="button" className={`${styles.saveButton}`}>
+          Save
+        </button>
       </div>
     </div>
   );
