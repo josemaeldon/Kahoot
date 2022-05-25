@@ -22,38 +22,54 @@ function Editor() {
       </p>
       <div>
         <div className={`${styles.grid}`}>
-          <div>
+          <div className={`${styles.wrapper}`}>
             <span>
               <BsFillTriangleFill></BsFillTriangleFill>
             </span>
             <div>
-              <p contentEditable="true"></p>
+              <p
+                contentEditable="true"
+                placeholder="Answer 1"
+                className={`${styles.answer}`}
+              ></p>
             </div>
           </div>
-          <div>
+          <div className={`${styles.wrapper}`}>
             <span>
               <BsFillSquareFill></BsFillSquareFill>
             </span>
             <div>
-              <p contentEditable="true"></p>
+              <p
+                contentEditable="true"
+                className={`${styles.answer}`}
+                placeholder="Answer 2"
+              ></p>
             </div>
           </div>
-          <div>
+          <div className={`${styles.wrapper}`}>
             <span>
               <BsFillCircleFill></BsFillCircleFill>
             </span>
             <div>
-              <p contentEditable="true"></p>
+              <p
+                contentEditable="true"
+                className={`${styles.answer}`}
+                placeholder="Answer 3 (optional)"
+              ></p>
             </div>
           </div>
-          <div>
+          <div className={`${styles.wrapper}`}>
             <span>
               <BsFillSquareFill
                 style={{ transform: "rotate(45deg)" }}
               ></BsFillSquareFill>
             </span>
             <div>
-              <p contentEditable="true"></p>
+              <p
+                contentEditable="true"
+                className={`${styles.answer}`}
+                placeholder="Answer 4 (optional)"
+              ></p>
             </div>
           </div>
         </div>

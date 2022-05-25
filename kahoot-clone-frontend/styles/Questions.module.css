@@ -1,4 +1,5 @@
 .container {
   width: 192px;
-  background-color: blue;
+  background-color: white;
+  box-shadow: rgb(0 0 0 / 24%) 0px 3px 8px;
 }

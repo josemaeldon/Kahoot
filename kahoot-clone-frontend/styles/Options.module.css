@@ -4,18 +4,17 @@
   position: relative;
   background-color: white;
   box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+  background-color: white;
 }
 
 .containerOpen {
   width: 272px;
   padding: 16px;
-  background-color: lightcoral;
 }
 
 .containerClosed {
   width: 0;
   padding: 0px;
-  background-color: lightcoral;
 }
 
 .toggleSwitch {
@@ -24,7 +23,7 @@
 
   position: absolute;
   left: -25px;
-  top: calc(50% - 25px);
+  top: calc(0%);
   background-color: white;
   box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
 

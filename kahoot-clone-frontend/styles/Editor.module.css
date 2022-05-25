@@ -93,3 +93,7 @@
   color: gray;
   background-color: transparent;
 }
+
+.wrapper {
+  transition: background-color 0.25s 0s ease-in-out;
+}
