@@ -28,4 +28,9 @@ sendButton.addEventListener("click", sendMessage);
 */
 
 var choices = document.getElementsByClassName("choice");
-choices.forEach(choice => choice.addEventListener(sendAnswer))
+console.log(choices);
+Array.from(choices).forEach(
+	(choice, index, array) => {
+		choice.addEventListener("click", sendAnswer);
+	}
+);

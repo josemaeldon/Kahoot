@@ -57,8 +57,12 @@
 	sendButton.addEventListener("click", sendMessage);
 	*/
 
-	var choices = document.querySelectorAll("choice");
+	var choices = document.getElementsByClassName("choice");
 	console.log(choices);
-	choices.forEach((index, value) => value.addEventListener(sendAnswer));
+	Array.from(choices).forEach(
+		(choice, index, array) => {
+			choice.addEventListener("click", sendAnswer);
+		}
+	);
 	</script>
 </html>
