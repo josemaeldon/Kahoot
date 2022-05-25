@@ -7,7 +7,6 @@ use std::net::SocketAddr;
 // `axum` is a Rust web server framework
 use axum::Router;
 
-// `axum` is a we
 /**
  * Note: You may notice that some functions end with a naked expression without
  * and no return statement.
