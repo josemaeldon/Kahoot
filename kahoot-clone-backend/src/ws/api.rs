@@ -9,9 +9,21 @@ use serde::{Deserialize, Serialize};
 
 /// Messages sent by the client to "do" something.
 #[derive(Debug, Deserialize)]
+// `tag = "type"`:
+// Add a "type" field to the serialization with the same value as the enum tag.
+// eg. CreateRoom { ... } => { "type": "createRoom", ... }
+//
+// `rename_all = "camelCase"`:
+// Renames the tags using camelCase when serializing, and converts camelCase
+// back into PascalCase upon deserializing.
+//
+// Relevant: https://serde.rs/container-attrs.html
+//           https://serde.rs/enum-representations.html
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum Action {
+    // Initial message
     CreateRoom { questions: Vec<Question> },
+    #[serde(rename_all = "camelCase")] // Renames fields as camelCase
     JoinRoom { room_id: RoomId, username: String },
 
     // Player only
@@ -26,21 +38,37 @@ pub enum Action {
 #[derive(Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum HostEvent {
+    /// Sent after the client sends a create room message.
+    #[serde(rename_all = "camelCase")]
     RoomCreated {
         room_id: RoomId,
     },
+
+    /// Sent whenever a user joins the room.
     UserJoined {
         username: String,
     },
+    /// Sent whenever a user leaves the room.
     UserLeft {
         username: String,
     },
+    /// Sent whenever a user answers a question.
+    ///
+    /// Duplicate answers are automatically handled by the server, so the host
+    /// does not need to deal with it.
     UserAnswered {
         username: String,
     },
+
+    /// Sent when a new round begins.
     RoundBegin {
         question: Question,
     },
+    /// Sent when the round ends.
+    ///
+    /// Rounds will automatically end after the specified time duration or when
+    /// all players have answered, so the client does not need to deal with it.
+    #[serde(rename_all = "camelCase")]
     RoundEnd {
         /// The amount of points each player gains.
         ///
@@ -48,6 +76,9 @@ pub enum HostEvent {
         /// didn't answer.
         point_gains: HashMap<String, u32>,
     },
+    /// Sent if there are no more questions.
+    ///
+    /// The websocket connection will close after this message is sent.
     GameEnd,
 }
 
@@ -55,8 +86,20 @@ pub enum HostEvent {
 #[derive(Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum UserEvent {
+    /// Sent when a new round begins.
+    ///
+    /// The user is only sent information about how many choices there are.
+    #[serde(rename_all = "camelCase")]
     RoundBegin { choice_count: usize },
+
+    /// Sent when the round ends.
+    ///
+    /// The point gain field is a `number` if the player answered correctly,
+    /// otherwise it is `null`.
+    #[serde(rename_all = "camelCase")]
     RoundEnd { point_gain: Option<u32> },
+
+    /// Sent when the game is over.
     GameEnd,
 }
 
@@ -79,6 +122,7 @@ pub struct Question {
     pub time: u16,
 }
 
+// Trait implementation stuff. Doesn't matter too much.
 impl TryFrom<Message> for Action {
     type Error = ();
 
