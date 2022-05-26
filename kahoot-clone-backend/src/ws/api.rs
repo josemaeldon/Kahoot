@@ -8,7 +8,7 @@ use axum::extract::ws::Message;
 use serde::{Deserialize, Serialize};
 
 /// Messages sent by the client to "do" something.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 // `tag = "type"`:
 // Add a "type" field to the serialization with the same value as the enum tag.
 // eg. CreateRoom { ... } => { "type": "createRoom", ... }
@@ -35,7 +35,7 @@ pub enum Action {
 }
 
 /// Messages sent by the server to the room host.
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum HostEvent {
     /// Sent after the client sends a create room message.
@@ -83,7 +83,7 @@ pub enum HostEvent {
 }
 
 /// Messages sent by the server to a player.
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum UserEvent {
     /// Sent when a new round begins.
@@ -111,7 +111,7 @@ pub enum UserEvent {
 pub type RoomId = u32;
 
 /// A structure containing all relevant information of a question.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Question {
     pub question: String,
     /// All of the valid choices.
