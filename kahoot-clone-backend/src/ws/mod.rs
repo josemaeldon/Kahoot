@@ -17,13 +17,13 @@ use api::{Action, HostEvent, Question, RoomId, UserEvent};
 
 use state::{GameEvent, PlayerAnswer, Room, SharedState, Users};
 
-use crate::ext::ToMessageExt;
+use crate::ext::{ToMessageExt, NextActionExt};
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use axum::extract::ws::{Message, WebSocket};
+use axum::extract::ws::WebSocket;
 use axum::extract::WebSocketUpgrade;
 use axum::response::Response;
 use axum::routing::get;
@@ -31,7 +31,7 @@ use axum::{Extension, Router};
 
 use tokio::sync::{mpsc, watch};
 
-use futures::{SinkExt, Stream, StreamExt};
+use futures::{SinkExt, StreamExt};
 
 use self::state::State;
 
@@ -69,7 +69,7 @@ async fn handle_ws_connection(
 
 /// Deals with an upgraded websocket.
 async fn handle_ws(mut socket: WebSocket, state: SharedState) {
-    let action = if let Some(action) = next_action(&mut socket).await {
+    let action = if let Some(action) = socket.next_action().await {
         action
     } else {
         eprintln!("Couldn't parse action");
@@ -149,7 +149,7 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
 
     // Wait until host begins room and there is at least one player in lobby
     loop {
-        match next_action(&mut host_rx).await {
+        match host_rx.next_action().await {
             // Host tries to begin the first round
             Some(Action::BeginRound) => {
                 eprintln!("Attempting to start game...");
@@ -270,7 +270,7 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
         });
 
         // Wait until host begins next round
-        match next_action(&mut host_rx).await {
+        match host_rx.next_action().await {
             Some(Action::BeginRound) => (),
             _ => {
                 eprintln!("Closing room...");
@@ -352,7 +352,7 @@ async fn join_room(socket: WebSocket, state: SharedState, room_id: RoomId, usern
     let mut user_action_task = {
         let action_stream = room.action_stream.clone();
         tokio::spawn(async move {
-            while let Some(action) = next_action(&mut user_rx).await {
+            while let Some(action) = user_rx.next_action().await {
                 if let Action::Answer { choice } = action {
                     let _ = action_stream
                         .send(PlayerAnswer {
@@ -373,23 +373,6 @@ async fn join_room(socket: WebSocket, state: SharedState, room_id: RoomId, usern
 
     // Leaves room
     presence.leave().await;
-}
-
-async fn next_action<E>(
-    stream: &mut (impl Stream<Item = Result<Message, E>> + Unpin),
-) -> Option<Action> {
-    let msg = stream.next().await?.ok()?;
-    eprintln!("Recieved message: {msg:?}");
-
-    let text = msg.to_text().ok()?;
-
-    match serde_json::from_str(text) {
-        Ok(action) => Some(action),
-        Err(err) => {
-            eprintln!("{err}");
-            None
-        }
-    }
 }
 
 /// Websocket api testing

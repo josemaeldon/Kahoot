@@ -1,6 +1,9 @@
-mod ext;
 /// Module for handling the websocket api.
 mod ws;
+/// Contains convenience extension methods.
+///
+/// Relevant: https://rust-lang.github.io/rfcs/0445-extension-trait-conventions.html
+mod ext;
 
 use std::net::SocketAddr;
 
