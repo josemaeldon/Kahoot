@@ -6,6 +6,7 @@ import {
   BsFillSquareFill,
   BsFillCircleFill,
 } from "react-icons/bs";
+import { FaCheck } from "react-icons/fa";
 import type { db } from "../kahoot";
 
 function replaceCaret(el: HTMLElement) {
@@ -27,6 +28,25 @@ function replaceCaret(el: HTMLElement) {
   }
 }
 
+function CheckboxCircle({
+  onClick,
+  checked,
+}: {
+  onClick: React.MouseEventHandler<HTMLDivElement>;
+  checked: boolean;
+}) {
+  return (
+    <div
+      className={`${styles.checkBoxOuter} ${checked ? styles.green : ""}`}
+      onClick={onClick}
+    >
+      <div className={`${styles.checkBoxInner}`}>
+        <FaCheck className={`${!checked ? styles.hidden : ""}`}></FaCheck>
+      </div>
+    </div>
+  );
+}
+
 function Editor() {
   const { game, setGame, questionNumber, setQuestionNumber } =
     useContext(GameContext);
@@ -42,6 +62,14 @@ function Editor() {
     };
   }
 
+  function onCheckboxClickHandler(index: number) {
+    return () => {
+      console.log(index);
+      const gameCopy = { ...game };
+      gameCopy.questions[questionNumber].correctAnswer = index;
+      setGame(gameCopy);
+    };
+  }
   function questionInputHandler(e: React.FormEvent<HTMLParagraphElement>) {
     e.preventDefault();
     const gameCopy = { ...game };
@@ -64,6 +92,15 @@ function Editor() {
     replaceCaret(a4.current);
   });
 
+  const q0Empty = game.questions[questionNumber].choices[0] === "";
+  const q1Empty = game.questions[questionNumber].choices[1] === "";
+  const q2Empty = game.questions[questionNumber].choices[2] === "";
+  const q3Empty = game.questions[questionNumber].choices[3] === "";
+  const q0Checked = game.questions[questionNumber].correctAnswer === 0;
+  const q1Checked = game.questions[questionNumber].correctAnswer === 1;
+  const q2Checked = game.questions[questionNumber].correctAnswer === 2;
+  const q3Checked = game.questions[questionNumber].correctAnswer === 3;
+
   return (
     <div className={`${styles.container}`}>
       <p
@@ -78,15 +115,21 @@ function Editor() {
       </p>
       <div>
         <div className={`${styles.grid}`}>
-          <div className={`${styles.wrapper}`}>
-            <span className={`${styles.shapeContainer}`}>
+          <div
+            className={`${styles.wrapper} ${
+              !q0Empty ? `${styles.red}` : `${styles.white}`
+            }`}
+          >
+            <span className={`${styles.shapeContainer} ${styles.red}`}>
               <BsFillTriangleFill></BsFillTriangleFill>
             </span>
             <div className={`${styles.answerContainer}`}>
               <p
                 contentEditable="true"
                 placeholder="Answer 1"
-                className={`${styles.answer}`}
+                className={`${styles.answer} ${
+                  !q0Empty ? `${styles.whiteText}` : ""
+                }`}
                 onInput={answerInputHandler(0)}
                 suppressContentEditableWarning
                 ref={a1}
@@ -94,15 +137,27 @@ function Editor() {
                 {game.questions[questionNumber].choices[0]}
               </p>
             </div>
+            {!q0Empty && (
+              <CheckboxCircle
+                onClick={onCheckboxClickHandler(0)}
+                checked={q0Checked}
+              ></CheckboxCircle>
+            )}
           </div>
-          <div className={`${styles.wrapper}`}>
-            <span className={`${styles.shapeContainer}`}>
+          <div
+            className={`${styles.wrapper} ${
+              !q1Empty ? `${styles.blue}` : `${styles.white}`
+            }`}
+          >
+            <span className={`${styles.shapeContainer} ${styles.blue}`}>
               <BsFillSquareFill></BsFillSquareFill>
             </span>
             <div className={`${styles.answerContainer}`}>
               <p
                 contentEditable="true"
-                className={`${styles.answer}`}
+                className={`${styles.answer} ${
+                  !q1Empty ? `${styles.whiteText}` : ""
+                }`}
                 placeholder="Answer 2"
                 onInput={answerInputHandler(1)}
                 suppressContentEditableWarning
@@ -111,15 +166,27 @@ function Editor() {
                 {game.questions[questionNumber].choices[1]}
               </p>
             </div>
+            {!q1Empty && (
+              <CheckboxCircle
+                onClick={onCheckboxClickHandler(1)}
+                checked={q1Checked}
+              ></CheckboxCircle>
+            )}
           </div>
-          <div className={`${styles.wrapper}`}>
-            <span className={`${styles.shapeContainer}`}>
+          <div
+            className={`${styles.wrapper} ${
+              !q2Empty ? `${styles.yellow}` : `${styles.white}`
+            }`}
+          >
+            <span className={`${styles.shapeContainer} ${styles.yellow}`}>
               <BsFillCircleFill></BsFillCircleFill>
             </span>
             <div className={`${styles.answerContainer}`}>
               <p
                 contentEditable="true"
-                className={`${styles.answer}`}
+                className={`${styles.answer} ${
+                  !q2Empty ? `${styles.whiteText}` : ""
+                }`}
                 placeholder="Answer 3 (optional)"
                 onInput={answerInputHandler(2)}
                 suppressContentEditableWarning
@@ -128,9 +195,19 @@ function Editor() {
                 {game.questions[questionNumber].choices[2]}
               </p>
             </div>
+            {!q2Empty && (
+              <CheckboxCircle
+                onClick={onCheckboxClickHandler(2)}
+                checked={q2Checked}
+              ></CheckboxCircle>
+            )}
           </div>
-          <div className={`${styles.wrapper}`}>
-            <span className={`${styles.shapeContainer}`}>
+          <div
+            className={`${styles.wrapper} ${
+              !q3Empty ? `${styles.green}` : `${styles.white}`
+            }`}
+          >
+            <span className={`${styles.shapeContainer} ${styles.green}`}>
               <BsFillSquareFill
                 style={{ transform: "rotate(45deg)" }}
               ></BsFillSquareFill>
@@ -138,7 +215,9 @@ function Editor() {
             <div className={`${styles.answerContainer}`}>
               <p
                 contentEditable="true"
-                className={`${styles.answer}`}
+                className={`${styles.answer} ${
+                  !q3Empty ? `${styles.whiteText}` : ""
+                }`}
                 placeholder="Answer 4 (optional)"
                 onInput={answerInputHandler(3)}
                 suppressContentEditableWarning
@@ -147,6 +226,12 @@ function Editor() {
                 {game.questions[questionNumber].choices[3]}
               </p>
             </div>
+            {!q3Empty && (
+              <CheckboxCircle
+                onClick={onCheckboxClickHandler(3)}
+                checked={q3Checked}
+              ></CheckboxCircle>
+            )}
           </div>
         </div>
       </div>

@@ -1,8 +1,10 @@
 import React, { useContext } from "react";
 import { BsTrash } from "react-icons/bs";
 import { MdContentCopy } from "react-icons/md";
+import { db } from "../kahoot";
 import { GameContext } from "../pages/create";
 import styles from "../styles/Questions.module.css";
+import GameButton from "./GameButton";
 
 function Questions() {
   const { game, setGame, questionNumber, setQuestionNumber } =
@@ -37,23 +39,36 @@ function Questions() {
       return gameCopy;
     });
   }
-  function addQuestionHandler() {}
+  function addQuestionHandler() {
+    setGame((game) => {
+      const gameCopy = JSON.parse(JSON.stringify(game)) as db.KahootGame;
+      gameCopy.questions.push({
+        choices: ["", "", "", ""],
+        correctAnswer: 0,
+        question: "",
+        time: 30,
+      });
+      setQuestionNumber(gameCopy.questions.length - 1);
+
+      return gameCopy;
+    });
+  }
 
   return (
     <div className={`${styles.container}`}>
       <div className={`${styles.innerContainer}`}>
         {game.questions.map((question, index) => {
+          const selectedQuestion = index === questionNumber;
           return (
             <div key={Math.random()}>
               <div
                 className={`${styles.questionBox} ${
-                  index === questionNumber
-                    ? `${styles.questionHighlighted}`
-                    : ""
+                  selectedQuestion ? `${styles.questionHighlighted}` : ""
                 }`}
                 onClick={() => {
                   setQuestionNumber(index);
                 }}
+                data-selectedquestion={selectedQuestion}
               >
                 <section className={`${styles.questionHeader}`}>
                   <div>
@@ -78,12 +93,38 @@ function Questions() {
                       }}
                     ></BsTrash>
                   </section>
-                  <section className={`${styles.questionPreview}`}></section>
+                  <section className={`${styles.questionPreviewContainer}`}>
+                    <div
+                      className={`${styles.questionPreview} ${
+                        selectedQuestion ? styles.white : styles.whitesmoke
+                      }`}
+                    >
+                      <p className={`${styles.previewParagraph}`}>
+                        {game.questions[index].question}
+                      </p>
+                    </div>
+                  </section>
                 </div>
               </div>
             </div>
           );
         })}
+        <GameButton
+          onClick={() => {
+            addQuestionHandler();
+          }}
+          backgroundStyle={{
+            backgroundColor: "rgb(14,78,154)",
+            margin: "20px auto 20px auto ",
+            display: "block",
+          }}
+          foregroundStyle={{
+            backgroundColor: "rgb(19,104,206)",
+            padding: "10px 14px 10px 14px",
+          }}
+        >
+          Add Question
+        </GameButton>
       </div>
     </div>
   );

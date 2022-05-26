@@ -7,7 +7,6 @@
 }
 
 .grid > div {
-  background-color: white;
   width: 100%;
   height: 100%;
   border-radius: 6px;
@@ -38,17 +37,27 @@
   width: 100px;
 }
 
-.grid > div:nth-child(1) > span:nth-child(1) {
+.whiteText {
+  color: white;
+}
+
+.white {
+  background-color: white;
+}
+
+.red {
   background-color: rgb(233, 29, 63);
 }
 
-.grid > div:nth-child(2) > span:nth-child(1) {
+.blue {
   background-color: rgb(20, 112, 224);
 }
-.grid > div:nth-child(3) > span:nth-child(1) {
+
+.yellow {
   background-color: rgb(221, 163, 2);
 }
-.grid > div:nth-child(4) > span:nth-child(1) {
+
+.green {
   background-color: rgb(47, 172, 16);
 }
 
@@ -95,5 +104,31 @@
 }
 
 .wrapper {
-  transition: background-color 0.25s 0s ease-in-out;
+  transition: background-color 0.125s 0s ease-in-out;
+}
+
+.checkBoxOuter {
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  border: solid white 4px;
+  aspect-ratio: 1 / 1;
+  height: 40px;
+  align-self: center;
+  cursor: pointer;
+}
+
+.checkBoxInner {
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  background-color: transparent;
+}
+
+.hidden {
+  visibility: hidden;
+}
+
+.green {
+  background-color: rgb(132, 176, 45);
 }
