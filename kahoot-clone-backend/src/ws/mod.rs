@@ -124,6 +124,9 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
                     return;
                 }
             }
+
+            // Close connection
+            let _ = host_tx.close().await;
         });
 
         host_tx_mpsc
@@ -326,6 +329,9 @@ async fn join_room(socket: WebSocket, state: SharedState, room_id: RoomId, usern
                     GameEvent::GameEnd => {
                         let event = UserEvent::GameEnd;
                         let _ = user_tx.send(event.to_message()).await;
+                        
+                        // Close connection
+                        let _ = user_tx.close().await;
                     }
                     GameEvent::RoundBegin { choice_count } => {
                         let event = UserEvent::RoundBegin { choice_count };
@@ -383,5 +389,196 @@ async fn next_action<E>(
             eprintln!("{err}");
             None
         }
+    }
+}
+
+/// Websocket api testing
+#[cfg(test)]
+mod tests {
+    use crate::ws::router;
+    use crate::ws::api::{Action, HostEvent, UserEvent, Question};
+
+    use std::{net::SocketAddr, time::Duration};
+    use tokio::net::TcpStream;
+    use tokio_tungstenite::{connect_async, tungstenite::Message, WebSocketStream, MaybeTlsStream};
+    use futures::{StreamExt, SinkExt};
+    use serde::Serialize;
+
+    // `let_assert` is a useful testing macro asserting a specific enum variant
+    // and destructuring the variant to get its inner value.
+    use assert2::let_assert;
+
+    // Macro magic, don't bother understanding
+    macro_rules! question {
+        ($ques:expr , time: $time:expr => [ $($correct:expr => $choice:expr),+ $(,)? ]) => {
+            {
+                let mut answer = 0;
+                let mut answer_count = 0;
+                let mut choices = Vec::new();
+
+                $(
+                    choices.push(String::from($choice));
+                    if $correct {
+                        answer_count += 1;
+                    } else {
+                        answer += 1;
+                    }
+                )+
+
+                assert!(answer_count == 1, "Must have one correct answer");
+
+                Question {
+                    question: String::from($ques),
+                    time: $time,
+                    choices,
+                    answer,
+                }
+            }
+        };
+    }
+
+    /// Tests a simple situation where there is one player and only one question.
+    #[tokio::test]
+    async fn one_player_and_question() {
+
+        let host_ws = serve_and_connect(3001).await;
+        let (mut host_tx, mut host_rx) = host_ws.split();
+
+        let question = question! {
+            "Fish?", time: 30 => [
+                true => "foo",
+                false => "bar",
+            ]
+        };
+
+        // Send create room action
+        host_tx.send(serial(&Action::CreateRoom {
+            questions: vec![question.clone()],
+        })).await.unwrap();
+
+        // Response must be a text message with no errors
+        let_assert!(Some(Ok(Message::Text(s))) = host_rx.next().await);
+
+        // Parse response
+        let event: HostEvent = serde_json::from_str(&s).unwrap();
+
+        // Response must be a room created event
+        let_assert!(HostEvent::RoomCreated { room_id } = event);
+
+        // Host tests
+        let question_clone = question.clone();
+        let host_task = tokio::spawn(async move {
+            // User joined event
+            let_assert!(Some(Ok(Message::Text(s))) = host_rx.next().await);
+            let event: HostEvent = serde_json::from_str(&s).unwrap();
+            let_assert!(HostEvent::UserJoined { username } = event);
+
+            // Username matches
+            assert_eq!("Johnny", &username);
+
+            // Send begin round action
+            host_tx.send(serial(&Action::BeginRound)).await.unwrap();
+
+            // Round begin event
+            let_assert!(Some(Ok(Message::Text(s))) = host_rx.next().await);
+            let event: HostEvent = serde_json::from_str(&s).unwrap();
+            let_assert!(HostEvent::RoundBegin { question } = event);
+
+            // Check if the question is the same
+            assert_eq!(question_clone, question);
+
+            // User answered event
+            let_assert!(Some(Ok(Message::Text(s))) = host_rx.next().await);
+            let event: HostEvent = serde_json::from_str(&s).unwrap();
+            let_assert!(HostEvent::UserAnswered { username } = event);
+
+            // Username matches
+            assert_eq!("Johnny", &username);
+
+            // Round end event
+            let_assert!(Some(Ok(Message::Text(s))) = host_rx.next().await);
+            let event: HostEvent = serde_json::from_str(&s).unwrap();
+            let_assert!(HostEvent::RoundEnd { point_gains } = event);
+
+            // Johnny gained 1000 points
+            assert_eq!(point_gains.get("Johnny"), Some(&1000));
+
+            // Send begin round action
+            host_tx.send(serial(&Action::BeginRound)).await.unwrap();
+
+            // Game end event
+            let_assert!(Some(Ok(Message::Text(s))) = host_rx.next().await);
+            let event: HostEvent = serde_json::from_str(&s).unwrap();
+            let_assert!(HostEvent::GameEnd = event);
+        });
+
+        // Player tests
+        let user_task = tokio::spawn(async move {
+            // Connect as player
+            let (user_ws, _) = connect_async("ws://127.0.0.1:3001").await.unwrap();
+            let (mut user_tx, mut user_rx) = user_ws.split();
+
+            // Join as "Johnny"
+            user_tx.send(serial(&Action::JoinRoom {
+                room_id,
+                username: String::from("Johnny")
+            })).await.unwrap();
+
+            // Round begin event
+            let_assert!(Some(Ok(Message::Text(s))) = user_rx.next().await);
+            let event: UserEvent = serde_json::from_str(&s).unwrap();
+            let_assert!(UserEvent::RoundBegin { choice_count } = event);
+
+            // Has correct choice count
+            assert_eq!(question.choices.len(), choice_count);
+
+            // Send correct answer
+            user_tx.send(serial(&Action::Answer {
+                choice: question.answer,
+            })).await.unwrap();
+
+            // Round end event
+            let_assert!(Some(Ok(Message::Text(s))) = user_rx.next().await);
+            let event: UserEvent = serde_json::from_str(&s).unwrap();
+            let_assert!(UserEvent::RoundEnd { point_gain: Some(point_gain) } = event);
+
+            // Gained 1000 points
+            assert_eq!(point_gain, 1000);
+
+            // Game end event
+            let_assert!(Some(Ok(Message::Text(s))) = user_rx.next().await);
+            let event: UserEvent = serde_json::from_str(&s).unwrap();
+            let_assert!(UserEvent::GameEnd = event);
+        });
+
+        // Wait for both tasks to complete
+        tokio::try_join!(host_task, user_task).unwrap();
+    }
+
+    /// Starts a server and makes a websocket connection with it.
+    async fn serve_and_connect(port: u16) -> WebSocketStream<MaybeTlsStream<TcpStream>> {
+        begin_server(port).await;
+
+        let (ws, _) = connect_async(format!("ws://127.0.0.1:{port}")).await.unwrap();
+
+        ws
+    }
+
+    /// Starts a localhost server on the given port.
+    async fn begin_server(port: u16) {
+        tokio::spawn(
+            axum::Server::bind(&SocketAddr::from(([127, 0, 0, 1], port)))
+                .serve(router().into_make_service())
+        );
+
+        // Wait a bit so server can start
+        // TODO: Make this wait for the server to open, not for a specific amount of time
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
+
+    /// Convert a `Serialize`able into a JSON message.
+    fn serial(s: &impl Serialize) -> Message {
+        let json_string = serde_json::to_string(s).unwrap();
+        Message::text(json_string)
     }
 }
