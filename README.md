@@ -3,7 +3,9 @@
 A clone of the classic multiplayer quiz game.
 
 ## Roster
-...
+- Haotian Gan (PM): Frontend, serverless functions
+- Wen Hao Dong: Rust backend
+- Renggeng Zheng: Frontend, Websockets functionality
 
 ## Launch Codes
 ### Prerequisites
