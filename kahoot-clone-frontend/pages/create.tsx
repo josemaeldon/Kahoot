@@ -4,21 +4,15 @@ import Questions from "../Components/Questions";
 import Image from "next/image";
 import Editor from "../Components/Editor";
 import Options from "../Components/Options";
+import type { db } from "../kahoot";
 
-interface KahootGame {
-  id: string; //uuid of the game
-  author: string; //uuid of the author
-  title: string;
-  questions: Question[];
-}
-
-interface Question {
-  question: string;
-  choices: string[];
-  correctAnswer: number;
-}
-
-function Header() {
+function Header({
+  game,
+  setGame,
+}: {
+  game: db.KahootGame;
+  setGame: React.Dispatch<React.SetStateAction<db.KahootGame>>;
+}) {
   return (
     <div className={`${styles.container}`}>
       <div className={`${styles.flex1}`}>
@@ -32,6 +26,14 @@ function Header() {
           className={`${styles.titleInput}`}
           type={"text"}
           placeholder="Enter Kahoot title..."
+          value={game.title}
+          onChange={(e) => {
+            setGame((game) => {
+              const gameCopy = { ...game }; //Shallow copy
+              gameCopy.title = e.target.value;
+              return gameCopy;
+            });
+          }}
         ></input>
       </div>
       <div>
@@ -46,14 +48,30 @@ function Header() {
   );
 }
 
-export const GameContext = React.createContext(null);
+interface GameContext {
+  game: db.KahootGame;
+  setGame: React.Dispatch<React.SetStateAction<db.KahootGame>>;
+  questionNumber: number;
+  setQuestionNumber: React.Dispatch<React.SetStateAction<number>>;
+}
+
+export const GameContext = React.createContext<GameContext>(null);
+
+const defaultGame: db.KahootGame = {
+  author: "",
+  id: "",
+  title: "",
+  questions: [
+    { correctAnswer: 0, choices: ["", "", "", ""], question: "", time: 15 },
+  ],
+};
 
 function Create() {
-  const [game, setGame] = useState<KahootGame>();
+  const [game, setGame] = useState<db.KahootGame>(defaultGame);
   const [questionNumber, setQuestionNumber] = useState(0);
   return (
     <div className={`vh100 ${styles.containerLayout}`}>
-      <Header></Header>
+      <Header game={game} setGame={setGame}></Header>
       <div
         className={`${styles.layout} ${styles.lightGrey} ${styles.flexChild}`}
       >

@@ -22,7 +22,7 @@
   color: white;
 }
 
-.grid > div > span:nth-child(1) {
+.shapeContainer {
   padding: 16px;
   border-radius: 6px;
   display: grid;
@@ -31,21 +31,11 @@
   margin-right: 10px;
 }
 
-.grid > div > div {
+.answerContainer {
   display: flex;
   align-items: center;
   flex: 1 0 auto;
   width: 100px;
-}
-
-.grid > div > div > p {
-  font-size: 1.75vw;
-  margin: 0;
-  width: 100%;
-  max-width: 100%;
-  outline: none;
-  word-break: break-all;
-  overflow-wrap: break-word;
 }
 
 .grid > div:nth-child(1) > span:nth-child(1) {
@@ -86,6 +76,16 @@
   content: attr(placeholder);
   color: gray;
   background-color: transparent;
+}
+
+.answer {
+  font-size: 1.75vw;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  outline: none;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .answer[contenteditable][placeholder]:empty:before {

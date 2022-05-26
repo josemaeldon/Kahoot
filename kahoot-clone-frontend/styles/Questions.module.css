@@ -2,4 +2,63 @@
   width: 192px;
   background-color: white;
   box-shadow: rgb(0 0 0 / 24%) 0px 3px 8px;
+  overflow: hidden;
+  height: 100%;
+}
+
+.questionBox {
+  height: 141px;
+  width: 100%;
+  padding: 12px 16px 12px 0px;
+}
+
+.questionHeader {
+  height: 24px;
+  font-size: 14px;
+  width: 100%;
+  display: flex;
+}
+
+.questionHeader div:nth-child(1) {
+  width: 28px;
+  flex: 0 0 20px;
+  text-align: right;
+}
+
+.questionHeader div:nth-child(2) {
+  flex: 1 0 auto;
+  margin-left: 10px;
+}
+
+.questionPreview {
+}
+
+.questionActions {
+  width: 26px;
+  font-size: 13.333px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
+  padding: 4px;
+}
+
+.questionActions svg {
+  width: 16px;
+  height: 16px;
+  margin-bottom: 12px;
+}
+
+.questionContainer {
+  height: 100%;
+}
+
+.questionHighlighted {
+  background-color: rgb(234, 244, 252);
+}
+
+.innerContainer {
+  width: 100%;
+  height: calc(100vh - 56px);
+  overflow: auto;
 }
