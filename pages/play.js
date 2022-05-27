@@ -1,5 +1,5 @@
 // Create WebSocket connection.
-const socket = new WebSocket("wss://ws.postman-echo.com/raw");
+const socket = new WebSocket("ws://64.225.12.53/ws");
 
 //  Listen for messages
 var receiveMessage = (e) => {
