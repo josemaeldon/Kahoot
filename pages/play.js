@@ -33,6 +33,15 @@ var joinRoom = (e) => {
 	socket.send(msg);
 }
 
+var createRoom = (questions) => {
+	const request = {
+		"type": "createRoom",
+		"questions": questions
+	};
+	console.log("Creating room: ", request);
+	socket.send(request);
+}
+
 /*
 var sendButton = document.getElementById("send");
 sendButton.addEventListener("click", sendMessage);
