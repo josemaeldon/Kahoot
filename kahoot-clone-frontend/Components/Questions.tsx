@@ -7,53 +7,59 @@ import styles from "../styles/Questions.module.css";
 import GameButton from "./GameButton";
 
 function Questions() {
-  const { game, setGame, questionNumber, setQuestionNumber } =
-    useContext(GameContext);
+  const {
+    game,
+    setGame,
+    questionNumber,
+    setQuestionNumber,
+    formErrors,
+    validateForm,
+    validateFormAndIgnoreError,
+  } = useContext(GameContext);
 
   function duplicateHandler(questionIndex) {
-    setGame((game) => {
-      const gameCopy = JSON.parse(JSON.stringify(game));
-      const questionCopy = JSON.parse(
-        JSON.stringify(gameCopy.questions[questionIndex])
-      );
-      gameCopy.questions.splice(questionIndex + 1, 0, questionCopy);
-      console.log(game, gameCopy);
-      return gameCopy;
-    });
+    const gameCopy = JSON.parse(JSON.stringify(game));
+    const questionCopy = JSON.parse(
+      JSON.stringify(gameCopy.questions[questionIndex])
+    );
+    gameCopy.questions.splice(questionIndex + 1, 0, questionCopy);
+    console.log(game, gameCopy);
+
+    setGame(gameCopy);
+    validateForm(gameCopy);
     setQuestionNumber(questionIndex + 1);
   }
   function deleteHandler(questionIndex) {
     //User shouldn't delete the only question in the kahoot
     //Todo: Modal popup
-    console.log(game.questions.length);
+
     if (game.questions.length === 1) return;
 
-    setGame((game) => {
-      const gameCopy = JSON.parse(JSON.stringify(game));
-      gameCopy.questions.splice(questionIndex, 1);
+    const gameCopy = JSON.parse(JSON.stringify(game));
+    gameCopy.questions.splice(questionIndex, 1);
 
-      //Makes sure that the question the user is on isn't out of bounds after an element is deleted
-      if (gameCopy.questions.length - 1 < questionNumber)
-        setQuestionNumber(gameCopy.questions.length - 1);
-
-      return gameCopy;
-    });
-  }
-  function addQuestionHandler() {
-    setGame((game) => {
-      const gameCopy = JSON.parse(JSON.stringify(game)) as db.KahootGame;
-      gameCopy.questions.push({
-        choices: ["", "", "", ""],
-        correctAnswer: 0,
-        question: "",
-        time: 30,
-      });
+    //Makes sure that the question the user is on isn't out of bounds after an element is deleted
+    if (gameCopy.questions.length - 1 < questionNumber)
       setQuestionNumber(gameCopy.questions.length - 1);
 
-      return gameCopy;
-    });
+    setGame(gameCopy);
+    validateForm(gameCopy);
   }
+  function addQuestionHandler() {
+    const gameCopy = JSON.parse(JSON.stringify(game)) as db.KahootGame;
+    gameCopy.questions.push({
+      choices: ["", "", "", ""],
+      correctAnswer: 0,
+      question: "",
+      time: 30,
+    });
 
+    const lastQuestion = gameCopy.questions.length - 1;
+    setQuestionNumber(lastQuestion);
+    setGame(gameCopy);
+    validateFormAndIgnoreError(gameCopy, lastQuestion);
+  }
+  console.log(formErrors);
   return (
     <div className={`${styles.container}`}>
       <div className={`${styles.innerContainer}`}>
@@ -66,7 +72,9 @@ function Questions() {
                   selectedQuestion ? `${styles.questionHighlighted}` : ""
                 }`}
                 onClick={() => {
+                  if (selectedQuestion) return;
                   setQuestionNumber(index);
+                  validateForm(game);
                 }}
                 data-selectedquestion={selectedQuestion}
               >
@@ -102,6 +110,24 @@ function Questions() {
                       <p className={`${styles.previewParagraph}`}>
                         {game.questions[index].question}
                       </p>
+                      <div className={`${styles.previewGrid}`}>
+                        {game.questions[index].choices.map(
+                          (choice, choiceIndex) => {
+                            return (
+                              <div
+                                key={choiceIndex}
+                                className={`${styles.previewGridChild}`}
+                                data-correct={
+                                  game.questions[index].correctAnswer ===
+                                    choiceIndex &&
+                                  game.questions[index].choices[choiceIndex] !==
+                                    ""
+                                }
+                              ></div>
+                            );
+                          }
+                        )}
+                      </div>
                     </div>
                   </section>
                 </div>

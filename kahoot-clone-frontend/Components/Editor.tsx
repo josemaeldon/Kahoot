@@ -48,8 +48,20 @@ function CheckboxCircle({
 }
 
 function Editor() {
-  const { game, setGame, questionNumber, setQuestionNumber } =
-    useContext(GameContext);
+  const {
+    game,
+    setGame,
+    questionNumber,
+    setQuestionNumber,
+    formErrors,
+    validateForm,
+  } = useContext(GameContext);
+
+  const questionError =
+    formErrors !== null &&
+    formErrors.questionErrors[questionNumber] !== undefined &&
+    formErrors.questionErrors[questionNumber].ignoreErrors !== true &&
+    formErrors.questionErrors[questionNumber];
 
   function answerInputHandler(answerIndex: number) {
     return (e: React.FormEvent<HTMLParagraphElement>) => {
@@ -59,6 +71,8 @@ function Editor() {
         e.currentTarget.innerText;
       console.log(e.currentTarget.innerText);
       setGame({ ...game });
+
+      if (questionError.choicesRequiredError) validateForm({ ...game });
     };
   }
 
@@ -68,6 +82,8 @@ function Editor() {
       const gameCopy = { ...game };
       gameCopy.questions[questionNumber].correctAnswer = index;
       setGame(gameCopy);
+
+      if (questionError.correctChoiceError) validateForm(gameCopy);
     };
   }
   function questionInputHandler(e: React.FormEvent<HTMLParagraphElement>) {
@@ -76,6 +92,8 @@ function Editor() {
     gameCopy.questions[questionNumber].question = e.currentTarget.innerText;
     console.log(e.currentTarget.innerText);
     setGame({ ...game });
+
+    if (questionError.questionBlankError) validateForm({ ...game });
   }
 
   const question = useRef();
@@ -105,7 +123,12 @@ function Editor() {
     <div className={`${styles.container}`}>
       <p
         contentEditable="true"
-        className={`${styles.question}`}
+        className={`${styles.question} ${
+          questionError.questionBlankError &&
+          game.questions[questionNumber].choices[0] === ""
+            ? styles.lightRed
+            : ""
+        }`}
         placeholder="Question..."
         ref={question}
         onInput={questionInputHandler}
@@ -118,6 +141,11 @@ function Editor() {
           <div
             className={`${styles.wrapper} ${
               !q0Empty ? `${styles.red}` : `${styles.white}`
+            } ${
+              questionError.choicesRequiredError &&
+              game.questions[questionNumber].choices[0] === ""
+                ? styles.lightRed
+                : ""
             }`}
           >
             <span className={`${styles.shapeContainer} ${styles.red}`}>
@@ -128,7 +156,7 @@ function Editor() {
                 contentEditable="true"
                 placeholder="Answer 1"
                 className={`${styles.answer} ${
-                  !q0Empty ? `${styles.whiteText}` : ""
+                  !q0Empty ? styles.whiteText : ""
                 }`}
                 onInput={answerInputHandler(0)}
                 suppressContentEditableWarning
@@ -147,6 +175,11 @@ function Editor() {
           <div
             className={`${styles.wrapper} ${
               !q1Empty ? `${styles.blue}` : `${styles.white}`
+            } ${
+              questionError.choicesRequiredError &&
+              game.questions[questionNumber].choices[1] === ""
+                ? styles.lightRed
+                : ""
             }`}
           >
             <span className={`${styles.shapeContainer} ${styles.blue}`}>
