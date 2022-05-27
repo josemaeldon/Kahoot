@@ -24,12 +24,13 @@ var sendAnswer = (e) => {
 
 var joinRoom = (e) => {
 	const code = document.getElementById("code").value;
-	console.log("Code: ", code);
-	socket.send({
+	const msg = {
 		"type": "joinRoom",
 		"roomId": code,
 		"username": "test"
-	});
+	};
+	console.log("Code: ", msg);
+	socket.send(msg);
 }
 
 /*
