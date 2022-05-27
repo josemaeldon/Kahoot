@@ -381,6 +381,7 @@ mod tests {
     use crate::ws::router;
     use crate::ws::api::{Action, HostEvent, UserEvent, Question};
 
+    use std::sync::atomic::{AtomicU16, Ordering};
     use std::{net::SocketAddr, time::Duration};
     use tokio::net::TcpStream;
     use tokio_tungstenite::{connect_async, tungstenite::Message, WebSocketStream, MaybeTlsStream};
@@ -390,6 +391,74 @@ mod tests {
     // `let_assert` is a useful testing macro asserting a specific enum variant
     // and destructuring the variant to get its inner value.
     use assert2::let_assert;
+
+    use super::api::RoomId;
+
+    static PORT: AtomicU16 = AtomicU16::new(3001);
+
+    struct TestServer {
+        port: u16,
+    }
+
+    type SocketStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
+
+    impl TestServer {
+        async fn new() -> Self {
+            let port = PORT.fetch_add(1, Ordering::Relaxed);
+
+            tokio::spawn(async move {
+                axum::Server::bind(&SocketAddr::from(([127, 0, 0, 1], port)))
+                    .serve(router().into_make_service())
+                    .await
+                    .unwrap();
+            });
+
+            // Wait a bit so server can start
+            // TODO: Make this wait for the server to open, not for a specific amount of time
+            tokio::time::sleep(Duration::from_secs(1)).await;
+
+            Self { port }
+        }
+
+        async fn connect(&self) -> SocketStream {
+            let (ws, _) = connect_async(format!("ws://127.0.0.1:{}", self.port))
+                .await
+                .unwrap();
+
+            ws
+        }
+
+        async fn create_room(&self, questions: Vec<Question>) -> (SocketStream, RoomId) {
+            let mut ws = self.connect().await;
+
+            // Send create room action
+            ws.send(serial(&Action::CreateRoom { questions })).await.unwrap();
+
+            // Response must be a text message with no errors
+            let_assert!(Some(Ok(Message::Text(s))) = ws.next().await);
+
+            // Parse response
+            let event: HostEvent = serde_json::from_str(&s).unwrap();
+
+            // Response must be a room created event
+            let_assert!(HostEvent::RoomCreated { room_id } = event);
+
+            (ws, room_id)
+        }
+
+        async fn join_room(&self, room_id: RoomId, username: String) -> SocketStream {
+            // Establish connection
+            let mut ws = self.connect().await;
+
+            // Send join room message
+            ws.send(serial(&Action::JoinRoom {
+                room_id,
+                username,
+            })).await.unwrap();
+
+            ws
+        }
+    }
 
     // Macro magic, don't bother understanding
     macro_rules! question {
@@ -423,10 +492,10 @@ mod tests {
     /// Tests a simple situation where there is one player and only one question.
     #[tokio::test]
     async fn one_player_and_question() {
+        // Start server
+        let server = TestServer::new().await;
 
-        let host_ws = serve_and_connect(3001).await;
-        let (mut host_tx, mut host_rx) = host_ws.split();
-
+        // Sample question
         let question = question! {
             "Fish?", time: 30 => [
                 true => "foo",
@@ -434,19 +503,9 @@ mod tests {
             ]
         };
 
-        // Send create room action
-        host_tx.send(serial(&Action::CreateRoom {
-            questions: vec![question.clone()],
-        })).await.unwrap();
-
-        // Response must be a text message with no errors
-        let_assert!(Some(Ok(Message::Text(s))) = host_rx.next().await);
-
-        // Parse response
-        let event: HostEvent = serde_json::from_str(&s).unwrap();
-
-        // Response must be a room created event
-        let_assert!(HostEvent::RoomCreated { room_id } = event);
+        // Start room
+        let (host_ws, room_id) = server.create_room(vec![question.clone()]).await;
+        let (mut host_tx, mut host_rx) = host_ws.split();
 
         // Host tests
         let question_clone = question.clone();
@@ -496,16 +555,9 @@ mod tests {
         });
 
         // Player tests
+        let user_ws = server.join_room(room_id, String::from("Johnny")).await;
         let user_task = tokio::spawn(async move {
-            // Connect as player
-            let (user_ws, _) = connect_async("ws://127.0.0.1:3001").await.unwrap();
             let (mut user_tx, mut user_rx) = user_ws.split();
-
-            // Join as "Johnny"
-            user_tx.send(serial(&Action::JoinRoom {
-                room_id,
-                username: String::from("Johnny")
-            })).await.unwrap();
 
             // Round begin event
             let_assert!(Some(Ok(Message::Text(s))) = user_rx.next().await);
@@ -538,25 +590,83 @@ mod tests {
         tokio::try_join!(host_task, user_task).unwrap();
     }
 
-    /// Starts a server and makes a websocket connection with it.
-    async fn serve_and_connect(port: u16) -> WebSocketStream<MaybeTlsStream<TcpStream>> {
-        begin_server(port).await;
+    #[tokio::test]
+    async fn join_leave() {
+        let server = TestServer::new().await;
 
-        let (ws, _) = connect_async(format!("ws://127.0.0.1:{port}")).await.unwrap();
+        let (mut host_ws, room_id) = server.create_room(vec![
+            question! {
+                "Fish?", time: 30 => [
+                    true => "foo",
+                    false => "bar",
+                ]
+            }
+        ]).await;
 
-        ws
-    }
+        // Host tests
+        let host_task = tokio::spawn(async move {
+            // Alice joined event
+            let_assert!(Some(Ok(Message::Text(s))) = host_ws.next().await);
+            let event: HostEvent = serde_json::from_str(&s).unwrap();
+            let_assert!(HostEvent::UserJoined { username } = event);
+            assert_eq!(username, "Alice");
 
-    /// Starts a localhost server on the given port.
-    async fn begin_server(port: u16) {
-        tokio::spawn(
-            axum::Server::bind(&SocketAddr::from(([127, 0, 0, 1], port)))
-                .serve(router().into_make_service())
-        );
+            // Bob joined event
+            let_assert!(Some(Ok(Message::Text(s))) = host_ws.next().await);
+            let event: HostEvent = serde_json::from_str(&s).unwrap();
+            let_assert!(HostEvent::UserJoined { username } = event);
+            assert_eq!(username, "Bob");
 
-        // Wait a bit so server can start
-        // TODO: Make this wait for the server to open, not for a specific amount of time
-        tokio::time::sleep(Duration::from_secs(1)).await;
+            // Alice left event
+            let_assert!(Some(Ok(Message::Text(s))) = host_ws.next().await);
+            let event: HostEvent = serde_json::from_str(&s).unwrap();
+            let_assert!(HostEvent::UserLeft { username } = event);
+            assert_eq!(username, "Alice");
+
+            // Chris joined event
+            let_assert!(Some(Ok(Message::Text(s))) = host_ws.next().await);
+            let event: HostEvent = serde_json::from_str(&s).unwrap();
+            let_assert!(HostEvent::UserJoined { username } = event);
+            assert_eq!(username, "Chris");
+
+            // Chris left event
+            let_assert!(Some(Ok(Message::Text(s))) = host_ws.next().await);
+            let event: HostEvent = serde_json::from_str(&s).unwrap();
+            let_assert!(HostEvent::UserLeft { username } = event);
+            assert_eq!(username, "Chris");
+
+            // Bob left event
+            let_assert!(Some(Ok(Message::Text(s))) = host_ws.next().await);
+            let event: HostEvent = serde_json::from_str(&s).unwrap();
+            let_assert!(HostEvent::UserLeft { username } = event);
+            assert_eq!(username, "Bob");
+        });
+
+        // Alice join
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        let mut alice = server.join_room(room_id, String::from("Alice")).await;
+
+        // Bob join
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        let mut bob = server.join_room(room_id, String::from("Bob")).await;
+
+        // Alice leave
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        alice.close(None).await.unwrap();
+
+        // Chris join
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        let mut chris = server.join_room(room_id, String::from("Chris")).await;
+
+        // Chris leave
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        chris.close(None).await.unwrap();
+
+        // Bob leave
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        bob.close(None).await.unwrap();
+
+        host_task.await.unwrap();
     }
 
     /// Convert a `Serialize`able into a JSON message.
