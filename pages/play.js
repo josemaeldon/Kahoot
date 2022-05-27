@@ -22,6 +22,16 @@ var sendAnswer = (e) => {
 	socket.send(answer);
 }
 
+var joinRoom = (e) => {
+	const code = document.getElementById("code").value;
+	console.log("Code: ", code);
+	socket.send({
+		"type": "joinRoom",
+		"roomId": code,
+		"username": "test"
+	});
+}
+
 /*
 var sendButton = document.getElementById("send");
 sendButton.addEventListener("click", sendMessage);
