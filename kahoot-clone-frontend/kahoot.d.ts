@@ -1,3 +1,5 @@
+import { ObjectId } from "mongodb";
+
 export namespace db {
   declare interface KahootGame {
     id: string; //uuid of the game
@@ -11,5 +13,18 @@ export namespace db {
     choices: string[];
     correctAnswer: number; //index of the correct answer
     time: number; // integer
+  }
+
+  declare interface User {
+    _id: string;
+    username: string;
+    passwordHash: string;
+  }
+}
+
+export namespace auth {
+  declare interface accessTokenPayload {
+    _id: string;
+    username: string;
   }
 }
