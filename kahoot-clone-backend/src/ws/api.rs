@@ -35,7 +35,7 @@ pub enum Action {
 }
 
 /// Messages sent by the server to the room host.
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum HostEvent {
     /// Sent after the client sends a create room message.
