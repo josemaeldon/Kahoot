@@ -5,7 +5,7 @@ import { postData } from "@lib/postData";
 import { APIRequest, APIResponse } from "pages/api/login";
 import useUser from "@lib/useUser";
 import { useRouter } from "next/router";
-import Header from "../../components/Header";
+import Header from "@components/HeaderBar";
 function Login() {
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
