@@ -59,6 +59,10 @@ var createRoom = (questions) => {
 	request = JSON.stringify(request);
 	console.log("Creating room: ", request);
 	socket.send(request);
+
+	createRmBtn.remove();
+	joinBtn.remove();
+	codeBox.remove();
 }
 
 /*
