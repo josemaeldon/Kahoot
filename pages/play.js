@@ -1,9 +1,27 @@
 // Create WebSocket connection.
 const socket = new WebSocket("ws://64.225.12.53/ws");
-
+// buttons
+const joinBtn = document.getElementById("joinBtn");
+const createRmBtn = document.getElementById("createRmBtn");
+// code box
+const codeBox = document.getElementById("code");
+// rm id
+const display = document.getElementById("display");
+// username stuff
+const input = document.getElementById("username");
 //  Listen for messages
 var receiveMessage = (e) => {
-  console.log("Message from server: ", event.data);
+	console.log("Message from server: ", event.data);
+	let data = JSON.parse(event.data);
+
+	switch (data.type) {
+		case "roomCreated":
+			display.innerText = `Room ID: ${data.roomId}`;
+			break;
+		case "userJoined":
+
+			break;
+	}
 };
 
 socket.addEventListener("message", receiveMessage);
@@ -23,14 +41,46 @@ var sendAnswer = (e) => {
 }
 
 var joinRoom = (e) => {
-	const code = document.getElementById("code").value;
-	const msg = {
-		"type": "joinRoom",
-		"roomId": code,
-		"username": "test"
+	let code = codeBox.value;
+	code = parseInt(code);
+	let msg = {
+		type: "joinRoom",
+		roomId: code,
+		username: input.value,
 	};
+	msg = JSON.stringify(msg);
+
 	console.log("Code: ", msg);
 	socket.send(msg);
+
+	display.innerText = `Username: ${input.value}`;
+
+	input.remove();
+	codeBox.remove();
+	joinBtn.remove();
+	createRmBtn.remove();
+}
+
+var createRoom = (questions) => {
+	let request = {
+		type: "createRoom",
+		questions: [
+			{
+				question: "Test",
+				choices: ["1", "2", "3"],
+				answer: 1,
+				time: 30,
+			},
+		]
+	};
+	request = JSON.stringify(request);
+	console.log("Creating room: ", request);
+	socket.send(request);
+
+	input.remove();
+	createRmBtn.remove();
+	joinBtn.remove();
+	codeBox.remove();
 }
 
 /*

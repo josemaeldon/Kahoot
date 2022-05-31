@@ -16,8 +16,12 @@
 		</style>
 	</head>
 	<body>
-		<input type="text" id="code">
-		<input type="submit" value="Join Room" onclick="joinRoom()">
+		<h1 id="display"></h1>
+		<input type="text" id="code" placeholder="code">
+		<input type="text" id="username" placeholder="username">
+		<input type="submit" value="Join Room" onclick="joinRoom()" id="joinBtn">
+
+		<button type="button" onclick="createRoom()" id="createRmBtn">Create Room</button>
 
 		<div class="grid-x">
 			<div class="small-6 choice">1</div>
