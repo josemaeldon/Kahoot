@@ -5,9 +5,18 @@ const joinBtn = document.getElementById("joinBtn");
 const createRmBtn = document.getElementById("createRmBtn");
 // code box
 const codeBox = document.getElementById("code");
+// rm idea
+const roomId = document.getElementById("roomId");
 //  Listen for messages
 var receiveMessage = (e) => {
-  console.log("Message from server: ", event.data);
+	console.log("Message from server: ", event.data);
+	let data = JSON.parse(event.data);
+
+	switch (data.type) {
+		case "roomCreated":
+			roomId.innerText = `Room ID: ${data.roomId}`;
+			break;
+	}
 };
 
 socket.addEventListener("message", receiveMessage);
