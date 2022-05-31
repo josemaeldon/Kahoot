@@ -133,11 +133,13 @@ function Create() {
   const [questionNumber, setQuestionNumber] = useState(0);
 
   const [firstRender, setFirstRender] = useState(true);
+  const { loggedIn, user } = useUser();
   useLayoutEffect(() => {
     setFirstRender(false);
   }, []);
 
-  if (firstRender) return <p>{firstRender}</p>;
+  if (firstRender) return <></>;
+  if (!loggedIn) return <></>;
 
   function validateForm(game: db.KahootGame) {
     const formErrors = getFormErrors(game);
