@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import Header from "../../components/Header";
 import styles from "@styles/signup.module.css";
 import Link from "next/link";
 import { postData } from "@lib/postData";
 import { APIRequest, APIResponse } from "pages/api/login";
 import useUser from "@lib/useUser";
 import { useRouter } from "next/router";
+import Header from "../../components/Header";
 function Login() {
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
