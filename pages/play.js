@@ -1,5 +1,5 @@
 // Create WebSocket connection.
-const socket = new WebSocket("wss://ws.postman-echo.com/raw");
+const socket = new WebSocket("ws://64.225.12.53/ws");
 
 //  Listen for messages
 var receiveMessage = (e) => {
@@ -20,6 +20,17 @@ var sendAnswer = (e) => {
 	const answer = event.target.innerHTML;
 	console.log("Sending: ", answer);
 	socket.send(answer);
+}
+
+var joinRoom = (e) => {
+	const code = document.getElementById("code").value;
+	const msg = {
+		"type": "joinRoom",
+		"roomId": code,
+		"username": "test"
+	};
+	console.log("Code: ", msg);
+	socket.send(msg);
 }
 
 /*

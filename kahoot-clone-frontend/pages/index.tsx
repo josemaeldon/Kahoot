@@ -1,7 +1,7 @@
-import Header from "../Components/header";
-import styles from "../styles/index.module.css";
+import Header from "@components/header";
+import styles from "@styles/index.module.css";
 import Image from "next/image";
-import GameButton from "../Components/GameButton";
+import GameButton from "@components/GameButton";
 import Link from "next/link";
 import { useRouter } from "next/router";
 
