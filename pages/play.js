@@ -34,10 +34,18 @@ var joinRoom = (e) => {
 }
 
 var createRoom = (questions) => {
-	const request = {
-		"type": "createRoom",
-		"questions": questions
+	let request = {
+		type: "createRoom",
+		questions: [
+			{
+				question: "Test",
+				choices: ["1", "2", "3"],
+				answer: 1,
+				time: 30,
+			},
+		]
 	};
+	request = JSON.stringify(request);
 	console.log("Creating room: ", request);
 	socket.send(request);
 }
