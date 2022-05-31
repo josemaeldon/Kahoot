@@ -57,9 +57,9 @@ function Login() {
               }}
             ></input>
             <p>
-              Forgot Password?{" "}
+              {"Don't have an account?"}
               <Link href="/auth/forgotpassword">
-                <a>Reset your password</a>
+                <a>Sign up</a>
               </Link>
             </p>
             <button

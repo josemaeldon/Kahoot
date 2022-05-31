@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import styles from "../styles/create.module.css";
 import Questions from "../components/Questions";
 import Image from "next/image";
@@ -83,15 +83,6 @@ interface FormErrorReport {
 
 export const GameContext = React.createContext<GameContext>(null);
 
-const defaultGame: db.KahootGame = {
-  author: "",
-  id: "",
-  title: "",
-  questions: [
-    { correctAnswer: 0, choices: ["", "", "", ""], question: "", time: 30 },
-  ],
-};
-
 function getFormErrors(game: db.KahootGame) {
   //Question with indexes 0 and 1, must be filled. (cannot be an empty string)
   //The correctAnswer has to be on a filled question
@@ -122,6 +113,16 @@ function getFormErrors(game: db.KahootGame) {
 }
 
 function Create() {
+  const defaultGame: db.KahootGame = {
+    _id: "",
+    author_id: "",
+    author_username: "",
+    title: "",
+    questions: [
+      { correctAnswer: 0, choices: ["", "", "", ""], question: "", time: 30 },
+    ],
+  };
+
   const [game, setGame] = useState<db.KahootGame>(defaultGame);
 
   //null is used as the default value. All components take "null" to mean
@@ -131,17 +132,22 @@ function Create() {
 
   const [questionNumber, setQuestionNumber] = useState(0);
 
-  const { loggedIn, user } = useUser();
-  if (!loggedIn) {
-    return <></>;
-  }
+  const [firstRender, setFirstRender] = useState(true);
+  useLayoutEffect(() => {
+    setFirstRender(false);
+  }, []);
+
+  if (firstRender) return <p>{firstRender}</p>;
 
   function validateForm(game: db.KahootGame) {
     const formErrors = getFormErrors(game);
     setFormErrors(formErrors);
   }
 
-  function validateFormAndIgnoreError(game, questionIndex: number) {
+  function validateFormAndIgnoreError(
+    game: db.KahootGame,
+    questionIndex: number
+  ) {
     const formErrors = getFormErrors(game);
     formErrors.questionErrors[questionIndex].ignoreErrors = true;
     setFormErrors(formErrors);

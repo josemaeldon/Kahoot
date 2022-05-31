@@ -2,8 +2,9 @@ import { ObjectId } from "mongodb";
 
 export namespace db {
   declare interface KahootGame {
-    id: string; //uuid of the game
-    author: string; //uuid of the author
+    _id: string; //uuid of the game
+    author_id: string; //uuid of the author
+    author_username: string;
     title: string;
     questions: Question[];
   }
