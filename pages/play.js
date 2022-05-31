@@ -38,6 +38,10 @@ var joinRoom = (e) => {
 
 	console.log("Code: ", msg);
 	socket.send(msg);
+
+	codeBox.remove();
+	joinBtn.remove();
+	createRmBtn.remove();
 }
 
 var createRoom = (questions) => {
