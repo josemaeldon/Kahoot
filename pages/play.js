@@ -5,8 +5,10 @@ const joinBtn = document.getElementById("joinBtn");
 const createRmBtn = document.getElementById("createRmBtn");
 // code box
 const codeBox = document.getElementById("code");
-// rm idea
-const roomId = document.getElementById("roomId");
+// rm id
+const display = document.getElementById("display");
+// username stuff
+const input = document.getElementById("username");
 //  Listen for messages
 var receiveMessage = (e) => {
 	console.log("Message from server: ", event.data);
@@ -14,7 +16,10 @@ var receiveMessage = (e) => {
 
 	switch (data.type) {
 		case "roomCreated":
-			roomId.innerText = `Room ID: ${data.roomId}`;
+			display.innerText = `Room ID: ${data.roomId}`;
+			break;
+		case "userJoined":
+
 			break;
 	}
 };
@@ -41,13 +46,16 @@ var joinRoom = (e) => {
 	let msg = {
 		type: "joinRoom",
 		roomId: code,
-		username: "test",
+		username: input.value,
 	};
 	msg = JSON.stringify(msg);
 
 	console.log("Code: ", msg);
 	socket.send(msg);
 
+	display.innerText = `Username: ${input.value}`;
+
+	input.remove();
 	codeBox.remove();
 	joinBtn.remove();
 	createRmBtn.remove();
@@ -69,6 +77,7 @@ var createRoom = (questions) => {
 	console.log("Creating room: ", request);
 	socket.send(request);
 
+	input.remove();
 	createRmBtn.remove();
 	joinBtn.remove();
 	codeBox.remove();
