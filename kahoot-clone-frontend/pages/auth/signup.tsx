@@ -5,7 +5,22 @@ import { useState } from "react";
 import { postData } from "@lib/postData";
 import { APIResponse } from "pages/api/signup";
 import { useRouter } from "next/router";
-import Header from "@components/Header";
+
+import headerStyles from "@styles/Header.module.css";
+import Image from "next/image";
+
+function Header() {
+  return (
+    <div className={`${headerStyles.container}`}>
+      <Image
+        src={"/kahootLogo.svg"}
+        width={"96px"}
+        height={"32.72px"}
+        alt="Kahoot Logo"
+      ></Image>
+    </div>
+  );
+}
 
 interface Info {
   username: string;
