@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import * as cookie from "cookie";
+import type { auth, db } from "kahoot";
 
 export default async function signout(
   req: NextApiRequest,
