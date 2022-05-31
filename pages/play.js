@@ -23,12 +23,15 @@ var sendAnswer = (e) => {
 }
 
 var joinRoom = (e) => {
-	const code = document.getElementById("code").value;
-	const msg = {
-		"type": "joinRoom",
-		"roomId": code,
-		"username": "test"
+	let code = document.getElementById("code").value;
+	code = parseInt(code);
+	let msg = {
+		type: "joinRoom",
+		roomId: code,
+		username: "test",
 	};
+	msg = JSON.stringify(msg);
+
 	console.log("Code: ", msg);
 	socket.send(msg);
 }
