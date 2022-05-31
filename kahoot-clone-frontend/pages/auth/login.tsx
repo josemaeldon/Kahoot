@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Header from "@components/Header";
+import Header from "../../components/Header";
 import styles from "@styles/signup.module.css";
 import Link from "next/link";
 import { postData } from "@lib/postData";
