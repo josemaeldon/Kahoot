@@ -381,6 +381,7 @@ mod tests {
     use crate::ws::router;
     use crate::ws::api::{Action, HostEvent, UserEvent, Question};
 
+    use std::collections::HashSet;
     use std::sync::atomic::{AtomicU16, Ordering};
     use std::{net::SocketAddr, time::Duration};
     use tokio::net::TcpStream;
@@ -605,41 +606,36 @@ mod tests {
 
         // Host tests
         let host_task = tokio::spawn(async move {
-            // Alice joined event
-            let_assert!(Some(Ok(Message::Text(s))) = host_ws.next().await);
-            let event: HostEvent = serde_json::from_str(&s).unwrap();
-            let_assert!(HostEvent::UserJoined { username } = event);
-            assert_eq!(username, "Alice");
+            let mut joined = HashSet::new();
+            let mut left = HashSet::new();
 
-            // Bob joined event
-            let_assert!(Some(Ok(Message::Text(s))) = host_ws.next().await);
-            let event: HostEvent = serde_json::from_str(&s).unwrap();
-            let_assert!(HostEvent::UserJoined { username } = event);
-            assert_eq!(username, "Bob");
+            let mut i = 0;
+            while let Some(Ok(Message::Text(s))) = host_ws.next().await {
+                let event: HostEvent = serde_json::from_str(&s).unwrap();
+                match event {
+                    HostEvent::UserJoined { username } => {
+                        assert!(joined.insert(username.clone()), "{username} joined twice");
+                    }
+                    HostEvent::UserLeft { username } => {
+                        assert!(joined.contains(&username), "{username} left before joining");
+                        assert!(left.insert(username.clone()), "{username} left twice");
+                    }
+                    _ => panic!("Unexpected event {event:?}"),
+                }
 
-            // Alice left event
-            let_assert!(Some(Ok(Message::Text(s))) = host_ws.next().await);
-            let event: HostEvent = serde_json::from_str(&s).unwrap();
-            let_assert!(HostEvent::UserLeft { username } = event);
-            assert_eq!(username, "Alice");
+                i += 1;
+                if i >= 6 {
+                    break;
+                }
+            }
 
-            // Chris joined event
-            let_assert!(Some(Ok(Message::Text(s))) = host_ws.next().await);
-            let event: HostEvent = serde_json::from_str(&s).unwrap();
-            let_assert!(HostEvent::UserJoined { username } = event);
-            assert_eq!(username, "Chris");
-
-            // Chris left event
-            let_assert!(Some(Ok(Message::Text(s))) = host_ws.next().await);
-            let event: HostEvent = serde_json::from_str(&s).unwrap();
-            let_assert!(HostEvent::UserLeft { username } = event);
-            assert_eq!(username, "Chris");
-
-            // Bob left event
-            let_assert!(Some(Ok(Message::Text(s))) = host_ws.next().await);
-            let event: HostEvent = serde_json::from_str(&s).unwrap();
-            let_assert!(HostEvent::UserLeft { username } = event);
-            assert_eq!(username, "Bob");
+            let names = HashSet::from([
+                String::from("Alice"),
+                String::from("Bob"),
+                String::from("Chris"),
+            ]);
+            assert_eq!(joined, names);
+            assert_eq!(left, names);
         });
 
         // Alice join
