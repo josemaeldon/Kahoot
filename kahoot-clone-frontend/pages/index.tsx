@@ -1,6 +1,6 @@
 import styles from "@styles/index.module.css";
 import Image from "next/image";
-import GameButton from "Components/GameButton";
+import GameButton from "components/GameButton";
 import { useRouter } from "next/router";
 
 function Index() {

@@ -1,9 +1,9 @@
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import styles from "../styles/create.module.css";
-import Questions from "../Components/Questions";
+import Questions from "../components/Questions";
 import Image from "next/image";
-import Editor from "../Components/Editor";
-import Options from "../Components/Options";
+import Editor from "../components/Editor";
+import Options from "../components/Options";
 import type { db } from "../kahoot";
 import useUser from "@lib/useUser";
 

@@ -16,7 +16,7 @@
     "jsx": "preserve",
     "baseUrl": ".",
     "paths": {
-      "@components/*": ["Components/*"],
+      "@components/*": ["components/*"],
       "@serverless/*": ["serverless/*"],
       "@styles/*": ["styles/*"],
       "@lib/*": ["lib/*"]
