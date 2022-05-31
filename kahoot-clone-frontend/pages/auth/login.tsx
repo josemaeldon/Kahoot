@@ -5,22 +5,7 @@ import { postData } from "@lib/postData";
 import { APIRequest, APIResponse } from "pages/api/login";
 import useUser from "@lib/useUser";
 import { useRouter } from "next/router";
-
-import headerStyles from "../styles/Header.module.css";
-import Image from "next/image";
-
-function Header() {
-  return (
-    <div className={`${headerStyles.container}`}>
-      <Image
-        src={"/kahootLogo.svg"}
-        width={"96px"}
-        height={"32.72px"}
-        alt="Kahoot Logo"
-      ></Image>
-    </div>
-  );
-}
+import Header from "@components/Header";
 
 function Login() {
   const [password, setPassword] = useState("");
