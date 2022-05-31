@@ -1,5 +1,5 @@
 import React from "react";
-import Header from "@components/header";
+import Header from "@components/Header";
 import styles from "@styles/signup.module.css";
 import Link from "next/link";
 import { useState } from "react";
