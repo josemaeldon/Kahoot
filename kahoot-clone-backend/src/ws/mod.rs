@@ -246,10 +246,25 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
         // Wait for the time duration or for the task to fully complete
         let time_task = tokio::time::sleep(Duration::from_secs(question_time));
         tokio::pin!(time_task);
-        tokio::select! {
-            _ = (&mut time_task) => answer_collect_task.abort(),
-            _ = (&mut answer_collect_task) => { drop(time_task) },
-        };
+        loop {
+            tokio::select! {
+                act = host_rx.next_action() => {
+                    if let Some(Action::EndRound) = act {
+                        answer_collect_task.abort();
+                        drop(time_task);
+                        break;
+                    }
+                }
+                _ = (&mut time_task) => {
+                    answer_collect_task.abort();
+                    break;
+                }
+                _ = (&mut answer_collect_task) => {
+                    drop(time_task);
+                    break;
+                }
+            };
+        }
 
         eprintln!("End of round...");
 
