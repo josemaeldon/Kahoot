@@ -25,7 +25,7 @@ function Profile() {
         }
       });
     }
-  }, [loggedIn, user._id]);
+  }, [loggedIn]);
 
   if (!loggedIn) return <></>;
 
