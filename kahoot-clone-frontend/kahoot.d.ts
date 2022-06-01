@@ -6,6 +6,7 @@ export namespace db {
     author_id: string; //uuid of the author
     author_username: string;
     title: string;
+    date: number; //Time since unix epoch
     questions: Question[];
   }
 

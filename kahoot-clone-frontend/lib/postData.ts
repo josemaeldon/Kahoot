@@ -1,4 +1,7 @@
-export async function postData<T>(url = "", data = {}): Promise<T> {
+export async function postData<APIRequest, APIResponse>(
+  url = "",
+  data: APIRequest
+): Promise<APIResponse> {
   // Default options are marked with *
   const response = await fetch(url, {
     method: "POST", // *GET, POST, PUT, DELETE, etc.

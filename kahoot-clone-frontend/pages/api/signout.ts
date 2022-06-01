@@ -2,12 +2,16 @@ import { NextApiRequest, NextApiResponse } from "next";
 import * as cookie from "cookie";
 import type { auth, db } from "kahoot";
 
+interface APIResponse {
+  error: boolean;
+}
+
 export default async function signout(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse<APIResponse>
 ) {
   if (req.method !== "POST") {
-    res.status(401).json({});
+    res.status(200).json({ error: true });
   }
 
   res.setHeader("Set-Cookie", [
@@ -24,5 +28,5 @@ export default async function signout(
     }),
   ]);
 
-  res.redirect("/");
+  res.status(200).json({ error: false });
 }

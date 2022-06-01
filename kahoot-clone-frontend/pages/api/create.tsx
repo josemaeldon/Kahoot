@@ -1,8 +1,14 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { connectToDatabase } from "@serverless/mongoCache";
 import * as jwt from "jsonwebtoken";
+import { auth, db } from "kahoot";
+import { ObjectId } from "mongodb";
 
 export type APIResponse = Success | Fail;
+export interface APIRequest {
+  game: db.KahootGame;
+  game_id?: string; //Used for updating an existing game
+}
 
 interface Success {
   error: false;
@@ -15,14 +21,58 @@ interface Fail {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse<APIResponse>
 ) {
-  if (req.method !== "POST") res.status(401).json({});
-  if (req.cookies["accessToken"]) {
-    const response: Fail = { error: true, errorDescription: "No access token" };
-    res.status(200).json(response);
+  if (req.method !== "POST")
+    return res.status(200).json({
+      error: true,
+      errorDescription: "Only POST requests are allowed",
+    });
+  if (!req.cookies["accessToken"]) {
+    return res
+      .status(200)
+      .json({ error: true, errorDescription: "No access token" });
   }
+
   try {
-    jwt.verify(req.cookies["accessToken"], "secret", { complete: false });
-  } catch (e) {}
+    const payload = jwt.verify(req.cookies["accessToken"], "secret", {
+      complete: false,
+    }) as auth.accessTokenPayload;
+
+    const client = await connectToDatabase();
+    const gameCollection = client
+      .db("kahoot-clone")
+      .collection<db.KahootGame>("game");
+    const requestBody = structuredClone(req.body) as APIRequest;
+    const gameData = requestBody.game;
+    const updateGameId = requestBody.game_id;
+
+    if (typeof updateGameId === "string") {
+      if (!ObjectId.isValid(updateGameId))
+        throw new Error("Incorrect object id");
+      const game = await gameCollection.findOne({ _id: updateGameId });
+      if (game !== null && game.author_id === payload._id) {
+        delete gameData._id;
+        await gameCollection.updateOne(
+          { _id: updateGameId },
+          { $set: gameData },
+          { upsert: true }
+        );
+      }
+
+      return res.status(200).json({ error: false });
+    } else {
+      gameData._id = new ObjectId().toHexString();
+      gameData.author_id = payload._id;
+      gameData.author_username = payload.username;
+      gameData.date = new Date().getTime();
+      await gameCollection.insertOne(gameData); //Todo: request validation
+      return res.status(200).json({ error: false });
+    }
+  } catch (e) {
+    console.log("ERROR", e);
+    return res
+      .status(200)
+      .json({ error: true, errorDescription: "Something went wrong." });
+  }
 }

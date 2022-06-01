@@ -3,24 +3,9 @@ import styles from "@styles/signup.module.css";
 import Link from "next/link";
 import { postData } from "@lib/postData";
 import { APIRequest, APIResponse } from "pages/api/login";
-import useUser from "@lib/useUser";
+import useUser from "@lib/useSSRUser";
 import { useRouter } from "next/router";
-
-import headerStyles from "@styles/Header.module.css";
-import Image from "next/image";
-
-function Header() {
-  return (
-    <div className={`${headerStyles.container}`}>
-      <Image
-        src={"/kahootLogo.svg"}
-        width={"96px"}
-        height={"32.72px"}
-        alt="Kahoot Logo"
-      ></Image>
-    </div>
-  );
-}
+import Header from "@components/Header";
 
 function Login() {
   const [password, setPassword] = useState("");
@@ -34,20 +19,22 @@ function Login() {
 
   function loginHandler() {
     const request: APIRequest = { username, password };
-    postData<APIResponse>("/api/login", request).then((response) => {
-      if (response.error === true) {
-        //To do: interface for the error
-        console.log(response.errorDescription);
-      }
+    postData<APIRequest, APIResponse>("/api/login", request).then(
+      (response) => {
+        if (response.error === true) {
+          //To do: interface for the error
+          console.log(response.errorDescription);
+        }
 
-      if (response.error === false) {
-        localStorage.setItem(
-          "accessTokenPayload",
-          JSON.stringify(response.user)
-        );
-        router.push("/");
+        if (response.error === false) {
+          localStorage.setItem(
+            "accessTokenPayload",
+            JSON.stringify(response.user)
+          );
+          router.push("/");
+        }
       }
-    });
+    );
   }
   return (
     <div className={`vh100`}>

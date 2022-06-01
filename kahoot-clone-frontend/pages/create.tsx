@@ -5,15 +5,21 @@ import Image from "next/image";
 import Editor from "../Components/Editor";
 import Options from "../Components/Options";
 import type { db } from "../kahoot";
-import useUser from "@lib/useUser";
+import useUser from "@lib/useSSRUser";
+import { useRouter } from "next/router";
+import { postData } from "@lib/postData";
+import { APIResponse, APIRequest } from "./api/create";
 
 function Header({
   game,
   setGame,
+  setFormErrors,
 }: {
   game: db.KahootGame;
   setGame: React.Dispatch<React.SetStateAction<db.KahootGame>>;
+  setFormErrors: React.Dispatch<React.SetStateAction<FormErrorReport>>;
 }) {
+  const router = useRouter();
   return (
     <div className={`${styles.container}`}>
       <div className={`${styles.flex1}`}>
@@ -38,10 +44,38 @@ function Header({
         ></input>
       </div>
       <div>
-        <button type="button" className={`${styles.exitButton}`}>
+        <button
+          type="button"
+          className={`${styles.exitButton}`}
+          onClick={() => {
+            router.push("/profile");
+          }}
+        >
           Exit
         </button>
-        <button type="button" className={`${styles.saveButton}`}>
+        <button
+          type="button"
+          className={`${styles.saveButton}`}
+          onClick={() => {
+            const formErrors = getFormErrors(game);
+            setFormErrors(formErrors);
+            const noQuestionErrors = formErrors.questionErrors.every((object) =>
+              Object.values(object).every((val) => val !== true)
+            );
+
+            if (formErrors.titleBlankError === false && noQuestionErrors) {
+              console.log("submitted", game);
+              postData<APIRequest, APIResponse>("/api/create", { game }).then(
+                (res) => {
+                  console.log(res);
+                }
+              );
+            } else {
+              //GUI for there still being form errors
+              //idea: button shake
+            }
+          }}
+        >
           Save
         </button>
       </div>
@@ -118,6 +152,7 @@ function Create() {
     author_id: "",
     author_username: "",
     title: "",
+    date: 0,
     questions: [
       { correctAnswer: 0, choices: ["", "", "", ""], question: "", time: 30 },
     ],
@@ -132,13 +167,7 @@ function Create() {
 
   const [questionNumber, setQuestionNumber] = useState(0);
 
-  const [firstRender, setFirstRender] = useState(true);
   const { loggedIn, user } = useUser();
-  useLayoutEffect(() => {
-    setFirstRender(false);
-  }, []);
-
-  if (firstRender) return <></>;
   if (!loggedIn) return <></>;
 
   function validateForm(game: db.KahootGame) {
@@ -157,7 +186,11 @@ function Create() {
 
   return (
     <div className={`vh100 ${styles.containerLayout}`}>
-      <Header game={game} setGame={setGame}></Header>
+      <Header
+        game={game}
+        setGame={setGame}
+        setFormErrors={setFormErrors}
+      ></Header>
       <div
         className={`${styles.layout} ${styles.lightGrey} ${styles.flexChild}`}
       >
