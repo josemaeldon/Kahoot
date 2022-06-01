@@ -25,7 +25,7 @@ function Profile() {
         }
       });
     }
-  }, [loggedIn]);
+  }, [loggedIn, user._id]);
 
   if (!loggedIn) return <></>;
 
@@ -42,7 +42,7 @@ function Profile() {
                 const date = new Date();
                 date.setTime(game.date);
                 return (
-                  <div className={`${styles.gameElement}`}>
+                  <div className={`${styles.gameElement}`} key={game._id}>
                     <p>
                       <b>{game.title}</b>
                     </p>

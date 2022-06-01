@@ -21,7 +21,7 @@ export default function useUser(): UserState {
   const [firstRender, setFirstRender] = useState(true);
   useLayoutEffect(() => {
     setFirstRender(false);
-  });
+  }, []);
   const user = useMemo(
     () =>
       typeof window !== "undefined" &&
