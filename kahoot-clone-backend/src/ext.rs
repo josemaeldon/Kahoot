@@ -32,14 +32,13 @@ where
 {
     async fn next_action(&mut self) -> Option<Action> {
         let msg = self.next().await?.ok()?;
-        eprintln!("Recieved message: {msg:?}");
 
         let text = msg.to_text().ok()?;
 
         match serde_json::from_str(text) {
             Ok(action) => Some(action),
             Err(err) => {
-                eprintln!("{err}");
+                tracing::debug!("{err}");
                 None
             }
         }

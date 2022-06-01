@@ -70,7 +70,7 @@ impl State {
     pub async fn remove_room(&self, room_id: &RoomId) {
         let mut rooms = self.rooms.lock().unwrap();
         if rooms.remove(&room_id).is_none() {
-            eprintln!("Room `{room_id}` doesn't exist");
+            tracing::debug!("Room `{room_id}` doesn't exist");
             return;
         }
     }
@@ -102,19 +102,19 @@ impl Users {
     /// Returns a `Some(UserPresence)` on success and `None` on failure.
     pub async fn join_user(&self, name: String) -> Option<UserPresence> {
         {
-            eprintln!("Accquiring users lock to add new user...");
+            tracing::debug!("Accquiring users lock to add new user...");
             let mut users = self.users.lock().unwrap();
-            eprintln!("Lock accquired.");
+            tracing::debug!("Lock accquired.");
 
             if users.contains(&name) {
                 return None;
             }
 
-            eprintln!("Adding `{name}`...");
+            tracing::debug!("Adding `{name}`...");
             let name = name.clone();
             users.insert(name);
 
-            eprintln!("User added.");
+            tracing::debug!("User added.");
         }
 
         // Emitting join event
