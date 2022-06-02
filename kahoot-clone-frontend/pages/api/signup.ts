@@ -27,10 +27,12 @@ export interface Fail {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse<APIResponse>
 ) {
   if (req.method !== "POST") {
-    res.status(401).json({});
+    return res
+      .status(401)
+      .json({ error: true, errorDescription: "Not a POST request" });
   }
   const { username, password }: APIRequest = req.body;
 
@@ -40,11 +42,10 @@ export default async function handler(
   //Does user already exist?
   const results = await user.findOne({ username });
   if (results !== null) {
-    const response: APIResponse = {
+    return res.status(200).json({
       error: true,
       errorDescription: "User already exists",
-    };
-    res.status(200).json(response);
+    });
   }
 
   //Create new user with hashed and salted password and add it to the database
@@ -59,10 +60,6 @@ export default async function handler(
   await user.insertOne(userDoc);
 
   //Give user an access token cookie and JSON response
-  const response: APIResponse = {
-    error: false,
-    user: { _id: userDoc._id, username },
-  };
 
   const payload: auth.accessTokenPayload = {
     _id: userDoc._id,
@@ -84,6 +81,8 @@ export default async function handler(
     }),
   ]);
 
-  console.log(response);
-  res.status(200).json(response);
+  res.status(200).json({
+    error: false,
+    user: { _id: userDoc._id, username },
+  });
 }

@@ -63,6 +63,12 @@ function Editor() {
     formErrors.questionErrors[questionNumber].ignoreErrors !== true &&
     formErrors.questionErrors[questionNumber];
 
+  const questionBlankError =
+    formErrors !== null &&
+    formErrors.questionErrors[questionNumber] !== undefined &&
+    formErrors.questionErrors[questionNumber].ignoreErrors !== true &&
+    formErrors.questionErrors[questionNumber].questionBlankError;
+
   function answerInputHandler(answerIndex: number) {
     return (e: React.FormEvent<HTMLParagraphElement>) => {
       e.preventDefault();
@@ -124,10 +130,7 @@ function Editor() {
       <p
         contentEditable="true"
         className={`${styles.question} ${
-          questionError.questionBlankError &&
-          game.questions[questionNumber].choices[0] === ""
-            ? styles.lightRed
-            : ""
+          questionBlankError ? styles.lightRed : ""
         }`}
         placeholder="Question..."
         ref={question}

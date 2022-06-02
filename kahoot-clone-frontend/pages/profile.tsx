@@ -5,28 +5,39 @@ import React, { useEffect, useState } from "react";
 import useUser from "@lib/useSSRUser";
 import type { db } from "../kahoot";
 import { postData } from "@lib/postData";
-import { APIRequest, APIResponse } from "./api/getGames";
+import {
+  APIRequest as GetGameReq,
+  APIResponse as GetGameRes,
+} from "./api/getGames";
+import { TiDelete, TiEdit } from "react-icons/ti";
+import { useRouter } from "next/router";
+import { APIRequest, APIResponse } from "./api/deleteOneGame";
+import { BsTrash } from "react-icons/bs";
 
 function Profile() {
   const { loggedIn, user } = useUser();
   const [data, setData] = useState<null | db.KahootGame[]>(null);
 
+  function getSetUserData() {
+    postData<GetGameReq, GetGameRes>("/api/getGames", {
+      type: "userId",
+      userId: user._id,
+    }).then((res) => {
+      if (res.error === true) {
+        //Todo: error gui
+      } else {
+        setData(res.games);
+        console.log(res.games);
+      }
+    });
+  }
+
   useEffect(() => {
     if (loggedIn) {
-      postData<APIRequest, APIResponse>("/api/getGames", {
-        type: "userId",
-        userId: user._id,
-      }).then((res) => {
-        if (res.error === true) {
-          //Todo: error gui
-        } else {
-          setData(res.games);
-          console.log(res.games);
-        }
-      });
+      getSetUserData();
     }
   }, [loggedIn]);
-
+  const router = useRouter();
   if (!loggedIn) return <></>;
 
   return (
@@ -36,6 +47,18 @@ function Profile() {
       </div>
       <div className={`${styles.innerContainer}`}>
         <div className={`${styles.innerInnerContainer}`}>
+          <p className={`${styles.headerMessage}`}>My Kahoots:</p>
+          {data !== null && data.length === 0 && (
+            <div className={`${styles.emptyMessage}`}>
+              <p>Looks like you have no Kahoots :(</p>
+              <button
+                className={`${styles.playButton}`}
+                onClick={() => router.push("/create")}
+              >
+                Create One
+              </button>
+            </div>
+          )}
           <div className={`${styles.kahootGrid}`}>
             {data !== null &&
               data.map((game) => {
@@ -50,10 +73,37 @@ function Profile() {
                       {game.questions.length}{" "}
                       {game.questions.length === 1 ? "Question" : "Questions"}
                     </p>
-                    <p>{`Created: ${date.getMonth()}/${date.getDay()}/${date.getFullYear()}`}</p>
+                    <p>{`Created: ${date.toLocaleDateString()}`}</p>
+
                     <button className={`${styles.playButton}`}>
                       Start Game
                     </button>
+                    <div
+                      className={`${styles.edit}`}
+                      onClick={() => {
+                        router.push({
+                          pathname: "/create",
+                          query: { editingId: game._id },
+                        });
+                      }}
+                    >
+                      <TiEdit></TiEdit>
+                    </div>
+                    <div
+                      className={`${styles.delete}`}
+                      onClick={() => {
+                        postData<APIRequest, APIResponse>(
+                          "/api/deleteOneGame",
+                          { gameId: game._id }
+                        ).then((res) => {
+                          if (res.error === false) {
+                            getSetUserData();
+                          }
+                        });
+                      }}
+                    >
+                      <BsTrash />
+                    </div>
                   </div>
                 );
               })}

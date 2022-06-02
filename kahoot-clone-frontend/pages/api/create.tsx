@@ -43,7 +43,7 @@ export default async function handler(
     const gameCollection = client
       .db("kahoot-clone")
       .collection<db.KahootGame>("game");
-    const requestBody = structuredClone(req.body) as APIRequest;
+    const requestBody = req.body as APIRequest;
     const gameData = requestBody.game;
     const updateGameId = requestBody.game_id;
 
@@ -53,6 +53,9 @@ export default async function handler(
       const game = await gameCollection.findOne({ _id: updateGameId });
       if (game !== null && game.author_id === payload._id) {
         delete gameData._id;
+        gameData.author_id = payload._id;
+        gameData.author_username = payload.username;
+        delete gameData.date;
         await gameCollection.updateOne(
           { _id: updateGameId },
           { $set: gameData },

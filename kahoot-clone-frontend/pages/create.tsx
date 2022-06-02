@@ -9,15 +9,20 @@ import useUser from "@lib/useSSRUser";
 import { useRouter } from "next/router";
 import { postData } from "@lib/postData";
 import { APIResponse, APIRequest } from "./api/create";
-
+import {
+  APIResponse as GetGameRes,
+  APIRequest as GetGameReq,
+} from "./api/getOneGame";
 function Header({
   game,
   setGame,
   setFormErrors,
+  formErrors,
 }: {
   game: db.KahootGame;
   setGame: React.Dispatch<React.SetStateAction<db.KahootGame>>;
   setFormErrors: React.Dispatch<React.SetStateAction<FormErrorReport>>;
+  formErrors: FormErrorReport;
 }) {
   const router = useRouter();
   return (
@@ -28,9 +33,17 @@ function Header({
           width={"96px"}
           height={"32.72px"}
           alt="Kahoot Logo"
+          style={{ cursor: "pointer" }}
+          onClick={() => {
+            router.push("/");
+          }}
         ></Image>
         <input
-          className={`${styles.titleInput}`}
+          className={`${styles.titleInput} ${
+            formErrors !== null && formErrors.titleBlankError
+              ? styles.lightRed
+              : ""
+          }`}
           type={"text"}
           placeholder="Enter Kahoot title..."
           value={game.title}
@@ -64,12 +77,23 @@ function Header({
             );
 
             if (formErrors.titleBlankError === false && noQuestionErrors) {
-              console.log("submitted", game);
-              postData<APIRequest, APIResponse>("/api/create", { game }).then(
-                (res) => {
+              const editingId = router.query.editingId as string | undefined;
+              if (typeof editingId === "string") {
+                postData<APIRequest, APIResponse>("/api/create", {
+                  game,
+                  game_id: editingId,
+                }).then((res) => {
                   console.log(res);
-                }
-              );
+                  router.push("/profile");
+                });
+              } else {
+                postData<APIRequest, APIResponse>("/api/create", { game }).then(
+                  (res) => {
+                    console.log(res);
+                    router.push("/profile");
+                  }
+                );
+              }
             } else {
               //GUI for there still being form errors
               //idea: button shake
@@ -96,7 +120,7 @@ interface GameContext {
   ) => void;
 }
 
-interface QuestionError {
+export interface QuestionError {
   /** The correctAnswer has to be on an answer choice that's not blank */
   correctChoiceError: boolean;
   /** Question cannot be left blank */
@@ -168,6 +192,23 @@ function Create() {
   const [questionNumber, setQuestionNumber] = useState(0);
 
   const { loggedIn, user } = useUser();
+  const router = useRouter();
+  useEffect(() => {
+    console.log(router.query);
+    if (loggedIn && router.query.editingId) {
+      postData<GetGameReq, GetGameRes>("/api/getOneGame", {
+        gameId: router.query.editingId as string,
+      }).then((res) => {
+        if (res.error === false) {
+          console.log(res);
+          setGame(res.game);
+        } else {
+          console.log("Error fetching game to edit");
+        }
+      });
+    }
+  }, [loggedIn, router.isReady]);
+
   if (!loggedIn) return <></>;
 
   function validateForm(game: db.KahootGame) {
@@ -190,6 +231,7 @@ function Create() {
         game={game}
         setGame={setGame}
         setFormErrors={setFormErrors}
+        formErrors={formErrors}
       ></Header>
       <div
         className={`${styles.layout} ${styles.lightGrey} ${styles.flexChild}`}
