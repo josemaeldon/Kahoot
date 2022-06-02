@@ -2,7 +2,6 @@
 const socket = new WebSocket("ws://64.225.12.53/ws");
 // buttons
 const joinBtn = document.getElementById("joinBtn");
-const createRmBtn = document.getElementById("createRmBtn");
 // code box
 const codeBox = document.getElementById("code");
 // rm id
@@ -12,16 +11,6 @@ const input = document.getElementById("username");
 //  Listen for messages
 var receiveMessage = (e) => {
 	console.log("Message from server: ", event.data);
-	let data = JSON.parse(event.data);
-
-	switch (data.type) {
-		case "roomCreated":
-			display.innerText = `Room ID: ${data.roomId}`;
-			break;
-		case "userJoined":
-
-			break;
-	}
 };
 
 socket.addEventListener("message", receiveMessage);
@@ -58,35 +47,7 @@ var joinRoom = (e) => {
 	input.remove();
 	codeBox.remove();
 	joinBtn.remove();
-	createRmBtn.remove();
 }
-
-var createRoom = (questions) => {
-	let request = {
-		type: "createRoom",
-		questions: [
-			{
-				question: "Test",
-				choices: ["1", "2", "3"],
-				answer: 1,
-				time: 30,
-			},
-		]
-	};
-	request = JSON.stringify(request);
-	console.log("Creating room: ", request);
-	socket.send(request);
-
-	input.remove();
-	createRmBtn.remove();
-	joinBtn.remove();
-	codeBox.remove();
-}
-
-/*
-var sendButton = document.getElementById("send");
-sendButton.addEventListener("click", sendMessage);
-*/
 
 var choices = document.getElementsByClassName("choice");
 console.log(choices);
