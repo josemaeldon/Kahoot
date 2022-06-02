@@ -83,9 +83,14 @@ pub enum HostEvent {
 }
 
 /// Messages sent by the server to a player.
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum UserEvent {
+    /// Sent when the user successfully joins.
+    Joined,
+    /// Sent when the user couldn't join.
+    JoinFailed { reason: String },
+
     /// Sent when a new round begins.
     ///
     /// The user is only sent information about how many choices there are.
