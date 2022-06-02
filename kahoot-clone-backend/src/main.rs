@@ -10,6 +10,9 @@ use std::net::SocketAddr;
 // `axum` is a Rust web server framework
 use axum::Router;
 
+// `tracing` is an async logging library
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
 /**
  * Note: You may notice that some functions end with a naked expression without
  * and no return statement.
@@ -43,8 +46,18 @@ use axum::Router;
 // how you look at it.
 #[tokio::main]
 async fn main() {
+    // Logging stuff, can ignore
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::new(
+            std::env::var("RUST_LOG").unwrap_or_else(|_| "kahoot-server=trace".into())
+        ))
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
     // Set the host address to `localhost:3000`
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+
+    tracing::debug!("Listening on {addr}");
 
     // Start the server
     axum::Server::bind(&addr)

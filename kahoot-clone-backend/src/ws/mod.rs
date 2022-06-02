@@ -72,14 +72,14 @@ async fn handle_ws(mut socket: WebSocket, state: SharedState) {
     let action = if let Some(action) = socket.next_action().await {
         action
     } else {
-        eprintln!("Couldn't parse action");
+        tracing::error!("Couldn't parse initial action");
         return;
     };
 
     match action {
         Action::CreateRoom { questions } => create_room(socket, state, questions).await,
         Action::JoinRoom { room_id, username } => join_room(socket, state, room_id, username).await,
-        action => eprintln!("Invalid first action {action:?}"),
+        action => tracing::error!("Invalid first action {action:?}"),
     };
 }
 
@@ -87,7 +87,7 @@ async fn handle_ws(mut socket: WebSocket, state: SharedState) {
 ///
 /// The websocket will be treated as the "host" from now on.
 async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Question>) {
-    eprintln!("Creating room...");
+    tracing::debug!("Creating room...");
 
     let (action_tx, action_rx) = mpsc::channel(20);
     let (result_tx, result_rx) = watch::channel(GameEvent::InLobby);
@@ -106,7 +106,7 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
     let room_id = state.insert_room(Arc::clone(&room));
 
     // Room creation event
-    eprintln!("Sending room id: `{room_id}`");
+    tracing::debug!("Sending room id: `{room_id}`");
     {
         let event = HostEvent::RoomCreated { room_id };
         let _ = host.send(event.to_message()).await;
@@ -152,14 +152,14 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
         match host_rx.next_action().await {
             // Host tries to begin the first round
             Some(Action::BeginRound) => {
-                eprintln!("Attempting to start game...");
+                tracing::debug!("Attempting to start game...");
 
                 // Accquire lock on users mutex, and check the length
                 if room.users.player_count() > 0 {
-                    eprintln!("Starting game...");
+                    tracing::debug!("Starting game...");
                     break;
                 } else {
-                    eprintln!("Not enough players.");
+                    tracing::warn!("Not enough players.");
                 }
             }
             // Close room otherwise
@@ -202,12 +202,12 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
                         })
                         .await;
 
-                    eprintln!("`{username}` answered {choice}");
+                    tracing::debug!("`{username}` answered {choice}");
 
                     // If the choice is correct
                     if choice == correct_choice {
                         // Update points log
-                        eprintln!("`{username}` +{points}");
+                        tracing::debug!("`{username}` +{points}");
                         point_gains.insert(username, points);
 
                         // Decrease next point gain
@@ -236,11 +236,11 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
         let choice_count = question.choices.len();
 
         // Alert host that the round began
-        eprintln!("Alerting host that round began...");
+        tracing::debug!("Alerting host that round began...");
         let _ = host_tx.send(HostEvent::RoundBegin { question }).await;
 
         // Alert players a round began
-        eprintln!("Alerting players that round began...");
+        tracing::debug!("Alerting players that round began...");
         let _ = result_tx.send(GameEvent::RoundBegin { choice_count });
 
         // Wait for the time duration or for the task to fully complete
@@ -266,12 +266,12 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
             };
         }
 
-        eprintln!("End of round...");
+        tracing::debug!("End of round...");
 
         let point_gains = point_gains.lock().await.clone();
 
         // Tell host that the round ended
-        eprintln!("Alerting host that round ended...");
+        tracing::debug!("Alerting host that round ended...");
         let _ = host_tx
             .send(HostEvent::RoundEnd {
                 point_gains: point_gains.clone(),
@@ -279,7 +279,7 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
             .await;
 
         // Alert players round ended
-        eprintln!("Alerting players that round ended...");
+        tracing::debug!("Alerting players that round ended...");
         let _ = result_tx.send(GameEvent::RoundEnd {
             point_gains: Arc::new(point_gains),
         });
@@ -288,17 +288,17 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
         match host_rx.next_action().await {
             Some(Action::BeginRound) => (),
             _ => {
-                eprintln!("Closing room...");
+                tracing::debug!("Closing room...");
                 state.remove_room(&room_id).await;
                 return;
             }
         }
     }
 
-    eprintln!("Game is over!");
+    tracing::debug!("Game is over!");
 
     // Alert host that the game ended
-    eprintln!("Alerting host that game has ended...");
+    tracing::debug!("Alerting host that game has ended...");
     let _ = host_tx.send(HostEvent::GameEnd).await;
 
     join_leave_task.abort();
@@ -314,21 +314,21 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
 ///
 /// The websocket will be treated as a "player" from now on.
 async fn join_room(socket: WebSocket, state: SharedState, room_id: RoomId, username: String) {
-    eprintln!("Finding room `{room_id}`...");
+    tracing::debug!("Finding room `{room_id}`...");
     let room = if let Some(room) = state.find_room(&room_id) {
         room
     } else {
-        eprintln!("Couldn't find room `{room_id}`, disconnecting...");
+        tracing::error!("Couldn't find room `{room_id}`, disconnecting...");
         return;
     };
 
-    eprintln!("Joining room...");
+    tracing::debug!("Joining room...");
 
     let (mut user_tx, mut user_rx) = socket.split();
     let presence = if let Some(presence) = room.users.join_user(username.clone()).await {
         presence
     } else {
-        eprintln!("User `{username}` already exists, disconnecting...");
+        tracing::error!("User `{username}` already exists, disconnecting...");
         return;
     };
 
