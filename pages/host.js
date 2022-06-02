@@ -6,6 +6,8 @@ const createRmBtn = document.getElementById("createRmBtn");
 const display = document.getElementById("display");
 // name display
 const names = document.getElementById("names");
+// tracks score of player
+const scores = new Map();
 //  Listen for messages
 var receiveMessage = (e) => {
 	console.log("Message from server: ", event.data);
@@ -17,6 +19,10 @@ var receiveMessage = (e) => {
 			display.innerText = `Room ID: ${data.roomId}`;
 			break;
 		case "userJoined":
+			// adds child to hashmap
+			scores.set(data.username, 0);
+			console.log(scores);
+			// adds child html element
 			let child = document.createElement("div");
 			child.classList.add("small-12");
 			child.classList.add("medium-4");
@@ -30,6 +36,10 @@ var receiveMessage = (e) => {
 			names.appendChild(child);
 			break;
 		case "userLeft":
+			// removes score tracking
+			scores.delete(data.username);
+			console.log(scores);
+			// removes html element
 			let left = document.getElementById(`name-${data.username}`);
 			left.remove();
 			break;
