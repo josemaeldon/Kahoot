@@ -16,3 +16,4 @@ rengZ -- 2022-06-01 8:40
 rengZ -- 2022-06-02 8:40
 	 - The host now removes users from the display that have joined.
 	 - The client now displays when the connection is closed.
+	 - The host now adds users to a scoretracking thing.
