@@ -313,12 +313,14 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
 /// Handles room joining.
 ///
 /// The websocket will be treated as a "player" from now on.
-async fn join_room(socket: WebSocket, state: SharedState, room_id: RoomId, username: String) {
+async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, username: String) {
     tracing::debug!("Finding room `{room_id}`...");
     let room = if let Some(room) = state.find_room(&room_id) {
         room
     } else {
         tracing::error!("Couldn't find room `{room_id}`, disconnecting...");
+        let event = UserEvent::JoinFailed { reason: String::from("Room does not exist") };
+        let _ = socket.send(event.to_message()).await;
         return;
     };
 
@@ -329,8 +331,14 @@ async fn join_room(socket: WebSocket, state: SharedState, room_id: RoomId, usern
         presence
     } else {
         tracing::error!("User `{username}` already exists, disconnecting...");
+        let event = UserEvent::JoinFailed { reason: String::from("Duplicate user") };
+        let _ = user_tx.send(event.to_message()).await;
         return;
     };
+
+    // Emit joined event to user
+    let event = UserEvent::Joined;
+    let _ = user_tx.send(event.to_message()).await;
 
     // Watch for game status updates
     let mut game_event_task = {
@@ -574,6 +582,11 @@ mod tests {
         let user_ws = server.join_room(room_id, String::from("Johnny")).await;
         let user_task = tokio::spawn(async move {
             let (mut user_tx, mut user_rx) = user_ws.split();
+            
+            // Joined event
+            let_assert!(Some(Ok(Message::Text(s))) = user_rx.next().await);
+            let event: UserEvent = serde_json::from_str(&s).unwrap();
+            assert_eq!(event, UserEvent::Joined);
 
             // Round begin event
             let_assert!(Some(Ok(Message::Text(s))) = user_rx.next().await);
@@ -678,6 +691,44 @@ mod tests {
         bob.close(None).await.unwrap();
 
         host_task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn room_not_exist() {
+        let server = TestServer::new().await;
+
+        // Join non-existent room
+        let mut user = server.join_room(0, String::from("Foo")).await;
+
+        let_assert!(Some(Ok(Message::Text(s))) = user.next().await);
+        let event: UserEvent = serde_json::from_str(&s).unwrap();
+        let_assert!(UserEvent::JoinFailed { reason } = event);
+
+        assert_eq!(reason, "Room does not exist");
+    }
+
+    #[tokio::test]
+    async fn dupe_user() {
+        // Start room
+        let server = TestServer::new().await;
+        let (_host, room_id) = server.create_room(vec![
+            question! {
+                "Fish?", time: 30 => [
+                    true => "foo",
+                    false => "bar",
+                ]
+            }
+        ]).await;
+
+        // Join duplicate user
+        let _user = server.join_room(room_id, String::from("Foo")).await;
+        let mut user = server.join_room(room_id, String::from("Foo")).await;
+
+        let_assert!(Some(Ok(Message::Text(s))) = user.next().await);
+        let event: UserEvent = serde_json::from_str(&s).unwrap();
+        let_assert!(UserEvent::JoinFailed { reason } = event);
+
+        assert_eq!(reason, "Duplicate user");
     }
 
     /// Convert a `Serialize`able into a JSON message.
