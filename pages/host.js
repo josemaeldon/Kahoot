@@ -22,9 +22,15 @@ var receiveMessage = (e) => {
 			child.classList.add("medium-4");
 			child.classList.add("large-2");
 			child.classList.add("nameDisplay");
+
+			child.setAttribute("id", `name-${data.username}`);
+
 			child.innerText = data.username;
+
 			names.appendChild(child);
 			break;
+		case "userLeft":
+			let child = document.getElementById();
 	}
 };
 
