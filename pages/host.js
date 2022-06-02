@@ -30,7 +30,9 @@ var receiveMessage = (e) => {
 			names.appendChild(child);
 			break;
 		case "userLeft":
-			let child = document.getElementById();
+			let left = document.getElementById(`name-${data.username}`);
+			left.remove();
+			break;
 	}
 };
 
