@@ -14,6 +14,25 @@ var receiveMessage = (e) => {
 	let data = JSON.parse(event.data);
 	console.log(data);
 
+	const displayQuestion = (q) => {
+		const questionDisplay = document.getElementById("questionDisplay");
+		const choices = document.getElementById("choices");
+		
+		questionDisplay.innerText = q.question;
+		for (choice of q.choices) {
+			const li = document.createElement("li");
+			li.innerText = choice;
+			choices.appendChild(li);
+		}
+	}
+
+	const clearQuestion = () => {
+		question.innerText = "";
+		while (choices.firstChild) {
+			choices.firstChild.remove();
+		}
+	}
+
 	switch (data.type) {
 		case "roomCreated":
 			display.innerText = `Room ID: ${data.roomId}`;
@@ -42,6 +61,15 @@ var receiveMessage = (e) => {
 			// removes html element
 			let left = document.getElementById(`name-${data.username}`);
 			left.remove();
+			break;
+		case "roundBegin":
+			displayQuestion(data.question);
+
+			let time = data.question.time;
+			intervalId = setInterval(() => {
+				time -= 1;
+				timeLeft.innerText = `Remaining time: ${time}`;
+			}, 1000)
 			break;
 	}
 };
