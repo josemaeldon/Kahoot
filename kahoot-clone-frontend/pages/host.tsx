@@ -1,15 +1,22 @@
 import useUser from "@lib/useSSRUser";
 import { useRouter } from "next/router";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useLayoutEffect } from "react";
 import styles from "@styles/host.module.css";
 import { IoMdPerson } from "react-icons/io";
 import GameButton from "@components/GameButton";
-import type { action, db, HostEvent } from "kahoot";
+import type { action, db, HostEvent, rustServerQuestion } from "kahoot";
 import { postData } from "@lib/postData";
 import { APIRequest, APIResponse } from "./api/getOneGame";
+import qStyles from "@styles/Editor.module.css";
+import {
+  BsFillCircleFill,
+  BsFillSquareFill,
+  BsFillTriangleFill,
+} from "react-icons/bs";
+import { FaCheck } from "react-icons/fa";
 
 const HostContext = React.createContext<Context>(null);
-
+type Players = { username: string; points: number }[];
 interface Context {
   roomId: number;
   game: db.KahootGame;
@@ -126,8 +133,220 @@ function Lobby() {
   );
 }
 
+interface Props {
+  question: rustServerQuestion;
+  showAnswer: boolean;
+}
+
+function CheckboxCircle({ checked }: { checked: boolean }) {
+  return (
+    <div className={`${qStyles.checkBoxOuter} ${checked ? qStyles.green : ""}`}>
+      <div className={`${qStyles.checkBoxInner}`}>
+        <FaCheck className={`${!checked ? qStyles.hidden : ""}`}></FaCheck>
+      </div>
+    </div>
+  );
+}
+
+function QuestionDisplay({ question, showAnswer }: Props) {
+  return (
+    <div className={`${qStyles.container}`}>
+      <p
+        contentEditable="true"
+        className={`${qStyles.question}`}
+        placeholder="Question..."
+        suppressContentEditableWarning
+      >
+        {question.question}
+      </p>
+      <div>
+        <div className={`${qStyles.grid}`}>
+          <div className={`${qStyles.wrapper} ${qStyles.red}`}>
+            <span className={`${qStyles.shapeContainer} ${qStyles.red}`}>
+              <BsFillTriangleFill></BsFillTriangleFill>
+            </span>
+            <div className={`${qStyles.answerContainer}`}>
+              <p
+                contentEditable="true"
+                placeholder="Answer 1"
+                className={`${qStyles.answer} `}
+                suppressContentEditableWarning
+              >
+                {question.choices[0]}
+              </p>
+            </div>
+            {showAnswer && question.answer === 0 && (
+              <CheckboxCircle checked={true}></CheckboxCircle>
+            )}
+          </div>
+          <div
+            className={`${qStyles.wrapper} 
+          ${qStyles.blue}`}
+          >
+            <span className={`${qStyles.shapeContainer} ${qStyles.blue}`}>
+              <BsFillSquareFill></BsFillSquareFill>
+            </span>
+            <div className={`${qStyles.answerContainer}`}>
+              <p
+                contentEditable="true"
+                className={`${qStyles.answer} ${qStyles.whiteText}
+            `}
+                placeholder="Answer 2"
+                suppressContentEditableWarning
+              >
+                {question.choices[1]}
+              </p>
+            </div>
+            {showAnswer && question.answer === 1 && (
+              <CheckboxCircle checked={true}></CheckboxCircle>
+            )}
+          </div>
+          <div className={`${qStyles.wrapper} ${qStyles.yellow}`}>
+            <span className={`${qStyles.shapeContainer} ${qStyles.yellow}`}>
+              <BsFillCircleFill></BsFillCircleFill>
+            </span>
+            <div className={`${qStyles.answerContainer}`}>
+              <p
+                contentEditable="true"
+                className={`${qStyles.answer} 
+              ${qStyles.whiteText}`}
+                suppressContentEditableWarning
+              >
+                {question.choices[2]}
+              </p>
+            </div>
+            {showAnswer && question.answer === 2 && (
+              <CheckboxCircle checked={true}></CheckboxCircle>
+            )}
+          </div>
+          <div className={`${qStyles.wrapper} ${qStyles.green}`}>
+            <span className={`${qStyles.shapeContainer} ${qStyles.green}`}>
+              <BsFillSquareFill
+                style={{ transform: "rotate(45deg)" }}
+              ></BsFillSquareFill>
+            </span>
+            <div className={`${qStyles.answerContainer}`}>
+              <p
+                contentEditable="true"
+                className={`${qStyles.answer} ${qStyles.whiteText}`}
+                suppressContentEditableWarning
+              >
+                {question.choices[3]}
+              </p>
+            </div>
+            {showAnswer && question.answer === 3 && (
+              <CheckboxCircle checked={true}></CheckboxCircle>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function QuestionsPhase() {
-  return <div></div>;
+  const { game, players, roomId, setPhase, setPlayers, socket } =
+    useContext(HostContext);
+  const [question, setQuestion] = useState<null | rustServerQuestion>(null);
+  const [answered, setAnswered] = useState<string[]>([]);
+  const [timer, setTimer] = useState<{ timer: number; timeLeft: number }>({
+    timer: 0,
+    timeLeft: 0,
+  });
+
+  const [results, setResults] = useState<null | { correctAnswers: number }>(
+    null
+  );
+
+  useEffect(() => {
+    let aborter = new AbortController();
+    socket.addEventListener(
+      "message",
+      (e) => {
+        const hostEvent = JSON.parse(e.data) as HostEvent.Event;
+        switch (hostEvent.type) {
+          case "roundBegin":
+            setQuestion(hostEvent.question);
+            break;
+          case "roundEnd":
+            setPlayers((players) => {
+              const copy = [...players];
+              //todo: n^2 to n
+              Object.entries(hostEvent.pointGains).forEach((pair) => {
+                const user = copy.find((user) => user.username === pair[0]);
+                if (user) user.points += pair[1];
+              });
+
+              return copy;
+            });
+            setResults(() => {
+              let correct = 0;
+              Object.values(hostEvent.pointGains).forEach((val) => {
+                if (val !== 0) correct += 1;
+              });
+              return { correctAnswers: correct };
+            });
+            break;
+          case "userAnswered":
+            setAnswered((a) => {
+              let copy = [...a];
+              copy.push(hostEvent.username);
+              return copy;
+            });
+          case "gameEnd":
+            setPhase("leaderboard");
+        }
+      },
+      { signal: aborter.signal }
+    );
+
+    const startGameRequest: action.BeginRound = { type: "beginRound" };
+    socket.send(JSON.stringify(startGameRequest));
+  }, []);
+
+  useLayoutEffect(() => {
+    if (question !== null) {
+      let timeLeft = question.time;
+
+      const timer = setInterval(() => {
+        if (timeLeft === 0) {
+          clearInterval(timer);
+          const endRoundRequest: action.EndRound = { type: "endRound" };
+          socket.send(JSON.stringify(endRoundRequest));
+          return;
+        }
+        timeLeft -= 1;
+        setTimer({ timeLeft, timer });
+      }, 1000) as unknown as number;
+      setTimer({ timer, timeLeft });
+      return () => {
+        clearInterval(timer);
+      };
+    }
+  }, [question]);
+
+  if (question === null) {
+    return <></>;
+  }
+  console.log(question);
+  return (
+    <div className="vh100">
+      <QuestionDisplay
+        question={question}
+        showAnswer={!!results}
+      ></QuestionDisplay>
+      <button
+        onClick={() => {
+          clearInterval(timer.timer);
+          const endRoundRequest: action.EndRound = { type: "endRound" };
+          socket.send(JSON.stringify(endRoundRequest));
+        }}
+      >
+        Skip
+      </button>
+      <div>{timer.timeLeft} seconds left</div>
+    </div>
+  );
 }
 
 function StartScreen() {
@@ -138,8 +357,6 @@ function StartScreen() {
     </div>
   );
 }
-
-type Players = { username: string; points: number }[];
 
 function Host() {
   const router = useRouter();
@@ -156,7 +373,6 @@ function Host() {
   const gameId = router.query.gameId as string;
   useEffect(() => {
     if (loggedIn && router.isReady) {
-      console.log("this should only run once");
       const socket = new WebSocket("wss://64.225.12.53/ws");
       const aborter = new AbortController();
       const socketPromise = new Promise((resolve, reject) => {
@@ -191,6 +407,7 @@ function Host() {
       Promise.all([socketPromise, gamePromise])
         .then((results) => {
           console.log(results);
+          console.log(socket);
           socket.addEventListener("message", function RoomListener(res) {
             const roomData = JSON.parse(res.data) as HostEvent.RoomCreated;
             if (roomData.type === "roomCreated") {

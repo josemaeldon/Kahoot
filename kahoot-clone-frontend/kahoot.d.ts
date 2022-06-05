@@ -106,7 +106,7 @@ export namespace HostEvent {
 }
 
 export namespace UserEvent {
-  declare type event = Joined | JoinFailed | RoundBegin;
+  declare type event = Joined | JoinFailed | RoundBegin | RoundEnd | GameEnd;
   declare interface Joined {
     type: "joined";
   }
@@ -119,5 +119,14 @@ export namespace UserEvent {
   declare interface RoundBegin {
     type: "roundBegin";
     choiceCount: number;
+  }
+
+  declare interface RoundEnd {
+    type: "roundEnd";
+    pointGain: number;
+  }
+
+  declare interface GameEnd {
+    type: "gameEnd";
   }
 }
