@@ -8,7 +8,7 @@ use axum::extract::ws::Message;
 use serde::{Deserialize, Serialize};
 
 /// Messages sent by the client to "do" something.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 // `tag = "type"`:
 // Add a "type" field to the serialization with the same value as the enum tag.
 // eg. CreateRoom { ... } => { "type": "createRoom", ... }
