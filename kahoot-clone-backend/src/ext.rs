@@ -31,15 +31,13 @@ where
     S: Stream<Item = Result<Message, E>> + Unpin + Send,
 {
     async fn next_action(&mut self) -> Option<Action> {
-        let msg = self.next().await?.ok()?;
+        loop {
+            let msg = self.next().await?.ok()?;
 
-        let text = msg.to_text().ok()?;
-
-        match serde_json::from_str(text) {
-            Ok(action) => Some(action),
-            Err(err) => {
-                tracing::debug!("{err}");
-                None
+            if let Ok(text) = msg.to_text() {
+                if let Ok(action) = serde_json::from_str(text) {
+                    return Some(action);
+                }
             }
         }
     }
