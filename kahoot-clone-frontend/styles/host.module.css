@@ -95,5 +95,91 @@
   color: white;
   padding: 4px 8px 4px 8px;
   background-color: rgba(0, 0, 0, 0.425);
-  font-size: 16px;
+  font-size: 24px;
+  font-weight: bold;
+  margin: 0 8px;
+}
+
+.questionContainer {
+  display: grid;
+  place-items: center;
+}
+
+.fullscreenHeight {
+  min-height: 100vh;
+}
+
+.questionContainer {
+  display: flex;
+  justify-content: center;
+}
+
+.leaderboardHeader {
+  color: white;
+  width: clamp(300px, 50%, 1000px);
+  margin: 0 auto -20px auto;
+  padding: 20px;
+  padding-top: 100px;
+  font-size: 32px;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.leaderboardContainer {
+  background-color: rgb(70, 23, 143);
+  width: 100%;
+  min-height: 100%;
+}
+
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+
+  padding: 20px;
+  align-items: center;
+}
+
+.leaderboardUser {
+  font-size: 28px;
+  font-weight: bold;
+  background-color: rgba(0, 0, 0, 0.425);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  width: clamp(300px, 50%, 1000px);
+  padding: 12px 20px 12px 20px;
+  margin: 14px 0 14px 0;
+}
+
+.imageContainer {
+  position: relative;
+  height: calc(50vw * 0.5);
+  max-height: 45vh;
+  width: 300px;
+}
+
+.middleContainer {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.timerBubble {
+  border-radius: 1000px;
+  color: white;
+  background-color: rgb(161, 5, 161);
+  font-size: 32px;
+  width: 65px;
+  height: 65px;
+  display: grid;
+  place-items: center;
+  font-weight: bold;
+}
+
+.answerNotifier {
+  color: black;
+  font-size: 24px;
+  font-weight: bold;
 }

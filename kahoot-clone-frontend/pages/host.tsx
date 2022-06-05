@@ -7,13 +7,15 @@ import GameButton from "@components/GameButton";
 import type { action, db, HostEvent, rustServerQuestion } from "kahoot";
 import { postData } from "@lib/postData";
 import { APIRequest, APIResponse } from "./api/getOneGame";
-import qStyles from "@styles/Editor.module.css";
+import qStyles from "@styles/DisplayQuestion.module.css";
 import {
   BsFillCircleFill,
   BsFillSquareFill,
   BsFillTriangleFill,
 } from "react-icons/bs";
 import { FaCheck } from "react-icons/fa";
+import { Spinner, SSRProvider } from "react-bootstrap";
+import Image from "next/image";
 
 const HostContext = React.createContext<Context>(null);
 type Players = { username: string; points: number }[];
@@ -94,10 +96,10 @@ function Lobby() {
           <IoMdPerson></IoMdPerson>
           <span>{players.length}</span>
         </div>
-        <div>
+        <div style={{ fontSize: "32px", fontWeight: "bold" }}>
           <span>Kahoot!</span>
         </div>
-        <div>
+        <div style={{ position: "relative", top: "10px" }}>
           <GameButton
             onClick={(e) => {
               if (players.length !== 0) {
@@ -136,6 +138,9 @@ function Lobby() {
 interface Props {
   question: rustServerQuestion;
   showAnswer: boolean;
+  nextScreenHandler: () => void;
+  timeLeft: number;
+  answered: number;
 }
 
 function CheckboxCircle({ checked }: { checked: boolean }) {
@@ -148,97 +153,174 @@ function CheckboxCircle({ checked }: { checked: boolean }) {
   );
 }
 
-function QuestionDisplay({ question, showAnswer }: Props) {
+function QuestionDisplay({
+  question,
+  showAnswer,
+  nextScreenHandler,
+  answered,
+  timeLeft,
+}: Props) {
   return (
-    <div className={`${qStyles.container}`}>
-      <p
-        contentEditable="true"
-        className={`${qStyles.question}`}
-        placeholder="Question..."
-        suppressContentEditableWarning
+    <section>
+      <GameButton
+        onClick={(e) => {
+          nextScreenHandler();
+        }}
+        backgroundStyle={{
+          backgroundColor: "lightgray",
+          color: "black",
+          fontSize: "19px",
+        }}
+        foregroundStyle={{
+          backgroundColor: "white",
+          cursor: "pointer",
+          padding: "3px 13px 3px 13px",
+        }}
       >
-        {question.question}
-      </p>
-      <div>
-        <div className={`${qStyles.grid}`}>
-          <div className={`${qStyles.wrapper} ${qStyles.red}`}>
-            <span className={`${qStyles.shapeContainer} ${qStyles.red}`}>
-              <BsFillTriangleFill></BsFillTriangleFill>
-            </span>
-            <div className={`${qStyles.answerContainer}`}>
-              <p
-                contentEditable="true"
-                placeholder="Answer 1"
-                className={`${qStyles.answer} `}
-                suppressContentEditableWarning
-              >
-                {question.choices[0]}
-              </p>
-            </div>
-            {showAnswer && question.answer === 0 && (
-              <CheckboxCircle checked={true}></CheckboxCircle>
-            )}
+        Next
+      </GameButton>
+      <div className={`${qStyles.container}`}>
+        <p
+          className={`${qStyles.question}`}
+          placeholder="Question..."
+          suppressContentEditableWarning
+        >
+          {question.question}
+        </p>
+        <section className={`${styles.middleContainer}`}>
+          <div className={`${styles.timerBubble}`}>{timeLeft}</div>
+          <div className={`${styles.imageContainer}`}>
+            <Image
+              src={"/kahootBalls.gif"}
+              layout="fill"
+              objectFit="contain"
+            ></Image>
           </div>
           <div
-            className={`${qStyles.wrapper} 
+            className={`${styles.answerNotifier}`}
+          >{`${answered} Answers`}</div>
+        </section>
+        <div>
+          <div className={`${qStyles.grid}`}>
+            <div className={`${qStyles.wrapper} ${qStyles.red}`}>
+              <span className={`${qStyles.shapeContainer} ${qStyles.red}`}>
+                <BsFillTriangleFill></BsFillTriangleFill>
+              </span>
+              <div className={`${qStyles.answerContainer}`}>
+                <p
+                  placeholder="Answer 1"
+                  className={`${qStyles.answer} ${qStyles.whiteText}`}
+                  suppressContentEditableWarning
+                >
+                  {question.choices[0]}
+                </p>
+              </div>
+              {showAnswer && question.answer === 0 && (
+                <CheckboxCircle checked={true}></CheckboxCircle>
+              )}
+            </div>
+            <div
+              className={`${qStyles.wrapper} 
           ${qStyles.blue}`}
-          >
-            <span className={`${qStyles.shapeContainer} ${qStyles.blue}`}>
-              <BsFillSquareFill></BsFillSquareFill>
-            </span>
-            <div className={`${qStyles.answerContainer}`}>
-              <p
-                contentEditable="true"
-                className={`${qStyles.answer} ${qStyles.whiteText}
+            >
+              <span className={`${qStyles.shapeContainer} ${qStyles.blue}`}>
+                <BsFillSquareFill></BsFillSquareFill>
+              </span>
+              <div className={`${qStyles.answerContainer}`}>
+                <p
+                  className={`${qStyles.answer} ${qStyles.whiteText}
             `}
-                placeholder="Answer 2"
-                suppressContentEditableWarning
-              >
-                {question.choices[1]}
-              </p>
+                  placeholder="Answer 2"
+                  suppressContentEditableWarning
+                >
+                  {question.choices[1]}
+                </p>
+              </div>
+              {showAnswer && question.answer === 1 && (
+                <CheckboxCircle checked={true}></CheckboxCircle>
+              )}
             </div>
-            {showAnswer && question.answer === 1 && (
-              <CheckboxCircle checked={true}></CheckboxCircle>
-            )}
-          </div>
-          <div className={`${qStyles.wrapper} ${qStyles.yellow}`}>
-            <span className={`${qStyles.shapeContainer} ${qStyles.yellow}`}>
-              <BsFillCircleFill></BsFillCircleFill>
-            </span>
-            <div className={`${qStyles.answerContainer}`}>
-              <p
-                contentEditable="true"
-                className={`${qStyles.answer} 
+            <div className={`${qStyles.wrapper} ${qStyles.yellow}`}>
+              <span className={`${qStyles.shapeContainer} ${qStyles.yellow}`}>
+                <BsFillCircleFill></BsFillCircleFill>
+              </span>
+              <div className={`${qStyles.answerContainer}`}>
+                <p
+                  className={`${qStyles.answer} 
               ${qStyles.whiteText}`}
-                suppressContentEditableWarning
-              >
-                {question.choices[2]}
-              </p>
+                  suppressContentEditableWarning
+                >
+                  {question.choices[2]}
+                </p>
+              </div>
+              {showAnswer && question.answer === 2 && (
+                <CheckboxCircle checked={true}></CheckboxCircle>
+              )}
             </div>
-            {showAnswer && question.answer === 2 && (
-              <CheckboxCircle checked={true}></CheckboxCircle>
-            )}
-          </div>
-          <div className={`${qStyles.wrapper} ${qStyles.green}`}>
-            <span className={`${qStyles.shapeContainer} ${qStyles.green}`}>
-              <BsFillSquareFill
-                style={{ transform: "rotate(45deg)" }}
-              ></BsFillSquareFill>
-            </span>
-            <div className={`${qStyles.answerContainer}`}>
-              <p
-                contentEditable="true"
-                className={`${qStyles.answer} ${qStyles.whiteText}`}
-                suppressContentEditableWarning
-              >
-                {question.choices[3]}
-              </p>
+            <div className={`${qStyles.wrapper} ${qStyles.green}`}>
+              <span className={`${qStyles.shapeContainer} ${qStyles.green}`}>
+                <BsFillSquareFill
+                  style={{ transform: "rotate(45deg)" }}
+                ></BsFillSquareFill>
+              </span>
+              <div className={`${qStyles.answerContainer}`}>
+                <p
+                  className={`${qStyles.answer} ${qStyles.whiteText}`}
+                  suppressContentEditableWarning
+                >
+                  {question.choices[3]}
+                </p>
+              </div>
+              {showAnswer && question.answer === 3 && (
+                <CheckboxCircle checked={true}></CheckboxCircle>
+              )}
             </div>
-            {showAnswer && question.answer === 3 && (
-              <CheckboxCircle checked={true}></CheckboxCircle>
-            )}
           </div>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function Leaderboard({ nextScreenHandler }) {
+  const { players } = useContext(HostContext);
+  const playerCopy = [...players];
+  playerCopy.sort((a, b) => {
+    return b.points - a.points;
+  });
+  return (
+    <div className={`${styles.leaderboardContainer}`}>
+      <p className={`${styles.leaderboardHeader}`}>
+        Leaderboard:
+        <GameButton
+          onClick={(e) => {
+            nextScreenHandler();
+          }}
+          backgroundStyle={{
+            backgroundColor: "lightgray",
+            color: "black",
+            fontSize: "19px",
+          }}
+          foregroundStyle={{
+            backgroundColor: "white",
+            cursor: "pointer",
+            padding: "3px 13px 3px 13px",
+          }}
+        >
+          Next
+        </GameButton>
+      </p>
+      <div className={`${styles.leaderboard}`}>
+        {playerCopy.map((user, index) => {
+          return (
+            <div className={`${styles.leaderboardUser}`} key={user.username}>
+              <span>
+                {index + 1}. {user.username}
+              </span>
+              <span>{user.points} points</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -258,6 +340,10 @@ function QuestionsPhase() {
     null
   );
 
+  const [subscreen, setSubscreen] = useState<
+    "question" | "results" | "leaderboard"
+  >("question");
+
   useEffect(() => {
     let aborter = new AbortController();
     socket.addEventListener(
@@ -267,6 +353,7 @@ function QuestionsPhase() {
         switch (hostEvent.type) {
           case "roundBegin":
             setQuestion(hostEvent.question);
+            setSubscreen("question");
             break;
           case "roundEnd":
             setPlayers((players) => {
@@ -286,6 +373,7 @@ function QuestionsPhase() {
               });
               return { correctAnswers: correct };
             });
+            setSubscreen("results");
             break;
           case "userAnswered":
             setAnswered((a) => {
@@ -293,8 +381,28 @@ function QuestionsPhase() {
               copy.push(hostEvent.username);
               return copy;
             });
+            break;
           case "gameEnd":
-            setPhase("leaderboard");
+            console.log("game ended");
+            break;
+          case "userJoined":
+            setPlayers((players) => {
+              const copy = [...players];
+              copy.push({ username: hostEvent.username, points: 0 });
+              return copy;
+            });
+            break;
+          case "userLeft":
+            console.log("Someone left");
+            setPlayers((players) => {
+              const copy = [...players];
+              const indexToDelete = copy.findIndex((player) => {
+                return player.username === hostEvent.username;
+              });
+              copy.splice(indexToDelete, 1);
+              return copy;
+            });
+            break;
         }
       },
       { signal: aborter.signal }
@@ -302,6 +410,9 @@ function QuestionsPhase() {
 
     const startGameRequest: action.BeginRound = { type: "beginRound" };
     socket.send(JSON.stringify(startGameRequest));
+    return () => {
+      aborter.abort();
+    };
   }, []);
 
   useLayoutEffect(() => {
@@ -328,23 +439,47 @@ function QuestionsPhase() {
   if (question === null) {
     return <></>;
   }
-  console.log(question);
+
+  function nextScreenHandler() {
+    switch (subscreen) {
+      case "question":
+        clearInterval(timer.timer);
+        const endRoundRequest: action.EndRound = { type: "endRound" };
+        socket.send(JSON.stringify(endRoundRequest));
+        break;
+      case "results":
+        setSubscreen("leaderboard");
+        break;
+      case "leaderboard":
+        const beginRoundRequest: action.BeginRound = { type: "beginRound" };
+        socket.send(JSON.stringify(beginRoundRequest));
+        break;
+    }
+  }
+
   return (
-    <div className="vh100">
-      <QuestionDisplay
-        question={question}
-        showAnswer={!!results}
-      ></QuestionDisplay>
-      <button
-        onClick={() => {
-          clearInterval(timer.timer);
-          const endRoundRequest: action.EndRound = { type: "endRound" };
-          socket.send(JSON.stringify(endRoundRequest));
-        }}
-      >
-        Skip
-      </button>
-      <div>{timer.timeLeft} seconds left</div>
+    <div className={`vh100 ${styles.fullscreenHeight}`}>
+      {subscreen === "question" && (
+        <QuestionDisplay
+          question={question}
+          showAnswer={false}
+          nextScreenHandler={nextScreenHandler}
+          timeLeft={timer.timeLeft}
+          answered={answered.length}
+        ></QuestionDisplay>
+      )}
+      {subscreen === "results" && (
+        <QuestionDisplay
+          question={question}
+          showAnswer={true}
+          nextScreenHandler={nextScreenHandler}
+          timeLeft={timer.timeLeft}
+          answered={answered.length}
+        ></QuestionDisplay>
+      )}
+      {subscreen === "leaderboard" && (
+        <Leaderboard nextScreenHandler={nextScreenHandler}></Leaderboard>
+      )}
     </div>
   );
 }
@@ -417,6 +552,7 @@ function Host() {
               socket.removeEventListener("message", RoomListener);
               socket.onclose = () => {
                 setConnectionClosed(true);
+                location.reload();
               };
             }
           });
@@ -456,9 +592,25 @@ function Host() {
     //Loading screen
     return (
       <div
-        className="vh100"
-        style={{ backgroundColor: "background-color: rgb(70, 23, 143)" }}
-      ></div>
+        style={{
+          backgroundColor: "rgb(70, 23, 143)",
+          display: "grid",
+          placeItems: "center",
+          height: "100vh",
+        }}
+      >
+        <SSRProvider>
+          <Spinner
+            animation="border"
+            style={{
+              color: "white",
+              width: "48px",
+              height: "48px",
+              fontSize: "24px",
+            }}
+          ></Spinner>
+        </SSRProvider>
+      </div>
     );
   }
   return (

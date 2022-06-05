@@ -31,7 +31,7 @@ function QuestionDisplay({ question }: Props) {
               <p
                 contentEditable="true"
                 placeholder="Answer 1"
-                className={`${qStyles.answer} `}
+                className={`${qStyles.answer} ${qStyles.whiteText}`}
                 suppressContentEditableWarning
               >
                 {question.choices[0]}
