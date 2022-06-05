@@ -92,8 +92,11 @@ function Lobby() {
         </div>
         <div>
           <GameButton
-            onClick={() => {
-              setPhase("questions");
+            onClick={(e) => {
+              if (players.length !== 0) {
+                setPhase("questions");
+              }
+              e.preventDefault();
             }}
             backgroundStyle={{
               backgroundColor: "lightgray",
@@ -123,6 +126,10 @@ function Lobby() {
   );
 }
 
+function QuestionsPhase() {
+  return <div></div>;
+}
+
 function StartScreen() {
   return (
     <div className={`${styles.startScreenContainer} vh100`}>
@@ -150,7 +157,7 @@ function Host() {
   useEffect(() => {
     if (loggedIn && router.isReady) {
       console.log("this should only run once");
-      const socket = new WebSocket("ws://64.225.12.53/ws");
+      const socket = new WebSocket("wss://64.225.12.53/ws");
       const aborter = new AbortController();
       const socketPromise = new Promise((resolve, reject) => {
         socket.addEventListener(
@@ -243,6 +250,7 @@ function Host() {
         value={{ game, socket, roomId, players, setPlayers, setPhase }}
       >
         {phase === "lobby" && <StartScreen></StartScreen>}
+        {phase === "questions" && <QuestionsPhase></QuestionsPhase>}
       </HostContext.Provider>
     </div>
   );
