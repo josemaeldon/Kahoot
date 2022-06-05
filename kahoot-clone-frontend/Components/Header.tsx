@@ -16,6 +16,10 @@ function Header() {
         width={"96px"}
         height={"32.72px"}
         alt="Kahoot Logo"
+        style={{ cursor: "pointer" }}
+        onClick={() => {
+          router.push("/");
+        }}
       ></Image>
       <div>
         {loggedIn && (

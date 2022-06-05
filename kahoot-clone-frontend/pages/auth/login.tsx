@@ -16,7 +16,7 @@ function Login() {
     window.location.href = "/";
     return <></>;
   }
-
+  console.log(router.query);
   function loginHandler() {
     const request: APIRequest = { username, password };
     postData<APIRequest, APIResponse>("/api/login", request).then(
@@ -31,7 +31,12 @@ function Login() {
             "accessTokenPayload",
             JSON.stringify(response.user)
           );
-          router.push("/");
+          if (typeof router.query.redirectOnLogin === "string") {
+            router.push(router.query.redirectOnLogin);
+            console.log("hey");
+          } else {
+            router.push("/");
+          }
         }
       }
     );
@@ -61,7 +66,7 @@ function Login() {
             ></input>
             <p>
               {"Don't have an account?"}
-              <Link href="/auth/forgotpassword">
+              <Link href="/auth/signup">
                 <a>Sign up</a>
               </Link>
             </p>

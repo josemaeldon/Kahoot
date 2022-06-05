@@ -59,7 +59,12 @@ function Signup() {
                 setInfo((info) => ({ ...info, password: e.target.value }));
               }}
             ></input>
-
+            <p>
+              {"Already have an account?"}
+              <Link href="/auth/login">
+                <a>Login</a>
+              </Link>
+            </p>
             <button
               type="submit"
               onClick={(e) => {

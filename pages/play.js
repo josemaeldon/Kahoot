@@ -15,6 +15,15 @@ var receiveMessage = (e) => {
 
 socket.addEventListener("message", receiveMessage);
 
+// checks for closing
+
+var socketClosed = (e) => {
+	display.innerText = "Connection closed.";
+	console.log(e);
+}
+
+socket.addEventListener("close", socketClosed);
+
 // Send messages
 var sendMessage = (e) => {
   const message = document.getElementById("message").value;

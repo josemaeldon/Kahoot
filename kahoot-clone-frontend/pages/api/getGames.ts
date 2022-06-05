@@ -43,7 +43,6 @@ export default async function handler(
 
   const client = await connectToDatabase();
   const games = client.db("kahoot-clone").collection<db.KahootGame>("game");
-  let gameArray: db.KahootGame[] = [];
 
   if (request.type === "userId") {
     const cursor: FindCursor<db.KahootGame> = games

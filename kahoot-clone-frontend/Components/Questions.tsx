@@ -1,10 +1,29 @@
 import React, { useContext } from "react";
+import { OverlayTrigger, Popover, Tooltip } from "react-bootstrap";
 import { BsTrash } from "react-icons/bs";
 import { MdContentCopy } from "react-icons/md";
+import { TiWarning } from "react-icons/ti";
 import { db } from "../kahoot";
-import { GameContext } from "../pages/create";
+import { GameContext, QuestionError } from "../pages/create";
 import styles from "../styles/Questions.module.css";
 import GameButton from "./GameButton";
+
+function renderOverlay(e: QuestionError) {
+  const overlay = ({ show: _, ...props }) => (
+    <div style={{ backgroundColor: "lightcoral" }}>
+      <Popover {...props}>
+        <p className={`${styles.overlayError}`}>
+          <ul>
+            {e.questionBlankError && <li>Your question cannot be blank</li>}
+            {e.choicesRequiredError && <li>Fill out the answer choices </li>}
+            {e.correctChoiceError && <li>Please select a correct answer</li>}
+          </ul>
+        </p>
+      </Popover>
+    </div>
+  );
+  return overlay;
+}
 
 function Questions() {
   const {
@@ -65,73 +84,91 @@ function Questions() {
       <div className={`${styles.innerContainer}`}>
         {game.questions.map((question, index) => {
           const selectedQuestion = index === questionNumber;
+          const e = formErrors?.questionErrors[index];
+          const questionHasError =
+            (e?.choicesRequiredError ||
+              e?.correctChoiceError ||
+              e?.questionBlankError) &&
+            e.ignoreErrors !== true;
           return (
             <div key={Math.random()}>
-              <div
-                className={`${styles.questionBox} ${
-                  selectedQuestion ? `${styles.questionHighlighted}` : ""
-                }`}
-                onClick={() => {
-                  if (selectedQuestion) return;
-                  setQuestionNumber(index);
-                  validateForm(game);
-                }}
-                data-selectedquestion={selectedQuestion}
+              <OverlayTrigger
+                placement="right"
+                delay={{ show: 0, hide: 0 }}
+                overlay={questionHasError ? renderOverlay(e) : <></>}
               >
-                <section className={`${styles.questionHeader}`}>
-                  <div>
-                    <span>{`${index + 1}`}</span>
-                  </div>
-                  <div>
-                    <span>Quiz</span>
-                  </div>
-                </section>
-                <div className={`${styles.questionContainer}`}>
-                  <section className={`${styles.questionActions}`}>
-                    <MdContentCopy
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        duplicateHandler(index);
-                      }}
-                    ></MdContentCopy>
-                    <BsTrash
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteHandler(index);
-                      }}
-                    ></BsTrash>
-                  </section>
-                  <section className={`${styles.questionPreviewContainer}`}>
-                    <div
-                      className={`${styles.questionPreview} ${
-                        selectedQuestion ? styles.white : styles.whitesmoke
-                      }`}
-                    >
-                      <p className={`${styles.previewParagraph}`}>
-                        {game.questions[index].question}
-                      </p>
-                      <div className={`${styles.previewGrid}`}>
-                        {game.questions[index].choices.map(
-                          (choice, choiceIndex) => {
-                            return (
-                              <div
-                                key={choiceIndex}
-                                className={`${styles.previewGridChild}`}
-                                data-correct={
-                                  game.questions[index].correctAnswer ===
-                                    choiceIndex &&
-                                  game.questions[index].choices[choiceIndex] !==
-                                    ""
-                                }
-                              ></div>
-                            );
-                          }
-                        )}
-                      </div>
+                <div
+                  className={`${styles.questionBox} ${
+                    selectedQuestion ? `${styles.questionHighlighted}` : ""
+                  }`}
+                  onClick={() => {
+                    if (selectedQuestion) return;
+                    setQuestionNumber(index);
+                    validateForm(game);
+                  }}
+                  data-selectedquestion={selectedQuestion}
+                >
+                  <TiWarning
+                    className={`${
+                      questionHasError ? styles.warning : styles.hidden
+                    }`}
+                  ></TiWarning>
+                  <section className={`${styles.questionHeader}`}>
+                    <div>
+                      <span>{`${index + 1}`}</span>
+                    </div>
+                    <div>
+                      <span>Quiz</span>
                     </div>
                   </section>
+                  <div className={`${styles.questionContainer}`}>
+                    <section className={`${styles.questionActions}`}>
+                      <MdContentCopy
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          duplicateHandler(index);
+                        }}
+                      ></MdContentCopy>
+                      <BsTrash
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteHandler(index);
+                        }}
+                      ></BsTrash>
+                    </section>
+                    <section className={`${styles.questionPreviewContainer}`}>
+                      <div
+                        className={`${styles.questionPreview} ${
+                          selectedQuestion ? styles.white : styles.whitesmoke
+                        }`}
+                      >
+                        <p className={`${styles.previewParagraph}`}>
+                          {game.questions[index].question}
+                        </p>
+                        <div className={`${styles.previewGrid}`}>
+                          {game.questions[index].choices.map(
+                            (choice, choiceIndex) => {
+                              return (
+                                <div
+                                  key={choiceIndex}
+                                  className={`${styles.previewGridChild}`}
+                                  data-correct={
+                                    game.questions[index].correctAnswer ===
+                                      choiceIndex &&
+                                    game.questions[index].choices[
+                                      choiceIndex
+                                    ] !== ""
+                                  }
+                                ></div>
+                              );
+                            }
+                          )}
+                        </div>
+                      </div>
+                    </section>
+                  </div>
                 </div>
-              </div>
+              </OverlayTrigger>
             </div>
           );
         })}

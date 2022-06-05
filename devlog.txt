@@ -1,14 +1,22 @@
 rengZ -- 2022-05-25 8:40
-Created websocket JS that can send and receive messages from an echo server.
+	 - Created websocket JS that can send and receive messages from an echo server.
 
 rengZ -- 2022-05-25 8:40
-Managed to connect to the backend, but haven't received an acknowledgement of packets.
+	 - Managed to connect to the backend, but haven't received an acknowledgement of packets.
 
 rengZ -- 2022-05-27 8:40
-The frontend now has a way to connect to the backend via a join code.
+	 - The frontend now has a way to connect to the backend via a join code.
 
 rengZ -- 2022-05-31 8:39
-Added username to input + displays code on host upon room creation.
+	 - Added username to input + displays code on host upon room creation.
 
 rengZ -- 2022-06-01 8:40
-Made the front end register joins on a screen to the host.
+	 - Made the front end register joins on a screen to the host.
+
+rengZ -- 2022-06-02 8:40
+	 - The host now removes users from the display that have joined.
+	 - The client now displays when the connection is closed.
+	 - The host now adds users to a scoretracking thing.
+
+rengZ -- 2022-06-03 8:40
+	 - Attempted to write question display code that hasn't been tested.

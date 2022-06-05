@@ -80,3 +80,7 @@
 .saveButton:active {
   background-color: rgb(24, 116, 207);
 }
+
+.lightRed {
+  background-color: rgb(245, 223, 223);
+}

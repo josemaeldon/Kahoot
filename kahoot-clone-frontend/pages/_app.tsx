@@ -10,7 +10,10 @@ function MyApp({ Component, pageProps }) {
     const cookies = cookie.parse(document.cookie);
 
     if (!cookies.loggedIn && !noAuthRequired.has(router.pathname)) {
-      router.push("/auth/login");
+      router.push({
+        pathname: "/auth/login",
+        query: { redirectOnLogin: router.pathname },
+      });
     }
   }
   return <Component {...pageProps} />;
