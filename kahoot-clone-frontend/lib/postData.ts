@@ -1,6 +1,7 @@
 export async function postData<APIRequest, APIResponse>(
   url = "",
-  data: APIRequest
+  data: APIRequest,
+  abortSignal?: AbortSignal
 ): Promise<APIResponse> {
   // Default options are marked with *
   const response = await fetch(url, {
@@ -15,6 +16,7 @@ export async function postData<APIRequest, APIResponse>(
     redirect: "follow", // manual, *follow, error
     referrerPolicy: "no-referrer", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
     body: JSON.stringify(data), // body data type must match "Content-Type" header
+    signal: abortSignal,
   });
   return response.json(); // parses JSON response into native JavaScript objects
 }

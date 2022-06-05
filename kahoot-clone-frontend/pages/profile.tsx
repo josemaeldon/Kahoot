@@ -47,7 +47,18 @@ function Profile() {
       </div>
       <div className={`${styles.innerContainer}`}>
         <div className={`${styles.innerInnerContainer}`}>
-          <p className={`${styles.headerMessage}`}>My Kahoots:</p>
+          <div className={`${styles.flexContainer}`}>
+            <p className={`${styles.headerMessage}`}>My Kahoots:</p>
+            {data !== null && data.length !== 0 && (
+              <button
+                className={`${styles.playButton}`}
+                onClick={() => router.push("/create")}
+              >
+                Create Kahoot
+              </button>
+            )}
+          </div>
+
           {data !== null && data.length === 0 && (
             <div className={`${styles.emptyMessage}`}>
               <p>Looks like you have no Kahoots :(</p>
@@ -75,8 +86,16 @@ function Profile() {
                     </p>
                     <p>{`Created: ${date.toLocaleDateString()}`}</p>
 
-                    <button className={`${styles.playButton}`}>
-                      Start Game
+                    <button
+                      className={`${styles.playButton}`}
+                      onClick={() => {
+                        router.push({
+                          pathname: "/host",
+                          query: { gameId: game._id },
+                        });
+                      }}
+                    >
+                      Start
                     </button>
                     <div
                       className={`${styles.edit}`}
