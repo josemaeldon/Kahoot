@@ -204,11 +204,13 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
                     answered.insert(username.clone());
 
                     // Tell host user answered
-                    let _ = host_tx
-                        .send(HostEvent::UserAnswered {
-                            username: username.clone(),
-                        }.to_message())
-                        .await;
+                    if host_tx
+                        .send(HostEvent::UserAnswered { username: username.clone(), }.to_message())
+                        .await
+                        .is_err()
+                    {
+                        return;
+                    }
 
                     tracing::debug!("`{username}` answered {choice}");
 
@@ -257,17 +259,27 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
         loop {
             tokio::select! {
                 act = host_rx.next_action() => {
+                    if act.is_none() {
+                        tracing::debug!("Host disconnected...");
+                        answer_collect_task.abort();
+                        drop(time_task);
+                        return;
+                    }
+
                     if let Some(Action::EndRound) = act {
+                        tracing::debug!("Host forcefully ended round");
                         answer_collect_task.abort();
                         drop(time_task);
                         break;
                     }
                 }
                 _ = (&mut time_task) => {
+                    tracing::debug!("Question timeout");
                     answer_collect_task.abort();
                     break;
                 }
                 _ = (&mut answer_collect_task) => {
+                    tracing::debug!("All users answered");
                     drop(time_task);
                     break;
                 }
@@ -358,21 +370,20 @@ async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, u
                 // Depending on which happens first
                 tokio::select! {
                     // Game status changed
-                    res = event_watch.changed() => {
-                        // If the event watch has closed
-                        if res.is_err() {
-                            return;
-                        }
+                    _ = event_watch.changed() => {
+                        drop(heartbeat);
 
                         // Get event
                         let event = { event_watch.borrow().clone() };
                         match event {
                             GameEvent::GameEnd => {
+                                tracing::debug!("Game ended, closing user connection...");
                                 let event = UserEvent::GameEnd;
                                 let _ = user_tx.send(event.to_message()).await;
                                 
                                 // Close connection
                                 let _ = user_tx.close().await;
+                                return;
                             }
                             GameEvent::RoundBegin { choice_count } => {
                                 let event = UserEvent::RoundBegin { choice_count };
