@@ -48,7 +48,7 @@ function StartScreen() {
         function handler(e) {
           const request: action.JoinRoom = {
             type: "joinRoom",
-            roomId: parseInt(pin),
+            roomId: parseInt(pin.replace(/\s/g, '')),
             username: username,
           };
           socket.send(JSON.stringify(request));
