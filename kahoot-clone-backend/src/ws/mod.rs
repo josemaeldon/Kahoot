@@ -370,7 +370,14 @@ async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, u
                 // Depending on which happens first
                 tokio::select! {
                     // Game status changed
-                    _ = event_watch.changed() => {
+                    res = event_watch.changed() => {
+                        // Host dc'd
+                        if res.is_err() {
+                            // Close connection
+                            let _ = user_tx.close().await;
+                            return;
+                        }
+
                         drop(heartbeat);
 
                         // Get event
