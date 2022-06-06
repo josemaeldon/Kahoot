@@ -20,3 +20,7 @@ rengZ -- 2022-06-02 8:40
 
 rengZ -- 2022-06-03 8:40
 	 - Attempted to write question display code that hasn't been tested.
+
+rengZ -- 2022-06-06 8:40
+	 - Fixed parsing for the telephone number style room code.
+	 - 
