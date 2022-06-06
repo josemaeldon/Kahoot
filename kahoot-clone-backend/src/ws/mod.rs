@@ -407,7 +407,7 @@ async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, u
                     // Heartbeat timer went off
                     _ = (&mut heartbeat) => {
                         tracing::debug!("Pinging player");
-                        let _ = user_tx.send(Message::Ping(vec![]));
+                        let _ = user_tx.send(Message::Ping(vec![])).await;
                     }
                 }
             }
