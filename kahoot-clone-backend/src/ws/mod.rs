@@ -243,7 +243,7 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
 
         // Save values
         let question_time = question.time as u64;
-        let choice_count = question.choices.len();
+        let choices = question.choices.clone();
 
         // Alert host that the round began
         tracing::debug!("Alerting host that round began...");
@@ -251,7 +251,7 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
 
         // Alert players a round began
         tracing::debug!("Alerting players that round began...");
-        let _ = result_tx.send(GameEvent::RoundBegin { choice_count });
+        let _ = result_tx.send(GameEvent::RoundBegin { choices });
 
         // Wait for the time duration or for the task to fully complete
         let time_task = tokio::time::sleep(Duration::from_secs(question_time));
@@ -392,8 +392,8 @@ async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, u
                                 let _ = user_tx.close().await;
                                 return;
                             }
-                            GameEvent::RoundBegin { choice_count } => {
-                                let event = UserEvent::RoundBegin { choice_count };
+                            GameEvent::RoundBegin { choices } => {
+                                let event = UserEvent::RoundBegin { choices };
                                 let _ = user_tx.send(event.to_message()).await;
                             }
                             GameEvent::RoundEnd { point_gains } => {
@@ -656,10 +656,10 @@ mod tests {
             assert_eq!(user_ws.recv().await.unwrap(), UserEvent::Joined);
 
             // Round begin event
-            let_assert!(UserEvent::RoundBegin { choice_count } = user_ws.recv().await.unwrap());
+            let_assert!(UserEvent::RoundBegin { choices } = user_ws.recv().await.unwrap());
 
             // Has correct choice count
-            assert_eq!(question.choices.len(), choice_count);
+            assert_eq!(question.choices, choices);
 
             // Send correct answer
             user_ws.send(&Action::Answer { choice: question.answer }).await;

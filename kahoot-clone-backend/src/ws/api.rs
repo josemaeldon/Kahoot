@@ -95,7 +95,7 @@ pub enum UserEvent {
     ///
     /// The user is only sent information about how many choices there are.
     #[serde(rename_all = "camelCase")]
-    RoundBegin { choice_count: usize },
+    RoundBegin { choices: Vec<String> },
 
     /// Sent when the round ends.
     ///
