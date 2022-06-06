@@ -44,7 +44,7 @@ pub struct PlayerAnswer {
 pub enum GameEvent {
     InLobby,
     RoundBegin {
-        choice_count: usize,
+        choices: Vec<String>,
     },
     RoundEnd {
         point_gains: Arc<HashMap<String, u32>>,
