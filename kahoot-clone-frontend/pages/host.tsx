@@ -59,11 +59,13 @@ function Lobby() {
     console.log("Lobby running");
     let aborter = new AbortController();
     socket.addEventListener(
+      // receives a message from the server
       "message",
       function lobbyHandler(e) {
         const hostEvent = JSON.parse(e.data) as HostEvent.Event;
         switch (hostEvent.type) {
           case "userJoined":
+            // sets player points
             setPlayers((players) => {
               const copy = [...players];
               copy.push({ username: hostEvent.username, points: 0 });
@@ -74,6 +76,7 @@ function Lobby() {
             console.log("Someone left");
             setPlayers((players) => {
               const copy = [...players];
+              // removes player from leaderboard
               const indexToDelete = copy.findIndex((player) => {
                 return player.username === hostEvent.username;
               });
@@ -220,7 +223,7 @@ function QuestionDisplay({
               )}
             </div>
             <div
-              className={`${qStyles.wrapper} 
+              className={`${qStyles.wrapper}
           ${qStyles.blue}`}
             >
               <span className={`${qStyles.shapeContainer} ${qStyles.blue}`}>
@@ -246,7 +249,7 @@ function QuestionDisplay({
               </span>
               <div className={`${qStyles.answerContainer}`}>
                 <p
-                  className={`${qStyles.answer} 
+                  className={`${qStyles.answer}
               ${qStyles.whiteText}`}
                   suppressContentEditableWarning
                 >
