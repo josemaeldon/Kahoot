@@ -115,10 +115,10 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
     let (mut host_tx, mut host_rx) = host.split();
 
     // Wrap the host transmitter with an `mpsc`
-    let host_tx = {
+    let (host_tx, mpsc_task) = {
         let (host_tx_mpsc, mut rx) = mpsc::channel::<Message>(30);
 
-        tokio::spawn(async move {
+        let task = tokio::spawn(async move {
             while let Some(msg) = rx.recv().await {
                 if host_tx.send(msg).await.is_err() {
                     return;
@@ -129,11 +129,11 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
             let _ = host_tx.close().await;
         });
 
-        host_tx_mpsc
+        (host_tx_mpsc, task)
     };
 
     // Forward player leave/join to host
-    {
+    let join_leave_task = {
         let host_tx = host_tx.clone();
         tokio::spawn(async move {
             while let Some(event) = player_event_rx.recv().await {
@@ -147,11 +147,11 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
                     break;
                 }
             }
-        });
-    }
+        })
+    };
 
     // Ping the host every 25 seconds to keep the socket alive
-    {
+    let heart_beat_task = {
         let host_tx = host_tx.clone();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(25));
@@ -159,8 +159,8 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
                 tracing::debug!("Pinging host");
                 interval.tick().await;
             }
-        });
-    }
+        })
+    };
 
     // Wait until host begins room and there is at least one player in lobby
     while let Some(action) = host_rx.next_action().await {
@@ -327,6 +327,10 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
 
     // Alert players game ended
     let _ = result_tx.send(GameEvent::GameEnd);
+
+    mpsc_task.abort();
+    join_leave_task.abort();
+    heart_beat_task.abort();
 }
 
 /// Handles room joining.
