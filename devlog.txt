@@ -23,4 +23,3 @@ rengZ -- 2022-06-03 8:40
 
 rengZ -- 2022-06-06 8:40
 	 - Fixed parsing for the telephone number style room code.
-	 - 
