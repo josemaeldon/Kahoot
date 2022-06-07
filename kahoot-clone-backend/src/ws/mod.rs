@@ -305,12 +305,20 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
         });
 
         // Wait until host begins next round
-        match host_rx.next_action().await {
-            Some(Action::BeginRound) => (),
-            _ => {
-                tracing::debug!("Closing room...");
-                state.remove_room(&room_id).await;
-                return;
+        loop {
+            match host_rx.next_action().await {
+                // If action is begin round, break loop
+                Some(Action::BeginRound) => break,
+                
+                // If host sends irrelevant message, ignore
+                Some(_) => (),
+
+                // If host dc's, close room
+                None => {
+                    tracing::debug!("Closing room...");
+                    state.remove_room(&room_id).await;
+                    return;
+                }
             }
         }
     }
