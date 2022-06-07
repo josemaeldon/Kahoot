@@ -59,6 +59,7 @@ function StartScreen() {
       );
       socket.onclose = () => {
         setConnectionClosed(true);
+        console.log("connection closed");
       };
       return () => {
         if (inputLocked) {
