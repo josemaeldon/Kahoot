@@ -556,6 +556,7 @@ function Host() {
               socket.onclose = () => {
                 setConnectionClosed(true);
                 location.reload();
+                console.log("socket closed");
               };
             }
           });
