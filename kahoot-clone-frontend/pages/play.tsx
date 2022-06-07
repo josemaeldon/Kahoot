@@ -58,6 +58,7 @@ function StartScreen() {
         { signal: aborter.signal }
       );
       socket.onclose = () => {
+	    console.log("connection closed");
         setConnectionClosed(true);
       };
       return () => {
