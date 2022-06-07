@@ -154,10 +154,9 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
     let heart_beat_task = {
         let host_tx = host_tx.clone();
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_secs(25));
             while host_tx.send(Message::Ping(vec![])).await.is_ok() {
                 tracing::debug!("Pinging host");
-                interval.tick().await;
+                tokio::time::sleep(Duration::from_secs(25)).await;
             }
         })
     };
