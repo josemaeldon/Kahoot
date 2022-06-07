@@ -554,9 +554,9 @@ function Host() {
               setSocket(socket);
               socket.removeEventListener("message", RoomListener);
               socket.onclose = () => {
+                console.log("socket closed");
                 setConnectionClosed(true);
                 location.reload();
-                console.log("socket closed");
               };
             }
           });
