@@ -1,5 +1,5 @@
 // Create WebSocket connection.
-const socket = new WebSocket("ws://64.225.12.53/ws");
+const socket = new WebSocket("wss://64.225.12.53/ws");
 // buttons
 const joinBtn = document.getElementById("joinBtn");
 // code box
@@ -34,8 +34,13 @@ var sendMessage = (e) => {
 // sends value on click
 var sendAnswer = (e) => {
 	const answer = event.target.innerHTML;
-	console.log("Sending: ", answer);
-	socket.send(answer);
+	let msg = {
+		type: "answer",
+		choice: parseInt(answer) - 1,
+	};
+	msg = JSON.stringify(msg);
+	socket.send(msg);
+	console.log("Sending: ", msg);
 }
 
 var joinRoom = (e) => {
