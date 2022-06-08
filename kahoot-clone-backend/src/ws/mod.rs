@@ -115,28 +115,15 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
     let (mut host_tx, mut host_rx) = host.split();
 
     // Wrap the host transmitter with an `mpsc`
-    let (close_host, mut close_socket_rx) = tokio::sync::oneshot::channel::<()>();
     let host_tx = {
         let (host_tx_mpsc, mut rx) = mpsc::channel::<Message>(30);
 
         tokio::spawn(async move {
-            loop {
-                tokio::select! {
-                    msg = rx.recv() => {
-                        match msg {
-                            Some(msg) => {
-                                // If socket is closed
-                                if host_tx.send(msg).await.is_err() {
-                                    return;
-                                }
-                            }
-                            None => break,
-                        }
-                    }
-                    // If `close_host` is dropped or a message is sent,
-                    // exit loop and close socket connection.
-                    _ = (&mut close_socket_rx) => break,
-                };
+            while let Some(msg) = rx.recv().await {
+                // If socket is closed
+                if host_tx.send(msg).await.is_err() {
+                    return;
+                }
             }
 
             // Close connection
@@ -165,15 +152,15 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
     }
 
     // Ping the host every 25 seconds to keep the socket alive
-    {
+    let heartbeat = {
         let host_tx = host_tx.clone();
         tokio::spawn(async move {
             while host_tx.send(Message::Ping(vec![])).await.is_ok() {
                 tracing::debug!("Pinging host");
                 tokio::time::sleep(Duration::from_secs(25)).await;
             }
-        });
-    }
+        })
+    };
 
     // Wait until host begins room and there is at least one player in lobby
     while let Some(action) = host_rx.next_action().await {
@@ -328,14 +315,14 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
     // Alert host that the game ended
     tracing::debug!("Alerting host that game has ended...");
     let _ = host_tx.send(HostEvent::GameEnd.to_message()).await;
-    let _ = close_host.send(());
 
-    drop(room);
-
-    state.remove_room(&room_id).await;
+    // Stop sending heartbeat to host
+    heartbeat.abort();
 
     // Alert players game ended
     let _ = result_tx.send(GameEvent::GameEnd);
+
+    state.remove_room(&room_id).await;
 }
 
 /// Handles room joining.
