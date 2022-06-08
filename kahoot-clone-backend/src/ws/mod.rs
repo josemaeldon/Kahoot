@@ -89,7 +89,7 @@ async fn handle_ws(mut socket: WebSocket, state: SharedState) {
 async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Question>) {
     tracing::debug!("Creating room...");
 
-    let (action_tx, action_rx) = mpsc::channel(20);
+    let (action_tx, mut action_rx) = mpsc::channel(20);
     let (result_tx, result_rx) = watch::channel(GameEvent::InLobby);
     let (users, mut player_event_rx) = Users::new();
 
@@ -191,44 +191,76 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
         }
     }
 
-    let action_rx = Arc::new(tokio::sync::Mutex::new(action_rx));
     for question in questions.into_iter() {
-        let point_gains = Arc::new(tokio::sync::Mutex::new(HashMap::new()));
+        let mut point_gains = HashMap::new();
+        let mut answered = HashSet::new();
+        let mut points = 1000;
 
-        // Collect answers from users
-        let mut answer_collect_task = {
-            let host_tx = host_tx.clone();
-            let action_rx = Arc::clone(&action_rx);
-            let point_gains = Arc::clone(&point_gains);
-            let correct_choice = question.answer;
-            let room = Arc::clone(&room);
+        // Save values
+        let question_time = question.time as u64;
+        let choices = question.choices.clone();
+        let answer = question.answer;
 
-            tokio::spawn(async move {
-                let mut answered = HashSet::new();
-                let mut action_rx = action_rx.lock().await;
-                let mut point_gains = point_gains.lock().await;
-                let mut points = 1000;
+        // Alert host that the round began
+        tracing::debug!("Alerting host that round began...");
+        let _ = host_tx.send(HostEvent::RoundBegin { question }.to_message()).await;
 
-                while let Some(PlayerAnswer { username, choice }) = action_rx.recv().await {
+        // Alert players a round began
+        tracing::debug!("Alerting players that round began...");
+        let _ = result_tx.send(GameEvent::RoundBegin { choices });
+
+        // Keep taking from stream until it is empty
+        while let Ok(_) = action_rx.try_recv() { }
+
+        // Wait for round end event
+        let time_task = tokio::time::sleep(Duration::from_secs(question_time));
+        tokio::pin!(time_task);
+        loop {
+            // Pick whichever future resolves first
+            tokio::select! {
+                // Host force end
+                act = host_rx.next_action() => {
+                    match act {
+                        // If the host sent an end round action, exit loop
+                        Some(Action::EndRound) => {
+                            tracing::debug!("Host forcefully ended round");
+                            break;
+                        }
+                        // Ignore all other actions
+                        Some(_) => (),
+
+                        // If the action is none, the socket must have dc'd
+                        None => {
+                            tracing::debug!("Host disconnected...");
+                            return;
+                        }
+                    }
+                }
+
+                // Timeout
+                _ = (&mut time_task) => {
+                    tracing::debug!("Question timeout");
+                    break;
+                }
+
+                // User answers
+                Some(PlayerAnswer { username, choice }) = action_rx.recv() => {
                     if answered.contains(&username) {
-                        return;
+                        continue;
                     }
 
                     answered.insert(username.clone());
 
                     // Tell host user answered
-                    if host_tx
-                        .send(HostEvent::UserAnswered { username: username.clone(), }.to_message())
-                        .await
-                        .is_err()
-                    {
-                        return;
-                    }
+                    let _ = host_tx.send(HostEvent::UserAnswered {
+                            username: username.clone()
+                        }.to_message())
+                        .await;
 
                     tracing::debug!("`{username}` answered {choice}");
 
                     // If the choice is correct
-                    if choice == correct_choice {
+                    if choice == answer {
                         // Update points log
                         tracing::debug!("`{username}` +{points}");
                         point_gains.insert(username, points);
@@ -246,62 +278,16 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
                         .iter()
                         .all(|name| answered.contains(name));
 
-                    // If everyone has answered, finish task
+                    // If everyone has answered, leave loop
                     if all_answered {
-                        return;
-                    }
-                }
-            })
-        };
-
-        // Save values
-        let question_time = question.time as u64;
-        let choices = question.choices.clone();
-
-        // Alert host that the round began
-        tracing::debug!("Alerting host that round began...");
-        let _ = host_tx.send(HostEvent::RoundBegin { question }.to_message()).await;
-
-        // Alert players a round began
-        tracing::debug!("Alerting players that round began...");
-        let _ = result_tx.send(GameEvent::RoundBegin { choices });
-
-        // Wait for the time duration or for the task to fully complete
-        let time_task = tokio::time::sleep(Duration::from_secs(question_time));
-        tokio::pin!(time_task);
-        loop {
-            tokio::select! {
-                act = host_rx.next_action() => {
-                    if act.is_none() {
-                        tracing::debug!("Host disconnected...");
-                        answer_collect_task.abort();
-                        drop(time_task);
-                        return;
-                    }
-
-                    if let Some(Action::EndRound) = act {
-                        tracing::debug!("Host forcefully ended round");
-                        answer_collect_task.abort();
-                        drop(time_task);
                         break;
                     }
                 }
-                _ = (&mut time_task) => {
-                    tracing::debug!("Question timeout");
-                    answer_collect_task.abort();
-                    break;
-                }
-                _ = (&mut answer_collect_task) => {
-                    tracing::debug!("All users answered");
-                    drop(time_task);
-                    break;
-                }
             };
         }
+        drop(time_task);
 
         tracing::debug!("End of round...");
-
-        let point_gains = point_gains.lock().await.clone();
 
         // Tell host that the round ended
         tracing::debug!("Alerting host that round ended...");
