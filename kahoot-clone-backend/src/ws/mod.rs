@@ -376,8 +376,6 @@ async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, u
                             return;
                         }
 
-                        drop(heartbeat);
-
                         // Get event
                         let event = { event_watch.borrow().clone() };
                         match event {
