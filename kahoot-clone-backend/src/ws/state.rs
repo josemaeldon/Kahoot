@@ -3,7 +3,7 @@ use super::api::RoomId;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
-use tokio::sync::{mpsc, watch};
+use tokio::sync::{mpsc, watch, oneshot};
 
 // `Arc` is an "atomic reference counter" which allows multiple ownership
 // of values across threads.
@@ -33,7 +33,7 @@ pub struct Users {
 
 type UserMap = HashSet<String>;
 
-pub struct UserPresence(String, Arc<Mutex<UserMap>>, mpsc::Sender<PlayerEvent>);
+pub struct UserPresence(String, Arc<Mutex<UserMap>>, Option<oneshot::Sender<()>>);
 
 pub struct PlayerAnswer {
     pub username: String,
@@ -126,23 +126,33 @@ impl Users {
         // Copy the necessary values
         let user_map = Arc::clone(&self.users);
         let event_stream = self.event_stream.clone();
-        Some(UserPresence(name, user_map, event_stream))
+        let username = name.clone();
+        
+        // Set up oneshot channel for leave message
+        let (leave_tx, leave_rx) = oneshot::channel();
+        tokio::spawn(async move {
+            // Wait for oneshot leave message
+            let _ = leave_rx.await;
+            // Emit player event to host
+            let _ = event_stream.send(PlayerEvent::Left(username)).await;
+        });
+
+        Some(UserPresence(name, user_map, Some(leave_tx)))
     }
 }
 
-impl UserPresence {
+impl Drop for UserPresence {
     /// Removes user from user map and emits a signal.
-    pub async fn leave(self) {
-        let UserPresence(name, user_map, event_stream) = self;
-
-        // Remove from user map
-        {
-            let mut user_map = user_map.lock().unwrap();
-
-            user_map.remove(&name);
-        }
+    fn drop(&mut self) {
+        let UserPresence(name, user_map, leave_tx) = self;
 
         // Emit event and ignore any errors
-        let _ = event_stream.send(PlayerEvent::Left(name.clone())).await;
+        if let Some(tx) = leave_tx.take() {
+            let _ = tx.send(());
+        }
+
+        // Remove from user map
+        let mut user_map = user_map.lock().unwrap();
+        user_map.remove(name);
     }
 }

@@ -355,7 +355,9 @@ async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, u
     tracing::debug!("Joining room...");
 
     let (mut user_tx, mut user_rx) = socket.split();
-    let presence = if let Some(presence) = room.users.join_user(username.clone()).await {
+    // Whenever the presence gets dropped (when the function returns),
+    // a leave message is automatically sent to the host.
+    let _presence = if let Some(presence) = room.users.join_user(username.clone()).await {
         presence
     } else {
         tracing::error!("User `{username}` already exists, disconnecting...");
@@ -445,9 +447,6 @@ async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, u
         _ = (&mut game_event_task) => user_action_task.abort(),
         _ = (&mut user_action_task) => game_event_task.abort(),
     };
-
-    // Leaves room
-    presence.leave().await;
 }
 
 /// Websocket api testing
