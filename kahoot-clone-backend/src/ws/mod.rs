@@ -232,6 +232,7 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
                         // If the action is none, the socket must have dc'd
                         None => {
                             tracing::debug!("Host disconnected...");
+                            state.remove_room(&room_id).await;
                             return;
                         }
                     }
