@@ -163,20 +163,23 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
     };
 
     // Wait until host begins room and there is at least one player in lobby
-    while let Some(action) = host_rx.next_action().await {
-        if action == Action::BeginRound {
-            // Host tries to begin the first round
-            tracing::debug!("Attempting to start game...");
+    loop {
+        match host_rx.next_action().await {
+            // If action is begin round and there is at least one player
+            Some(Action::BeginRound) if room.users.player_count() > 0 => break,
+            // If received action but does not match above, ignore
+            Some(_) => (),
 
-            // Accquire lock on users mutex, and check the length
-            if room.users.player_count() > 0 {
-                tracing::debug!("Starting game...");
-                break;
-            } else {
-                tracing::warn!("Not enough players.");
+            // If host dc's, close room
+            None => {
+                tracing::debug!("Closing room...");
+                state.remove_room(&room_id).await;
+                return;
             }
         }
     }
+
+    tracing::debug!("Starting game...");
 
     for question in questions.into_iter() {
         let mut point_gains = HashMap::new();
