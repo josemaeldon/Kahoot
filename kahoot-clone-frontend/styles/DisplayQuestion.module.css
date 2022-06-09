@@ -136,3 +136,10 @@
 .lightRed {
   background-color: rgb(245, 223, 223);
 }
+
+.gameButtonFlex {
+  display: flex;
+  justify-content: right;
+  padding: 20px;
+  padding-bottom: 2px;
+}

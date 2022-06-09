@@ -165,23 +165,25 @@ function QuestionDisplay({
 }: Props) {
   return (
     <section>
-      <GameButton
-        onClick={(e) => {
-          nextScreenHandler();
-        }}
-        backgroundStyle={{
-          backgroundColor: "lightgray",
-          color: "black",
-          fontSize: "19px",
-        }}
-        foregroundStyle={{
-          backgroundColor: "white",
-          cursor: "pointer",
-          padding: "3px 13px 3px 13px",
-        }}
-      >
-        Next
-      </GameButton>
+      <div className={qStyles.gameButtonFlex}>
+        <GameButton
+          onClick={(e) => {
+            nextScreenHandler();
+          }}
+          backgroundStyle={{
+            backgroundColor: "lightgray",
+            color: "black",
+            fontSize: "19px",
+          }}
+          foregroundStyle={{
+            backgroundColor: "rgb(244,244,244)",
+            cursor: "pointer",
+            padding: "3px 13px 3px 13px",
+          }}
+        >
+          Next
+        </GameButton>
+      </div>
       <div className={`${qStyles.container}`}>
         <p
           className={`${qStyles.question}`}
@@ -205,23 +207,25 @@ function QuestionDisplay({
         </section>
         <div>
           <div className={`${qStyles.grid}`}>
-            <div className={`${qStyles.wrapper} ${qStyles.red}`}>
-              <span className={`${qStyles.shapeContainer} ${qStyles.red}`}>
-                <BsFillTriangleFill></BsFillTriangleFill>
-              </span>
-              <div className={`${qStyles.answerContainer}`}>
-                <p
-                  placeholder="Answer 1"
-                  className={`${qStyles.answer} ${qStyles.whiteText}`}
-                  suppressContentEditableWarning
-                >
-                  {question.choices[0]}
-                </p>
+            {question.choices[0] && (
+              <div className={`${qStyles.wrapper} ${qStyles.red}`}>
+                <span className={`${qStyles.shapeContainer} ${qStyles.red}`}>
+                  <BsFillTriangleFill></BsFillTriangleFill>
+                </span>
+                <div className={`${qStyles.answerContainer}`}>
+                  <p
+                    placeholder="Answer 1"
+                    className={`${qStyles.answer} ${qStyles.whiteText}`}
+                    suppressContentEditableWarning
+                  >
+                    {question.choices[0]}
+                  </p>
+                </div>
+                {showAnswer && question.answer === 0 && (
+                  <CheckboxCircle checked={true}></CheckboxCircle>
+                )}
               </div>
-              {showAnswer && question.answer === 0 && (
-                <CheckboxCircle checked={true}></CheckboxCircle>
-              )}
-            </div>
+            )}
             <div
               className={`${qStyles.wrapper}
           ${qStyles.blue}`}
@@ -243,41 +247,45 @@ function QuestionDisplay({
                 <CheckboxCircle checked={true}></CheckboxCircle>
               )}
             </div>
-            <div className={`${qStyles.wrapper} ${qStyles.yellow}`}>
-              <span className={`${qStyles.shapeContainer} ${qStyles.yellow}`}>
-                <BsFillCircleFill></BsFillCircleFill>
-              </span>
-              <div className={`${qStyles.answerContainer}`}>
-                <p
-                  className={`${qStyles.answer}
+            {question.choices[2] && (
+              <div className={`${qStyles.wrapper} ${qStyles.yellow}`}>
+                <span className={`${qStyles.shapeContainer} ${qStyles.yellow}`}>
+                  <BsFillCircleFill></BsFillCircleFill>
+                </span>
+                <div className={`${qStyles.answerContainer}`}>
+                  <p
+                    className={`${qStyles.answer}
               ${qStyles.whiteText}`}
-                  suppressContentEditableWarning
-                >
-                  {question.choices[2]}
-                </p>
+                    suppressContentEditableWarning
+                  >
+                    {question.choices[2]}
+                  </p>
+                </div>
+                {showAnswer && question.answer === 2 && (
+                  <CheckboxCircle checked={true}></CheckboxCircle>
+                )}
               </div>
-              {showAnswer && question.answer === 2 && (
-                <CheckboxCircle checked={true}></CheckboxCircle>
-              )}
-            </div>
-            <div className={`${qStyles.wrapper} ${qStyles.green}`}>
-              <span className={`${qStyles.shapeContainer} ${qStyles.green}`}>
-                <BsFillSquareFill
-                  style={{ transform: "rotate(45deg)" }}
-                ></BsFillSquareFill>
-              </span>
-              <div className={`${qStyles.answerContainer}`}>
-                <p
-                  className={`${qStyles.answer} ${qStyles.whiteText}`}
-                  suppressContentEditableWarning
-                >
-                  {question.choices[3]}
-                </p>
+            )}
+            {question.choices[3] && (
+              <div className={`${qStyles.wrapper} ${qStyles.green}`}>
+                <span className={`${qStyles.shapeContainer} ${qStyles.green}`}>
+                  <BsFillSquareFill
+                    style={{ transform: "rotate(45deg)" }}
+                  ></BsFillSquareFill>
+                </span>
+                <div className={`${qStyles.answerContainer}`}>
+                  <p
+                    className={`${qStyles.answer} ${qStyles.whiteText}`}
+                    suppressContentEditableWarning
+                  >
+                    {question.choices[3]}
+                  </p>
+                </div>
+                {showAnswer && question.answer === 3 && (
+                  <CheckboxCircle checked={true}></CheckboxCircle>
+                )}
               </div>
-              {showAnswer && question.answer === 3 && (
-                <CheckboxCircle checked={true}></CheckboxCircle>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -357,6 +365,7 @@ function QuestionsPhase() {
           case "roundBegin":
             setQuestion(hostEvent.question);
             setSubscreen("question");
+            setAnswered([]);
             break;
           case "roundEnd":
             setPlayers((players) => {

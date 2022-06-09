@@ -42,6 +42,7 @@
   justify-content: center;
   flex-direction: column;
   z-index: 1;
+  color: white;
 }
 
 .logo {
@@ -107,4 +108,35 @@
 .gameInputPin:focus {
   border: black solid;
   outline: none;
+}
+
+.answerGrid {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(200px, 1fr);
+  min-width: 500px;
+  gap: 10px;
+}
+
+.red,
+.blue,
+.green,
+.yellow {
+  aspect-ratio: 1 / 1;
+  cursor: pointer;
+}
+
+.red {
+  background-color: rgb(233, 29, 63);
+}
+
+.blue {
+  background-color: rgb(20, 112, 224);
+}
+
+.yellow {
+  background-color: rgb(221, 163, 2);
+}
+
+.green {
+  background-color: rgb(47, 172, 16);
 }

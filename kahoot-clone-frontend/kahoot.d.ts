@@ -118,7 +118,7 @@ export namespace UserEvent {
 
   declare interface RoundBegin {
     type: "roundBegin";
-    choiceCount: number;
+    choices: string[];
   }
 
   declare interface RoundEnd {
