@@ -28,7 +28,7 @@ function LobbyWaiting() {
   return (
     <div className={styles.backdrop}>
       <div className={styles.gameBox}>
-        <p>You're in! See your name on the screen?</p>
+        <p>You&apos;re in! See your name on the screen?</p>
         <p>Waiting to start...</p>
       </div>
     </div>
