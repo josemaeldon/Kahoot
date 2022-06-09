@@ -375,7 +375,7 @@ function QuestionsPhase() {
                 const user = copy.find((user) => user.username === pair[0]);
                 if (user) user.points += pair[1];
               });
-
+              clearInterval(timer.timer);
               return copy;
             });
             setResults(() => {
