@@ -60,3 +60,102 @@ The player side receives the following messages from the server:
             type: "roundEnd"
           }
           ```
+## Host Side
+The host sends the following messages to the server:
+1. Game Creation
+    1. createRoom - Creates the room, the "questions" field is an array of JSON objects that represent questions. The "question" field in the question object is a string that is the question being asked. "choices" in the question object is a list of up to 4 strings representing the answer choices. "answer" is the 0-indexed integer index of the correct choice. "time" is the amount of seconds alloted to the question.
+       - Format:
+          ```
+          {
+            type: "createRoom",
+            questions: [
+                {
+                    question: "Test",
+                    choices: ["1", "2", "3"],
+                    answer: 1,
+                    time: 30,
+                },
+            ]
+          }
+          ```
+2. During Game
+    1. beginRound - begins the round.
+       - Format:
+          ```
+          {
+            type: "beginRound"
+          }
+          ```
+    2. endRound - ends the round.
+       - Format:
+          ```
+          {
+            type: "endRound"
+          }
+          ```
+The host receives the following messages from the server:
+1. Game Creation
+    1. roomCreated - contains the roomId, an integer value.
+       - Format:
+          ```
+          {
+            type: "roomCreated",
+            roomId: 182131313,
+          }
+          ```
+2. During Play
+    1. userJoined - User has joined. "username" is the username of the player.
+       - Format:
+          ```
+          {
+            type: "userJoined",
+            username: "username",
+          }
+          ```
+    2. userLeft - User has left. "username" is the username of the player.
+       - Format:
+          ```
+          {
+            type: "userLeft",
+            username: "username",
+          }
+          ```
+    3. roundBegin - payload for the next round's question. "question" is the question object.
+       - Format:
+          ```
+          {
+            type: "roundBegin",
+            question: {
+                question: "Test",
+                choices: ["1", "2", "3"],
+                answer: 1,
+                time: 30,
+            },
+          }
+          ```
+    4. roundEnd - signals the round has ended. Payload is a JSON with key value pairs of users matching to their score increase.
+       - Format:
+          ```
+          {
+            type: "roundEnd",
+            pointGains = {
+                "user1" = 1000,
+                "user2" = 1000,
+            }
+          }
+          ```
+    5. userAnswered - the username of whoever answered.
+       - Format:
+          ```
+          {
+            type: "userAnswered",
+            username: "username",
+          }
+          ```
+    6. gameEnd - game ended.
+       - Format:
+          ```
+          {
+            type: "gameEnd"
+          }
+          ```
