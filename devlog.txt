@@ -30,3 +30,7 @@ rengZ -- 2022-06-07 8:40
 rengZ -- 2022-06-08 8:40
 	 - Made answer frontend API call
 	 - Tested it with a set up interface.
+
+rengZ -- 2022-06-10 3:55
+	 - Documented our kahoot api in its functionality.
+	 - Printed design docs x3.
