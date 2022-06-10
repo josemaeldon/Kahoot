@@ -9,13 +9,13 @@ A clone of the classic multiplayer quiz game.
 
 ## Launch Codes
 ### Prerequisites
-- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
+- [yarn](https://yarnpkg.com/)
 - [rustup](https://www.rust-lang.org/tools/install)
 
 ### Launching front-end
 1. `$ cd kahoot-clone-frontend`
-2. `$ npm install` or `$ yarn` to install the dependencies
-3. `$ npm start` or `$ yarn start` to start the server
+2. `$ yarn install` to install the dependencies
+3. `$ yarn run dev` to start the development server
 4. Navigate to [http://localhost:3000](http://localhost:3000)
 
 ### Launching back-end
