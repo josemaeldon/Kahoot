@@ -1,6 +1,6 @@
 # Kahoot by Goodbye Stuy
 
-A clone of the classic multiplayer quiz game.
+A clone of the classic multiplayer quiz game. Visit the live site at: kahoot-clone.vercel.app
 
 ## Roster
 - Haotian Gan (PM): Frontend, serverless functions
