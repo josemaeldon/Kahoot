@@ -21,4 +21,42 @@ The player side has the following commands it sends from the client to the serve
             choice: parseInt(answer) - 1,
           };
           ```
-2. 
+The player side receives the following messages from the server:
+1. During Join
+    1. joined - You have successfully joined the game room.
+       - Format:
+          ```
+          {
+            type: "joined"
+          }
+          ```
+    2. joinFailed - The room join process has failed. The "reason" field is why it failed, and is a string.
+       - Format:
+          ```
+          {
+            type: "joinFailed",
+            reason: ""
+          }
+          ```
+3. During Play
+    1. gameEnd - The game has ended.
+       - Format:
+          ```
+          {
+            type: "gameEnd"
+          }
+          ```
+    2. roundBegin - The next round has begun. It also will be sent at the start of the first round.
+       - Format:
+          ```
+          {
+            type: "roundBegin"
+          }
+          ```
+    3. roundEnd - The current round has ended.
+       - Format:
+          ```
+          {
+            type: "roundEnd"
+          }
+          ```
