@@ -1,13 +1,7 @@
-# Kahoot by Goodbye Stuy
+# Kahoot
 
 A clone of the classic multiplayer quiz game. Visit the live site at: [kahoot-clone.vercel.app](https://kahoot-clone.vercel.app)
 
-## Roster
-- Haotian Gan (PM): Frontend, serverless functions
-- Wen Hao Dong: Rust backend
-- Renggeng Zheng: Frontend, Websockets functionality
-
-## Launch Codes
 ### Prerequisites
 - [yarn](https://yarnpkg.com/)
 - [rustup](https://www.rust-lang.org/tools/install)
