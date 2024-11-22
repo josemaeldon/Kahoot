@@ -10,75 +10,99 @@ import Header from "@components/Header";
 function Login() {
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { loggedIn, user } = useUser();
-  if (loggedIn) {
-    window.location.href = "/";
-    return <></>;
-  }
-  console.log(router.query);
-  function loginHandler() {
-    const request: APIRequest = { username, password };
-    postData<APIRequest, APIResponse>("/api/login", request).then(
-      (response) => {
-        if (response.error === true) {
-          //To do: interface for the error
-          console.log(response.errorDescription);
-        }
 
-        if (response.error === false) {
-          localStorage.setItem(
-            "accessTokenPayload",
-            JSON.stringify(response.user)
-          );
-          if (typeof router.query.redirectOnLogin === "string") {
-            router.push(router.query.redirectOnLogin);
-            console.log("hey");
-          } else {
-            router.push("/");
-          }
-        }
-      }
-    );
+  if (loggedIn) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/";
+    }
+    return null;
   }
+
+  const loginHandler = async () => {
+    const request: APIRequest = { username, password };
+    try {
+      const response = await postData<APIRequest, APIResponse>(
+        "/api/login",
+        request
+      );
+      if (response.error === true) {
+        setError(response.errorDescription || "An unexpected error occurred.");
+      } else {
+        localStorage.setItem(
+          "accessTokenPayload",
+          JSON.stringify(response.user)
+        );
+        const redirect =
+          typeof router.query.redirectOnLogin === "string"
+            ? router.query.redirectOnLogin
+            : "/";
+        router.push(redirect);
+      }
+    } catch (err) {
+      setError("Failed to connect to the server. Please try again.");
+      console.error(err);
+    }
+  };
+
   return (
-    <div className={`vh100`}>
-      <Header></Header>
-      <div className={`${styles.container}`}>
-        <div className={`${styles.card}`}>
-          <form>
-            <p>Log in</p>
-            <label htmlFor="username">Username</label>
-            <input
-              type="text"
-              id="username"
-              onChange={(e) => {
-                setUsername(e.target.value);
-              }}
-            ></input>
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              onChange={(e) => {
-                setPassword(e.target.value);
-              }}
-            ></input>
-            <p>
-              {"Don't have an account?"}
+    <div className={styles.vh100}>
+      <Header />
+      <div className={styles.container}>
+        <div className={styles.card}>
+          <form
+            className={styles.form}
+            onSubmit={(e) => {
+              e.preventDefault();
+              loginHandler();
+            }}
+          >
+            <h2 className={styles.title}>Log In</h2>
+
+            {error && <p className={styles.error}>{error}</p>}
+
+            <div className={styles.inputGroup}>
+              <label htmlFor="username" className={styles.label}>
+                Username
+              </label>
+              <input
+                type="text"
+                id="username"
+                className={styles.input}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+                required
+              />
+            </div>
+
+            <div className={styles.inputGroup}>
+              <label htmlFor="password" className={styles.label}>
+                Password
+              </label>
+              <input
+                type="password"
+                id="password"
+                className={styles.input}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+
+            <button type="submit" className={styles.button}>
+              Log In
+            </button>
+
+            <p className={styles.signupPrompt}>
+              {"Don't have an account? "}
               <Link href="/auth/signup">
-                <a>Sign up</a>
+                <a className={styles.signupLink}>Sign up</a>
               </Link>
             </p>
-            <button
-              type="submit"
-              onClick={(e) => {
-                e.preventDefault();
-                loginHandler();
-              }}
-            >
-              Log in
-            </button>
           </form>
         </div>
       </div>

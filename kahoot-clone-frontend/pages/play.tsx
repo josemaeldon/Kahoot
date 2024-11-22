@@ -43,7 +43,7 @@ function StartScreen() {
   const [inputLocked, setInputLocked] = useState(false);
   useEffect(() => {
     if (inputLocked) {
-      const socket = new WebSocket("wss://64.225.12.53/ws");
+      const socket = new WebSocket("wss://kahootbruh.duckdns.org/ws");
       const aborter = new AbortController();
       socket.addEventListener(
         "message",
