@@ -44,6 +44,7 @@ function Signup() {
       } else {
         localStorage.setItem(
           "accessTokenPayload",
+          //@ts-ignore
           JSON.stringify(response.user)
         );
         router.push("/");
