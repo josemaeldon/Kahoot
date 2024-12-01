@@ -1,5 +1,5 @@
 export async function postData<APIRequest, APIResponse>(
-  url = "",
+  url = "https://kahoot-server.cloudbr.app",
   data: APIRequest,
   abortSignal?: AbortSignal
 ): Promise<APIResponse> {
