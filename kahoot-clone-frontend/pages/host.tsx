@@ -39,7 +39,8 @@ function JoinHeader() {
   console.log(roomId);
 
 // URL fixa para o QR Code
-  const qrCodeImageUrl = "https://raw.githubusercontent.com/josemaeldon/Kahoot/refs/heads/main/kahoot-clone-frontend/pages/Captura%20de%20Tela%202024-12-01%20às%2015.16.22.png";  // Altere para o caminho correto da imagem
+  const qrCodeImageUrl = "https://raw.githubusercontent.com/josemaeldon/Kahoot/8b1c87cd30fe3e7603c168fdf762fc70984e3c08/kahoot-clone-frontend/pages/Captura%20de%20Tela%202024-12-01%20a%CC%80s%2015.16.22.png
+";  // Altere para o caminho correto da imagem
   
   return (
     <div className={`${styles.darkBackground}`}>
