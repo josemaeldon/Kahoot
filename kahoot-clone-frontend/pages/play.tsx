@@ -28,8 +28,8 @@ function LobbyWaiting() {
   return (
     <div className={styles.backdrop}>
       <div className={styles.gameBox}>
-        <p>You&apos;re in! See your name on the screen?</p>
-        <p>Waiting to start...</p>
+        <p>Você está dentro! Vê seu nome na tela?</p>
+        <p>Esperando para começar...</p>
       </div>
     </div>
   );
@@ -176,7 +176,7 @@ function ChooseAnswer({ data }) {
       {madeChoice === true && (
         <div className={`${styles.backdrop}`}>
           <div className={`${styles.gameBox}`}>
-            <p>You made your answer. Waiting for round to end...</p>
+            <p>Você fez sua resposta. Esperando a rodada terminar...</p>
           </div>
         </div>
       )}
@@ -190,10 +190,10 @@ function Result({ data }) {
   return (
     <div className={`${styles.backdrop}`}>
       <div className={`${styles.gameBox}`}>
-        {pointGain && `You got it right! +${pointGain} points`}
+        {pointGain && `Você acertou! +${pointGain} points`}
         {pointGain === null && (
           <div>
-            <p>You got it wrong :(</p> <p>You recieved no points</p>
+            <p>Você entendeu errado :(</p> <p>Você não recebeu nenhum ponto</p>
           </div>
         )}
       </div>
