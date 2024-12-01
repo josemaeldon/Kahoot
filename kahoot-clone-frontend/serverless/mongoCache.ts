@@ -7,7 +7,7 @@ export const connectToDatabase = async () => {
   }
 
   const uri =
-    "mongodb+srv://haotian:haotian@kahoot.3jyhz.mongodb.net/?retryWrites=true&w=majority&appName=Kahoot";
+    "mongodb+srv://josemaeldon:trino005@cloudbr.p4jbd.mongodb.net/?retryWrites=true&w=majority&appName=Kahoot";
   const client = new MongoClient(uri, { serverApi: ServerApiVersion.v1 });
   await client.connect();
   cachedDb = client;
