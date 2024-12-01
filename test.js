@@ -17,7 +17,7 @@ Promise.resolve().then(() => {
 
     readyState: 1,
 
-    url: "ws://64.225.12.53/ws",
+    url: "wss://kahoot-server.cloudbr.app/ws",
   };
   console.log(o);
   o.bufferedAmount = 3;
