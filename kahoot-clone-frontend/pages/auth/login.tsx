@@ -29,7 +29,7 @@ function Login() {
         request
       );
       if (response.error === true) {
-        setError(response.errorDescription || "An unexpected error occurred.");
+        setError(response.errorDescription || "Ocorreu um erro inesperado.");
       } else {
         localStorage.setItem(
           "accessTokenPayload",
@@ -42,7 +42,7 @@ function Login() {
         router.push(redirect);
       }
     } catch (err) {
-      setError("Failed to connect to the server. Please try again.");
+      setError("Falha ao conectar-se ao servidor. Por favor, tente novamente.");
       console.error(err);
     }
   };
@@ -88,7 +88,7 @@ function Login() {
                 className={styles.input}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder="Digite sua senha"
                 required
               />
             </div>
@@ -98,7 +98,7 @@ function Login() {
             </button>
 
             <p className={styles.signupPrompt}>
-              {"Don't have an account? "}
+              {"Não tem uma conta? "}
               <Link href="/auth/signup">
                 <a className={styles.signupLink}>Sign up</a>
               </Link>
