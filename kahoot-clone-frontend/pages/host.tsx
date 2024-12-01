@@ -41,7 +41,7 @@ function JoinHeader() {
     <div className={`${styles.darkBackground}`}>
       <div className={`${styles.outerContainer}`}>
         <div className={`${styles.playHeader}`}>
-          <p>Join at kahoot-clone.vercel.app</p>
+          <p>Acesse kahoot-rosy.vercel.app</p>
         </div>
         <div className={`${styles.pinHeader}`}>
           <p>Game Pin:</p>
