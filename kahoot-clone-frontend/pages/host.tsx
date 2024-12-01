@@ -525,7 +525,7 @@ function Host() {
   const gameId = router.query.gameId as string;
   useEffect(() => {
     if (loggedIn && router.isReady) {
-      const socket = new WebSocket("wss://kahootbruh.duckdns.org/ws");
+      const socket = new WebSocket("wss://kahoot-server.cloudbr.app/ws");
       const aborter = new AbortController();
       const socketPromise = new Promise((resolve, reject) => {
         socket.addEventListener(
