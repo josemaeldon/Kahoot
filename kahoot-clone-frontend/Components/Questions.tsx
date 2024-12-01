@@ -14,9 +14,9 @@ function renderOverlay(e: QuestionError) {
       <Popover {...props}>
         <p className={`${styles.overlayError}`}>
           <ul>
-            {e.questionBlankError && <li>Your question cannot be blank</li>}
-            {e.choicesRequiredError && <li>Fill out the answer choices </li>}
-            {e.correctChoiceError && <li>Please select a correct answer</li>}
+            {e.questionBlankError && <li>Sua pergunta não pode estar em branco</li>}
+            {e.choicesRequiredError && <li>Preencha as opções de resposta </li>}
+            {e.correctChoiceError && <li>Por favor, selecione uma resposta correta</li>}
           </ul>
         </p>
       </Popover>
