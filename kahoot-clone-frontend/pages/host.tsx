@@ -37,11 +37,19 @@ function JoinHeader() {
   const r2 = roomString.slice(3, 6);
   const r3 = roomString.slice(6);
   console.log(roomId);
+
+// URL fixa para o QR Code
+  const qrCodeImageUrl = "https://raw.githubusercontent.com/josemaeldon/Kahoot/refs/heads/main/kahoot-clone-frontend/pages/Captura%20de%20Tela%202024-12-01%20às%2015.16.22.png";  // Altere para o caminho correto da imagem
+  
   return (
     <div className={`${styles.darkBackground}`}>
       <div className={`${styles.outerContainer}`}>
         <div className={`${styles.playHeader}`}>
+          
           <p>Acesse kahoot.cloudbr.app</p>
+          {/* Linha com a imagem do QR Code abaixo */}
+          <img src={qrCodeImageUrl} alt="QR Code para acessar o jogo" />
+          
         </div>
         <div className={`${styles.pinHeader}`}>
           <p>Game Pin:</p>
