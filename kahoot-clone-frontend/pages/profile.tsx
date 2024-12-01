@@ -61,7 +61,7 @@ function Profile() {
 
           {data !== null && data.length === 0 && (
             <div className={`${styles.emptyMessage}`}>
-              <p>Looks like you have no Kahoots :(</p>
+              <p>Parece que você não tem Kahoots :(</p>
               <button
                 className={`${styles.playButton}`}
                 onClick={() => router.push("/create")}
