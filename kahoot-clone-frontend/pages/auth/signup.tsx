@@ -50,7 +50,7 @@ function Signup() {
         router.push("/");
       }
     } catch (err) {
-      setError("Failed to connect to the server. Please try again.");
+      setError("Falha ao conectar-se ao servidor. Por favor, tente novamente.");
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -83,7 +83,7 @@ function Signup() {
                 className={styles.input}
                 value={info.username}
                 onChange={(e) => setInfo({ ...info, username: e.target.value })}
-                placeholder="Enter your username"
+                placeholder="Digite seu nome de usuário"
                 required
               />
             </div>
@@ -101,14 +101,14 @@ function Signup() {
                   onChange={(e) =>
                     setInfo({ ...info, password: e.target.value })
                   }
-                  placeholder="Enter your password"
+                  placeholder="Digite sua senha"
                   required
                 />
                 <button
                   type="button"
                   className={styles.togglePassword}
                   onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? "Ocultar senha" : "Show password"}
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
@@ -120,11 +120,11 @@ function Signup() {
               className={styles.button}
               disabled={isLoading}
             >
-              {isLoading ? "Signing up..." : "Sign Up"}
+              {isLoading ? "Inscrever-se..." : "Inscreva-se"}
             </button>
 
             <p className={styles.loginPrompt}>
-              Already have an account?{" "}
+              Já tem uma conta?{" "}
               <Link href="/auth/login">
                 <a className={styles.loginLink}>Login</a>
               </Link>
