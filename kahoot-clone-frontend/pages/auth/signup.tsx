@@ -90,7 +90,7 @@ function Signup() {
 
             <div className={styles.inputGroup}>
               <label htmlFor="password" className={styles.label}>
-                Password
+                Senha
               </label>
               <div className={styles.passwordWrapper}>
                 <input
