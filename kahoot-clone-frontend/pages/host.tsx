@@ -39,7 +39,7 @@ function JoinHeader() {
   console.log(roomId);
 
 // URL fixa para o QR Code
- const qrCodeImageUrl = "https://raw.githubusercontent.com/josemaeldon/Kahoot/8b1c87cd30fe3e7603c168fdf762fc70984e3c08/kahoot-clone-frontend/pages/Captura%20de%20Tela%202024-12-01%20a%CC%80s%2015.16.22.png";
+ const qrCodeImageUrl = "https://raw.githubusercontent.com/josemaeldon/Kahoot/423004878480c915ac5f049fc39f656fce431993/kahoot-clone-frontend/pages/qr_karoot.png";
   
   return (
     <div className={`${styles.darkBackground}`}>
