@@ -48,13 +48,13 @@ function Profile() {
       <div className={`${styles.innerContainer}`}>
         <div className={`${styles.innerInnerContainer}`}>
           <div className={`${styles.flexContainer}`}>
-            <p className={`${styles.headerMessage}`}>My Kahoots:</p>
+            <p className={`${styles.headerMessage}`}>Meus Kahoots:</p>
             {data !== null && data.length !== 0 && (
               <button
                 className={`${styles.playButton}`}
                 onClick={() => router.push("/create")}
               >
-                Create Kahoot
+                Criar Kahoot
               </button>
             )}
           </div>
@@ -82,9 +82,9 @@ function Profile() {
                     </p>
                     <p>
                       {game.questions.length}{" "}
-                      {game.questions.length === 1 ? "Question" : "Questions"}
+                      {game.questions.length === 1 ? "Pergunta" : "Perguntas"}
                     </p>
-                    <p>{`Created: ${date.toLocaleDateString()}`}</p>
+                    <p>{`Criado: ${date.toLocaleDateString()}`}</p>
 
                     <button
                       className={`${styles.playButton}`}
@@ -95,7 +95,7 @@ function Profile() {
                         });
                       }}
                     >
-                      Start
+                      Começar
                     </button>
                     <div
                       className={`${styles.edit}`}
