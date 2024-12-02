@@ -38,26 +38,28 @@ function JoinHeader() {
   const r3 = roomString.slice(6);
   console.log(roomId);
 
-// URL fixa para o QR Code
- const qrCodeImageUrl = "https://raw.githubusercontent.com/josemaeldon/Kahoot/8b1c87cd30fe3e7603c168fdf762fc70984e3c08/kahoot-clone-frontend/pages/Captura%20de%20Tela%202024-12-01%20a%CC%80s%2015.16.22.png";
-  
-  return (
-    <div className={`${styles.darkBackground}`}>
-      <div className={`${styles.outerContainer}`}>
-        <div className={`${styles.playHeader}`}>
-          
-          <p>Acesse kahoot.cloudbr.app ou pelo QrCode</p>          
+// JSX
+const qrCodeImageUrl = "https://raw.githubusercontent.com/josemaeldon/Kahoot/8b1c87cd30fe3e7603c168fdf762fc70984e3c08/kahoot-clone-frontend/pages/Captura%20de%20Tela%202024-12-01%20a%CC%80s%2015.16.22.png";
+
+return (
+  <div className={`${styles.darkBackground}`}>
+    <div className={`${styles.outerContainer}`}>
+      <div className="play-header">
+        <p>Acesse <strong>kahoot.cloudbr.app</strong> ou pelo QrCode</p>
+      </div>
+      <div className="pin-header">
+        <p>Game Pin:</p>
+        <p className="game-pin">{`${r1} ${r2} ${r3}`}</p>
+        <div className="qr-code-container">
+          <img
+            src={qrCodeImageUrl}
+            alt="QR Code para acessar o jogo"
+            className="qr-code"
+          />
         </div>
-        <div className={`${styles.pinHeader}`}>
-          <p>Game Pin:</p>
-          <p>{`${r1} ${r2} ${r3}`}</p>
-<p>  {/* Linha com a imagem do QR Code abaixo */}
-          <img src={qrCodeImageUrl} alt="QR Code para acessar o jogo" />
-           </p>
-          
-        </div>        
       </div>
     </div>
+  </div>
   );
 }
 
