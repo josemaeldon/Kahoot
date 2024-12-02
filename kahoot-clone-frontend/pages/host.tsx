@@ -310,7 +310,7 @@ function Leaderboard({ nextScreenHandler }) {
   return (
     <div className={`${styles.leaderboardContainer}`}>
       <p className={`${styles.leaderboardHeader}`}>
-        Leaderboard:
+        Classificação:
         <GameButton
           onClick={(e) => {
             nextScreenHandler();
