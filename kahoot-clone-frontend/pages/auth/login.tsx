@@ -80,7 +80,7 @@ function Login() {
 
             <div className={styles.inputGroup}>
               <label htmlFor="password" className={styles.label}>
-                Password
+                Senha
               </label>
               <input
                 type="password"
