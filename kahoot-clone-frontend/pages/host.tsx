@@ -195,7 +195,7 @@ function QuestionDisplay({
       <div className={`${qStyles.container}`}>
         <p
           className={`${qStyles.question}`}
-          placeholder="Question..."
+          placeholder="Pergunta..."
           suppressContentEditableWarning
         >
           {question.question}
@@ -336,7 +336,7 @@ function Leaderboard({ nextScreenHandler }) {
               <span>
                 {index + 1}. {user.username}
               </span>
-              <span>{user.points} points</span>
+              <span>{user.points} pontos</span>
             </div>
           );
         })}
