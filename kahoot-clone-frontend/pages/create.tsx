@@ -45,11 +45,11 @@ function Header({
               : ""
           }`}
           type={"text"}
-          placeholder="Enter Kahoot title..."
+          placeholder="Digite o título do Kahoot..."
           value={game.title}
           onChange={(e) => {
             setGame((game) => {
-              const gameCopy = { ...game }; //Shallow copy
+              const gameCopy = { ...game }; //Cópia superficial
               gameCopy.title = e.target.value;
               return gameCopy;
             });
