@@ -43,11 +43,9 @@ function JoinHeader() {
   
   return (
     <div className={`${styles.darkBackground}`}>
-      <div className={`${styles.playHeader}`}>
-          <p>Acesse kahoot.cloudbr.app/play ou pelo QrCode</p>
-        </div>
-      <div className={`${styles.outerContainer}`}>
+      <div className={`${styles.outerContainer}`}>      
         <div className={`${styles.pinHeader}`}>
+          <p>Acesse kahoot.cloudbr.app/play ou pelo QrCode</p>
           <p>Game Pin:</p>
           <p>{`${r1} ${r2} ${r3}`}</p>
           {/* Linha com a imagem do QR Code abaixo */}
