@@ -9,11 +9,29 @@
   background-color: white;
   border-radius: 4px;
   display: grid;
-  width: 800px;
-  grid-template-columns:
-    minmax(200px, 1fr)
-    350px;
+  width: 100%;
+  max-width: 800px; /* Limita o tamanho máximo */
+  grid-template-columns: minmax(200px, 1fr) 350px;
+  gap: 20px; /* Espaço entre as colunas */
+  padding: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  margin: 0 auto; /* Centraliza o conteúdo */
 }
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .outerContainer {
+    grid-template-columns: 1fr; /* Alterna para uma coluna única */
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .outerContainer {
+    padding: 10px; /* Reduz o padding em telas muito pequenas */
+  }
+}
+
 
 .playHeader {
   padding: 10px;
