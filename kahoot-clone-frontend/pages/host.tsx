@@ -46,7 +46,7 @@ function JoinHeader() {
       <div className={`${styles.outerContainer}`}>
         <div className={`${styles.playHeader}`}>
           
-          <p>Acesse kahoot.cloudbr.app ou pelo QrCode</p>          
+          <p>Acesse kahoot.cloudbr.app/play ou pelo QrCode</p>          
         </div>
         <div className={`${styles.pinHeader}`}>
           <p>Game Pin:</p>
@@ -129,7 +129,7 @@ function Lobby() {
               padding: "3px 13px 3px 13px",
             }}
           >
-            Start
+            Começar
           </GameButton>
         </div>
       </div>
@@ -189,7 +189,7 @@ function QuestionDisplay({
             padding: "3px 13px 3px 13px",
           }}
         >
-          Next
+          Próximo
         </GameButton>
       </div>
       <div className={`${qStyles.container}`}>
@@ -211,7 +211,7 @@ function QuestionDisplay({
           </div>
           <div
             className={`${styles.answerNotifier}`}
-          >{`${answered} Answers`}</div>
+          >{`${answered} Respostas`}</div>
         </section>
         <div>
           <div className={`${qStyles.grid}`}>
@@ -222,7 +222,7 @@ function QuestionDisplay({
                 </span>
                 <div className={`${qStyles.answerContainer}`}>
                   <p
-                    placeholder="Answer 1"
+                    placeholder="Resposta 1"
                     className={`${qStyles.answer} ${qStyles.whiteText}`}
                     suppressContentEditableWarning
                   >
@@ -245,7 +245,7 @@ function QuestionDisplay({
                 <p
                   className={`${qStyles.answer} ${qStyles.whiteText}
             `}
-                  placeholder="Answer 2"
+                  placeholder="Resposta 2"
                   suppressContentEditableWarning
                 >
                   {question.choices[1]}
@@ -326,7 +326,7 @@ function Leaderboard({ nextScreenHandler }) {
             padding: "3px 13px 3px 13px",
           }}
         >
-          Next
+          Próximo
         </GameButton>
       </p>
       <div className={`${styles.leaderboard}`}>
@@ -596,7 +596,7 @@ function Host() {
         })
 
         .catch(() => {
-          console.log("Either the websocket or the fetch request failed");
+          console.log("O websocket ou a solicitação de reta falharam");
           aborter.abort(); //Cancel websocket or fetch request if either fails.
         });
       return () => {
