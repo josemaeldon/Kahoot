@@ -50,7 +50,7 @@ function JoinHeader() {
         </div>
         <div className={`${styles.pinHeader}`}>
           <p>Game Pin:</p>
-          <p>{`${r1} ${r2} ${r3}`}</p>
+          <p>{`${r1} ${r2} ${r3}`}</p></br>
           {/* Linha com a imagem do QR Code abaixo */}
           <p><img src={qrCodeImageUrl} alt="QR Code para acessar o jogo" />
            </p>
