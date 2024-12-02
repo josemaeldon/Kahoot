@@ -77,7 +77,6 @@
   font-size: 2vw;
   width: 100%;
   overflow-wrap: break-word;
-
   word-break: break-all;
 }
 
@@ -135,4 +134,41 @@
 
 .lightRed {
   background-color: rgb(245, 223, 223);
+}
+
+/* Responsivo para dispositivos móveis */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    height: auto;
+  }
+
+  .grid > div {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .shapeContainer {
+    font-size: 24px;
+    margin-right: 0;
+    margin-bottom: 10px;
+  }
+
+  .answerContainer {
+    width: 100%;
+  }
+
+  .question {
+    font-size: 4vw;
+    padding: 16px;
+  }
+
+  .answer {
+    font-size: 3.5vw;
+  }
+
+  .checkBoxOuter {
+    height: 30px;
+  }
 }
