@@ -26,12 +26,12 @@ export default async function handler(
   if (req.method !== "POST")
     return res.status(200).json({
       error: true,
-      errorDescription: "Only POST requests are allowed",
+      errorDescription: "Somente solicitações POST são permitidas",
     });
   if (!req.cookies["accessToken"]) {
     return res
       .status(200)
-      .json({ error: true, errorDescription: "No access token" });
+      .json({ error: true, errorDescription: "Sem token de acesso" });
   }
 
   try {
@@ -76,6 +76,6 @@ export default async function handler(
     console.log("ERROR", e);
     return res
       .status(200)
-      .json({ error: true, errorDescription: "Something went wrong." });
+      .json({ error: true, errorDescription: "Algo deu errado." });
   }
 }
