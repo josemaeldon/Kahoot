@@ -154,7 +154,7 @@ function StartScreen() {
       ></Spinner>
     </span>
   )}
-  {!inputLocked && <span>Voltar</span>}
+  {!inputLocked && <span>SAIR</span>}
 </button>
 
         </div>
