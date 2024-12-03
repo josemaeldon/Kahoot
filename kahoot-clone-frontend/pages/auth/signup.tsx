@@ -108,7 +108,7 @@ function Signup() {
                   type="button"
                   className={styles.togglePassword}
                   onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Ocultar senha" : "Show password"}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar Senha"}
                 >
                   {showPassword ? "Ocultar" : "Mostrar"}
                 </button>
