@@ -65,7 +65,7 @@ function Login() {
 
             <div className={styles.inputGroup}>
               <label htmlFor="username" className={styles.label}>
-                Username
+                Usuário
               </label>
               <input
                 type="text"
@@ -73,7 +73,7 @@ function Login() {
                 className={styles.input}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
+                placeholder="Digite seu usuário"
                 required
               />
             </div>
@@ -100,7 +100,7 @@ function Login() {
             <p className={styles.signupPrompt}>
               {"Não tem uma conta? "}
               <Link href="/auth/signup">
-                <a className={styles.signupLink}>Sign up</a>
+                <a className={styles.signupLink}>Inscrever-se</a>
               </Link>
             </p>
           </form>
