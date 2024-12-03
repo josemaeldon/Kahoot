@@ -23,7 +23,7 @@ interface Context {
   roomId: number;
   game: db.KahootGame;
   socket: WebSocket;
-  players: Players;
+  players: Player
   setPlayers: React.Dispatch<React.SetStateAction<Players>>;
   setPhase: React.Dispatch<
     React.SetStateAction<"lobby" | "questions" | "leaderboard">
@@ -45,8 +45,19 @@ function JoinHeader() {
     <div className={`${styles.darkBackground}`}>
       <div className={`${styles.outerContainer}`}>
         <div className={`${styles.playHeader}`}>
-          <p>Acesse kahoot.cloudbr.app/play ou pelo QrCode</p>
-          <p><a href="https://kahoot.cloudbr.app">Recomeçar</a></p>
+          <p>Acesse kahoot.cloudbr.app/play ou pelo QrCode</p></br>
+         
+          <button
+            type="button"
+            className="gameButton"
+            onClick={() => {
+            window.location.href = "https://kahoot.cloudbr.app";
+                          }}
+                  >
+            Voltar
+          </button>
+          
+          
         </div>
         <div className={`${styles.pinHeader}`}>
           <p>Game Pin:</p>
