@@ -45,7 +45,7 @@ function JoinHeader() {
     <div className={`${styles.darkBackground}`}>
       <div className={`${styles.outerContainer}`}>
         <div className={`${styles.playHeader}`}>
-          <p>Acesse kahoot.cloudbr.app/play ou pelo QrCode</p></br>
+          <p>Acesse kahoot.cloudbr.app/play ou pelo QrCode</p>
          
           <button
             type="button"
