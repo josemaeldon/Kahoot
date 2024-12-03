@@ -134,7 +134,7 @@ function StartScreen() {
                 ></Spinner>
               </span>
             )}
-            {!inputLocked && <span>Enter</span>}
+            {!inputLocked && <span>Entrar</span>}
           </button>
         </div>
       </div>
