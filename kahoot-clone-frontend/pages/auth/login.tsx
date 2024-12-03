@@ -59,7 +59,7 @@ function Login() {
               loginHandler();
             }}
           >
-            <h2 className={styles.title}>Log In</h2>
+            <h2 className={styles.title}>Login</h2>
 
             {error && <p className={styles.error}>{error}</p>}
 
@@ -94,7 +94,7 @@ function Login() {
             </div>
 
             <button type="submit" className={styles.button}>
-              Log In
+              Login
             </button>
 
             <p className={styles.signupPrompt}>
