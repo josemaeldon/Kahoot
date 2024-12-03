@@ -132,7 +132,7 @@ function Editor() {
         className={`${styles.question} ${
           questionBlankError ? styles.lightRed : ""
         }`}
-        placeholder="Question..."
+        placeholder="Sua pergunta aqui..."
         ref={question}
         onInput={questionInputHandler}
         suppressContentEditableWarning
@@ -157,7 +157,7 @@ function Editor() {
             <div className={`${styles.answerContainer}`}>
               <p
                 contentEditable="true"
-                placeholder="Answer 1"
+                placeholder="Resposta 1"
                 className={`${styles.answer} ${
                   !q0Empty ? styles.whiteText : ""
                 }`}
@@ -194,7 +194,7 @@ function Editor() {
                 className={`${styles.answer} ${
                   !q1Empty ? `${styles.whiteText}` : ""
                 }`}
-                placeholder="Answer 2"
+                placeholder="Resposta 2"
                 onInput={answerInputHandler(1)}
                 suppressContentEditableWarning
                 ref={a2}
@@ -223,7 +223,7 @@ function Editor() {
                 className={`${styles.answer} ${
                   !q2Empty ? `${styles.whiteText}` : ""
                 }`}
-                placeholder="Answer 3 (optional)"
+                placeholder="Resposta 3 (optional)"
                 onInput={answerInputHandler(2)}
                 suppressContentEditableWarning
                 ref={a3}
@@ -254,7 +254,7 @@ function Editor() {
                 className={`${styles.answer} ${
                   !q3Empty ? `${styles.whiteText}` : ""
                 }`}
-                placeholder="Answer 4 (optional)"
+                placeholder="Resposta 4 (optional)"
                 onInput={answerInputHandler(3)}
                 suppressContentEditableWarning
                 ref={a4}
