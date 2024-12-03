@@ -96,7 +96,18 @@ function Login() {
             <button type="submit" className={styles.button}>
               Login
             </button>
-
+            
+            <p><button
+                type="button"
+                className="gameButton"
+                onClick={() => {
+                window.location.href = "https://kahoot.cloudbr.app";
+                  }}
+                    >
+                  Voltar
+              </button>
+            </p>
+            
             <p className={styles.signupPrompt}>
               {"Não tem uma conta? "}
               <Link href="/auth/signup">
