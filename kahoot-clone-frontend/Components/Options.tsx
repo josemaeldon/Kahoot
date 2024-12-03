@@ -36,11 +36,11 @@ function Options() {
           <div>
             <label htmlFor="timer" className={`${styles.alignmentContainer}`}>
               <MdTimer></MdTimer>
-              <span>Time</span>
+              <span>Tempo</span>
             </label>
             <DropdownButton
               id="dropdown-basic-button"
-              title={`${game.questions[questionNumber].time} seconds`}
+              title={`${game.questions[questionNumber].time} segundos`}
               variant="outline-secondary"
               className={`${styles.getRidOfOutline}`}
             >
