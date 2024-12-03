@@ -123,6 +123,16 @@ function Signup() {
               {isLoading ? "Inscrever-se..." : "Inscreva-se"}
             </button>
 
+            <button
+              type="button"
+              className={styles.button}
+              onClick={() => {
+                        window.location.href = "https://kahoot.cloudbr.app";
+                          }}
+                            >
+                Voltar
+            </button>
+
             <p className={styles.loginPrompt}>
               Já tem uma conta?{" "}
               <Link href="/auth/login">
