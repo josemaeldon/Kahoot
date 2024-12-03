@@ -121,21 +121,42 @@ function StartScreen() {
             readOnly={inputLocked}
           ></input>
           <button
-            className={`${styles.gameButton}`}
-            onClick={() => {
-              setInputLocked(true);
-            }}
-          >
-            {inputLocked && (
-              <span>
-                <Spinner
-                  animation="border"
-                  style={{ height: "24px", width: "24px" }}
-                ></Spinner>
-              </span>
-            )}
-            {!inputLocked && <span>Entrar</span>}
-          </button>
+  className={`${styles.gameButton}`}
+  onClick={() => {
+    setInputLocked(true);
+  }}
+>
+  {inputLocked && (
+    <span>
+      <Spinner
+        animation="border"
+        style={{ height: "24px", width: "24px" }}
+      ></Spinner>
+    </span>
+  )}
+  {!inputLocked && <span>Entrar</span>}
+</button>
+
+<button
+  className={`${styles.gameButton}`}
+  onClick={() => {
+    setInputLocked(true);
+    setTimeout(() => {
+      window.location.href = "https://kahoot.cloudbr.app";
+    }, 1000); // Adiciona um pequeno delay para simular o carregamento
+  }}
+>
+  {inputLocked && (
+    <span>
+      <Spinner
+        animation="border"
+        style={{ height: "24px", width: "24px" }}
+      ></Spinner>
+    </span>
+  )}
+  {!inputLocked && <span>Voltar</span>}
+</button>
+
         </div>
       </div>
     </div>
