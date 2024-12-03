@@ -64,7 +64,7 @@ function Header({
             router.push("/profile");
           }}
         >
-          Exit
+          Sair
         </button>
         <button
           type="button"
@@ -100,7 +100,7 @@ function Header({
             }
           }}
         >
-          Save
+          Salvar
         </button>
       </div>
     </div>
