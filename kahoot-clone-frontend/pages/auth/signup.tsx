@@ -69,13 +69,13 @@ function Signup() {
               signupHandler();
             }}
           >
-            <h2 className={styles.title}>Sign Up</h2>
+            <h2 className={styles.title}>Inscrver-se</h2>
 
             {error && <p className={styles.error}>{error}</p>}
 
             <div className={styles.inputGroup}>
               <label htmlFor="username" className={styles.label}>
-                Username
+                Usuário
               </label>
               <input
                 type="text"
@@ -110,7 +110,7 @@ function Signup() {
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? "Ocultar senha" : "Show password"}
                 >
-                  {showPassword ? "Hide" : "Show"}
+                  {showPassword ? "Ocultar" : "Mostrar"}
                 </button>
               </div>
             </div>
