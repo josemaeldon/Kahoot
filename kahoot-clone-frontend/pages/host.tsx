@@ -49,7 +49,6 @@ function JoinHeader() {
 
           <p><a href="https://kahoot.cloudbr.app">Recomeçar</a></p>
           
-        </div>
         <div className={`${styles.pinHeader}`}>
           <p>Game Pin:</p>
           <p>{`${r1} ${r2} ${r3}`}</p>
