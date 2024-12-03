@@ -66,7 +66,7 @@ function Profile() {
                 className={`${styles.playButton}`}
                 onClick={() => router.push("/create")}
               >
-                Create One
+                Crie um
               </button>
             </div>
           )}
