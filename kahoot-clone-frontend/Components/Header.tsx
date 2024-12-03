@@ -32,7 +32,7 @@ function Header() {
               });
             }}
           >
-            Log Out
+            Sair
           </button>
         )}
       </div>
