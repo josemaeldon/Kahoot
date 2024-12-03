@@ -55,7 +55,7 @@ function Options() {
                         return gameCopy;
                       });
                     }}
-                  >{`${val} seconds`}</Dropdown.Item>
+                  >{`${val} segundos`}</Dropdown.Item>
                 );
               })}
             </DropdownButton>
