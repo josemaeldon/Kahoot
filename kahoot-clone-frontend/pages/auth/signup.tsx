@@ -83,7 +83,7 @@ function Signup() {
                 className={styles.input}
                 value={info.username}
                 onChange={(e) => setInfo({ ...info, username: e.target.value })}
-                placeholder="Digite seu nome de usuário"
+                placeholder="Digite seu nome de usuário - Ex.: joaoemaria -"
                 required
               />
             </div>
