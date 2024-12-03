@@ -46,7 +46,15 @@ function JoinHeader() {
       <div className={`${styles.outerContainer}`}>
         <div className={`${styles.playHeader}`}>
           <p>Acesse kahoot.cloudbr.app/play ou pelo QrCode</p>
-          <p><a href="https://kahoot.cloudbr.app">Recomeçar</a></p>
+          <p>  <button
+    type="button"
+    className={styles.button}
+    onClick={() => {
+      window.location.href = "https://kahoot.cloudbr.app";
+    }}
+  >
+    Recomeçar
+  </button></p>
         </div>
         <div className={`${styles.pinHeader}`}>
           <p>Game Pin:</p>
