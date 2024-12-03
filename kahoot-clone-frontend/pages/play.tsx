@@ -112,7 +112,7 @@ function StartScreen() {
           ></input>
           <input
             type="text"
-            placeholder="Username"
+            placeholder="Seu nome"
             className={`${styles.gameInputPin}`}
             onChange={(e) => {
               setUsername(e.target.value);
@@ -193,7 +193,7 @@ function Result({ data }) {
         {pointGain && `Você acertou! +${pointGain} points`}
         {pointGain === null && (
           <div>
-            <p>Você entendeu errado :(</p> <p>Você não recebeu nenhum ponto</p>
+            <p>Você errou :(</p> <p>Você não recebeu nenhum ponto</p>
           </div>
         )}
       </div>
