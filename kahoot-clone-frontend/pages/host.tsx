@@ -23,7 +23,7 @@ interface Context {
   roomId: number;
   game: db.KahootGame;
   socket: WebSocket;
-  players: Player
+  players: Players;
   setPlayers: React.Dispatch<React.SetStateAction<Players>>;
   setPhase: React.Dispatch<
     React.SetStateAction<"lobby" | "questions" | "leaderboard">
@@ -54,7 +54,7 @@ function JoinHeader() {
 <p>  {/* Linha com a imagem do QR Code abaixo */}
           <img src={qrCodeImageUrl} alt="QR Code para acessar o jogo" />
            </p>
-
+          
         </div>        
       </div>
     </div>
