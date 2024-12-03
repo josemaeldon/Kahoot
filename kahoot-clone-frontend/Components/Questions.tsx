@@ -186,7 +186,7 @@ function Questions() {
             padding: "10px 14px 10px 14px",
           }}
         >
-          Add Question
+          Add Pergunta
         </GameButton>
       </div>
     </div>
