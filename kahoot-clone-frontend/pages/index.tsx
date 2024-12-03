@@ -27,7 +27,7 @@ function Index() {
             padding: "10px 16px 10px 16px",
           }}
         >
-          Play
+          Jogar
         </GameButton>
         <GameButton
           onClick={() => {
@@ -41,7 +41,7 @@ function Index() {
             padding: "10px 16px 10px 16px",
           }}
         >
-          Create
+          Criar
         </GameButton>
       </div>
     </div>
