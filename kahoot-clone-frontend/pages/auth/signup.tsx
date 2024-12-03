@@ -121,7 +121,7 @@ function Signup() {
               disabled={isLoading}
             >
               {isLoading ? "Inscrever-se..." : "Inscreva-se"}
-            </button>
+            </button><br />
 
             <button
               type="button"
