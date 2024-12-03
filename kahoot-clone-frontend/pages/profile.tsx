@@ -17,6 +17,8 @@ import { BsTrash } from "react-icons/bs";
 function Profile() {
   const { loggedIn, user } = useUser();
   const [data, setData] = useState<null | db.KahootGame[]>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortByMonth, setSortByMonth] = useState(false); // Estado para ordenar por mês
 
   function getSetUserData() {
     postData<GetGameReq, GetGameRes>("/api/getGames", {
@@ -37,8 +39,36 @@ function Profile() {
       getSetUserData();
     }
   }, [loggedIn]);
+
   const router = useRouter();
   if (!loggedIn) return <></>;
+
+  // Função para ordenar por data ou por mês
+  const sortedData = data
+    ? [...data].sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+
+        if (sortByMonth) {
+          // Ordenação por mês (comparar ano e mês)
+          const monthA = new Date(a.date).getMonth();
+          const monthB = new Date(b.date).getMonth();
+          return sortOrder === "asc" ? monthA - monthB : monthB - monthA;
+        } else {
+          // Ordenação por data
+          return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+        }
+      })
+    : [];
+
+  // Função para formatar o mês de forma legível
+  const formatMonth = (date: number) => {
+    const months = [
+      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
+      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ];
+    return months[new Date(date).getMonth()];
+  };
 
   return (
     <div className={`${styles.container}`}>
@@ -50,12 +80,26 @@ function Profile() {
           <div className={`${styles.flexContainer}`}>
             <p className={`${styles.headerMessage}`}>Meus Kahoots:</p>
             {data !== null && data.length !== 0 && (
-              <button
-                className={`${styles.playButton}`}
-                onClick={() => router.push("/create")}
-              >
-                Criar Kahoot
-              </button>
+              <>
+                <button
+                  className={`${styles.playButton}`}
+                  onClick={() => router.push("/create")}
+                >
+                  Criar Kahoot
+                </button>
+                <button
+                  className={`${styles.sortButton}`}
+                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                >
+                  Ordenar por data ({sortOrder === "asc" ? "Crescente" : "Decrescente"})
+                </button>
+                <button
+                  className={`${styles.sortButton}`}
+                  onClick={() => setSortByMonth(!sortByMonth)}
+                >
+                  Ordenar por mês ({sortByMonth ? "Ano" : "Mês"})
+                </button>
+              </>
             )}
           </div>
 
@@ -71,61 +115,62 @@ function Profile() {
             </div>
           )}
           <div className={`${styles.kahootGrid}`}>
-            {data !== null &&
-              data.map((game) => {
-                const date = new Date();
-                date.setTime(game.date);
-                return (
-                  <div className={`${styles.gameElement}`} key={game._id}>
-                    <p>
-                      <b>{game.title}</b>
-                    </p>
-                    <p>
-                      {game.questions.length}{" "}
-                      {game.questions.length === 1 ? "Pergunta" : "Perguntas"}
-                    </p>
-                    <p>{`Criado: ${date.toLocaleDateString()}`}</p>
+            {sortedData.map((game) => {
+              const date = new Date();
+              date.setTime(game.date);
+              const month = formatMonth(game.date); // Mês formatado
 
-                    <button
-                      className={`${styles.playButton}`}
-                      onClick={() => {
-                        router.push({
-                          pathname: "/host",
-                          query: { gameId: game._id },
-                        });
-                      }}
-                    >
-                      Começar
-                    </button>
-                    <div
-                      className={`${styles.edit}`}
-                      onClick={() => {
-                        router.push({
-                          pathname: "/create",
-                          query: { editingId: game._id },
-                        });
-                      }}
-                    >
-                      <TiEdit></TiEdit>
-                    </div>
-                    <div
-                      className={`${styles.delete}`}
-                      onClick={() => {
-                        postData<APIRequest, APIResponse>(
-                          "/api/deleteOneGame",
-                          { gameId: game._id }
-                        ).then((res) => {
-                          if (res.error === false) {
-                            getSetUserData();
-                          }
-                        });
-                      }}
-                    >
-                      <BsTrash />
-                    </div>
+              return (
+                <div className={`${styles.gameElement}`} key={game._id}>
+                  <p>
+                    <b>{game.title}</b>
+                  </p>
+                  <p>
+                    {game.questions.length}{" "}
+                    {game.questions.length === 1 ? "Pergunta" : "Perguntas"}
+                  </p>
+                  <p>{`Criado: ${date.toLocaleDateString()}`}</p>
+                  <p>{`Mês: ${month}`}</p> {/* Exibindo o mês */}
+                  <button
+                    className={`${styles.playButton}`}
+                    onClick={() => {
+                      router.push({
+                        pathname: "/host",
+                        query: { gameId: game._id },
+                      });
+                    }}
+                  >
+                    Começar
+                  </button>
+                  <div
+                    className={`${styles.edit}`}
+                    onClick={() => {
+                      router.push({
+                        pathname: "/create",
+                        query: { editingId: game._id },
+                      });
+                    }}
+                  >
+                    <TiEdit></TiEdit>
                   </div>
-                );
-              })}
+                  <div
+                    className={`${styles.delete}`}
+                    onClick={() => {
+                      postData<APIRequest, APIResponse>(
+                        "/api/deleteOneGame",
+                        { gameId: game._id }
+                      ).then((res) => {
+                        if (res.error === false) {
+                          getSetUserData();
+                        }
+                      });
+                    }}
+                  >
+                    <BsTrash />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
