@@ -95,9 +95,9 @@ function Login() {
 
             <button type="submit" className={styles.button}>
               Login
-            </button>
+            </button><br></br>
             
-            <p><button
+            <button
                 type="button"
                 className="gameButton"
                 onClick={() => {
@@ -106,7 +106,6 @@ function Login() {
                     >
                   Voltar
               </button>
-            </p>
             
             <p className={styles.signupPrompt}>
               {"Não tem uma conta? "}
