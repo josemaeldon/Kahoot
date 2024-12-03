@@ -17,7 +17,6 @@ import { BsTrash } from "react-icons/bs";
 function Profile() {
   const { loggedIn, user } = useUser();
   const [data, setData] = useState<null | db.KahootGame[]>(null);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   function getSetUserData() {
     postData<GetGameReq, GetGameRes>("/api/getGames", {
@@ -38,19 +37,8 @@ function Profile() {
       getSetUserData();
     }
   }, [loggedIn]);
-
   const router = useRouter();
   if (!loggedIn) return <></>;
-
-  // Função para ordenar os dados com base na data
-  const sortedData = data
-    ? [...data].sort((a, b) => {
-        const dateA = new Date(a.date).getTime();
-        const dateB = new Date(b.date).getTime();
-
-        return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
-      })
-    : [];
 
   return (
     <div className={`${styles.container}`}>
@@ -62,20 +50,12 @@ function Profile() {
           <div className={`${styles.flexContainer}`}>
             <p className={`${styles.headerMessage}`}>Meus Kahoots:</p>
             {data !== null && data.length !== 0 && (
-              <>
-                <button
-                  className={`${styles.playButton}`}
-                  onClick={() => router.push("/create")}
-                >
-                  Criar Kahoot
-                </button>
-                <button
-                  className={`${styles.sortButton}`}
-                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                >
-                  Ordenar por data ({sortOrder === "asc" ? "Crescente" : "Decrescente"})
-                </button>
-              </>
+              <button
+                className={`${styles.playButton}`}
+                onClick={() => router.push("/create")}
+              >
+                Criar Kahoot
+              </button>
             )}
           </div>
 
@@ -91,60 +71,61 @@ function Profile() {
             </div>
           )}
           <div className={`${styles.kahootGrid}`}>
-            {sortedData.map((game) => {
-              const date = new Date();
-              date.setTime(game.date);
-              return (
-                <div className={`${styles.gameElement}`} key={game._id}>
-                  <p>
-                    <b>{game.title}</b>
-                  </p>
-                  <p>
-                    {game.questions.length}{" "}
-                    {game.questions.length === 1 ? "Pergunta" : "Perguntas"}
-                  </p>
-                  <p>{`Criado: ${date.toLocaleDateString()}`}</p>
+            {data !== null &&
+              data.map((game) => {
+                const date = new Date();
+                date.setTime(game.date);
+                return (
+                  <div className={`${styles.gameElement}`} key={game._id}>
+                    <p>
+                      <b>{game.title}</b>
+                    </p>
+                    <p>
+                      {game.questions.length}{" "}
+                      {game.questions.length === 1 ? "Pergunta" : "Perguntas"}
+                    </p>
+                    <p>{`Criado: ${date.toLocaleDateString()}`}</p>
 
-                  <button
-                    className={`${styles.playButton}`}
-                    onClick={() => {
-                      router.push({
-                        pathname: "/host",
-                        query: { gameId: game._id },
-                      });
-                    }}
-                  >
-                    Começar
-                  </button>
-                  <div
-                    className={`${styles.edit}`}
-                    onClick={() => {
-                      router.push({
-                        pathname: "/create",
-                        query: { editingId: game._id },
-                      });
-                    }}
-                  >
-                    <TiEdit></TiEdit>
+                    <button
+                      className={`${styles.playButton}`}
+                      onClick={() => {
+                        router.push({
+                          pathname: "/host",
+                          query: { gameId: game._id },
+                        });
+                      }}
+                    >
+                      Começar
+                    </button>
+                    <div
+                      className={`${styles.edit}`}
+                      onClick={() => {
+                        router.push({
+                          pathname: "/create",
+                          query: { editingId: game._id },
+                        });
+                      }}
+                    >
+                      <TiEdit></TiEdit>
+                    </div>
+                    <div
+                      className={`${styles.delete}`}
+                      onClick={() => {
+                        postData<APIRequest, APIResponse>(
+                          "/api/deleteOneGame",
+                          { gameId: game._id }
+                        ).then((res) => {
+                          if (res.error === false) {
+                            getSetUserData();
+                          }
+                        });
+                      }}
+                    >
+                      <BsTrash />
+                    </div>
                   </div>
-                  <div
-                    className={`${styles.delete}`}
-                    onClick={() => {
-                      postData<APIRequest, APIResponse>(
-                        "/api/deleteOneGame",
-                        { gameId: game._id }
-                      ).then((res) => {
-                        if (res.error === false) {
-                          getSetUserData();
-                        }
-                      });
-                    }}
-                  >
-                    <BsTrash />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </div>
       </div>
