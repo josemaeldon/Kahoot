@@ -94,16 +94,12 @@ function Login() {
             </div>
 
             <button type="submit" className={styles.button}>
-              Login
-            </button><br></br>
-            
-            <button type="submit" className={styles.button}>
   Login
 </button><br />
 
 <button
   type="button"
-  className="gameButton"
+  className={styles.button}
   onClick={() => {
     window.location.href = "https://kahoot.cloudbr.app";
   }}
