@@ -223,7 +223,7 @@ function Editor() {
                 className={`${styles.answer} ${
                   !q2Empty ? `${styles.whiteText}` : ""
                 }`}
-                placeholder="Resposta 3 (optional)"
+                placeholder="Resposta 3 (opcional)"
                 onInput={answerInputHandler(2)}
                 suppressContentEditableWarning
                 ref={a3}
@@ -254,7 +254,7 @@ function Editor() {
                 className={`${styles.answer} ${
                   !q3Empty ? `${styles.whiteText}` : ""
                 }`}
-                placeholder="Resposta 4 (optional)"
+                placeholder="Resposta 4 (opcional)"
                 onInput={answerInputHandler(3)}
                 suppressContentEditableWarning
                 ref={a4}
