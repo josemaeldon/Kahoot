@@ -137,7 +137,7 @@ function StartScreen() {
       ></Spinner>
     </span>
   )}
-  {!inputLocked && <span>Enter</span>}
+  {!inputLocked && <span>ENTRAR NA SALA</span>}
 </button>
 
 <button
