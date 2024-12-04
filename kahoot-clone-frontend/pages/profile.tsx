@@ -66,7 +66,7 @@ function Profile() {
                 className={`${styles.playButton}`}
                 onClick={() => router.push("/create")}
               >
-                Crie um
+                Crie um agora
               </button>
             </div>
           )}
@@ -84,7 +84,7 @@ function Profile() {
                       {game.questions.length}{" "}
                       {game.questions.length === 1 ? "Pergunta" : "Perguntas"}
                     </p>
-                    <p>{`Criado: ${date.toLocaleDateString()}`}</p>
+                    <p>{`Criado em: ${date.toLocaleDateString()}`}</p>
 
                     <button
                       className={`${styles.playButton}`}
