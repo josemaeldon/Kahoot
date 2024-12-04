@@ -20,6 +20,7 @@ function Profile() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [sortByMonth, setSortByMonth] = useState(false); // Estado para ordenar por mês
   const [filteredData, setFilteredData] = useState<db.KahootGame[]>([]); // Para armazenar dados filtrados
+  const [selectedCategory, setSelectedCategory] = useState<string>(""); // Filtro por categoria
 
   function getSetUserData() {
     postData<GetGameReq, GetGameRes>("/api/getGames", {
@@ -83,6 +84,18 @@ function Profile() {
     }
   };
 
+  // Função para filtrar por categoria
+  const handleCategoryFilter = (category: string) => {
+    setSelectedCategory(category);
+    if (category === "") {
+      setFilteredData(data); // Se não houver filtro, exibe todos
+    } else {
+      setFilteredData(
+        data.filter((game) => game.category === category)
+      );
+    }
+  };
+
   return (
     <div className={`${styles.container}`}>
       <div className={`${styles.otherContainer}`}>
@@ -130,6 +143,17 @@ function Profile() {
                     <option value="Dezembro">Dezembro</option>
                   </select>
                 </div>
+
+                <div>
+                  <label>Filtrar por categoria:</label>
+                  <select onChange={(e) => handleCategoryFilter(e.target.value)} value={selectedCategory}>
+                    <option value="">Todas</option>
+                    <option value="Categoria 1">Categoria 1</option>
+                    <option value="Categoria 2">Categoria 2</option>
+                    <option value="Categoria 3">Categoria 3</option>
+                    {/* Adicione mais categorias conforme necessário */}
+                  </select>
+                </div>
               </>
             )}
           </div>
@@ -163,6 +187,7 @@ function Profile() {
                   </p>
                   <p>{`Criado: ${date.toLocaleDateString()}`}</p>
                   <p>{`Mês: ${month}`}</p> {/* Exibindo o mês */}
+                  <p className={`${styles.category}`}>{game.category}</p> {/* Exibindo a categoria */}
                   <button
                     className={`${styles.playButton}`}
                     onClick={() => {
