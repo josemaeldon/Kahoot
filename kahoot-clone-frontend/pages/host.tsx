@@ -45,8 +45,7 @@ function JoinHeader() {
     <div className={`${styles.darkBackground}`}>
       <div className={`${styles.outerContainer}`}>
         <div className={`${styles.playHeader}`}>
-          <p>Acesse kahoot.cloudbr.app/play ou pelo QrCode</p>
-          <p><a href="https://kahoot.cloudbr.app">Recomeçar</a></p>
+          <p>Acesse kahoot.cloudbr.app/play ou pelo QrCode</p>          
         </div>
         <div className={`${styles.pinHeader}`}>
           <p>Game Pin:</p>
@@ -196,7 +195,7 @@ function QuestionDisplay({
       <div className={`${qStyles.container}`}>
         <p
           className={`${qStyles.question}`}
-          placeholder="Pergunta..."
+          placeholder="Question..."
           suppressContentEditableWarning
         >
           {question.question}
@@ -337,7 +336,7 @@ function Leaderboard({ nextScreenHandler }) {
               <span>
                 {index + 1}. {user.username}
               </span>
-              <span>{user.points} pontos</span>
+              <span>{user.points} points</span>
             </div>
           );
         })}
