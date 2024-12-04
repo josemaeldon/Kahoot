@@ -27,11 +27,11 @@ function Index() {
             padding: "10px 16px 10px 16px",
           }}
         >
-          Jogar
+          Entrar
         </GameButton>
         <GameButton
           onClick={() => {
-            router.push("/create");
+            router.push("/profile");
           }}
           backgroundStyle={{
             backgroundColor: "rgb(14,78,154)",
@@ -41,7 +41,7 @@ function Index() {
             padding: "10px 16px 10px 16px",
           }}
         >
-          Criar
+          Criar Sala
         </GameButton>
       </div>
     </div>
