@@ -63,12 +63,6 @@ function Editor() {
     formErrors.questionErrors[questionNumber].ignoreErrors !== true &&
     formErrors.questionErrors[questionNumber];
 
-  const questionBlankError =
-    formErrors !== null &&
-    formErrors.questionErrors[questionNumber] !== undefined &&
-    formErrors.questionErrors[questionNumber].ignoreErrors !== true &&
-    formErrors.questionErrors[questionNumber].questionBlankError;
-
   function answerInputHandler(answerIndex: number) {
     return (e: React.FormEvent<HTMLParagraphElement>) => {
       e.preventDefault();
@@ -130,9 +124,12 @@ function Editor() {
       <p
         contentEditable="true"
         className={`${styles.question} ${
-          questionBlankError ? styles.lightRed : ""
+          questionError.questionBlankError &&
+          game.questions[questionNumber].choices[0] === ""
+            ? styles.lightRed
+            : ""
         }`}
-        placeholder="Sua pergunta aqui..."
+        placeholder="Question..."
         ref={question}
         onInput={questionInputHandler}
         suppressContentEditableWarning
@@ -157,7 +154,7 @@ function Editor() {
             <div className={`${styles.answerContainer}`}>
               <p
                 contentEditable="true"
-                placeholder="Resposta 1"
+                placeholder="Answer 1"
                 className={`${styles.answer} ${
                   !q0Empty ? styles.whiteText : ""
                 }`}
@@ -194,7 +191,7 @@ function Editor() {
                 className={`${styles.answer} ${
                   !q1Empty ? `${styles.whiteText}` : ""
                 }`}
-                placeholder="Resposta 2"
+                placeholder="Answer 2"
                 onInput={answerInputHandler(1)}
                 suppressContentEditableWarning
                 ref={a2}
@@ -223,7 +220,7 @@ function Editor() {
                 className={`${styles.answer} ${
                   !q2Empty ? `${styles.whiteText}` : ""
                 }`}
-                placeholder="Resposta 3 (optional)"
+                placeholder="Answer 3 (optional)"
                 onInput={answerInputHandler(2)}
                 suppressContentEditableWarning
                 ref={a3}
@@ -254,7 +251,7 @@ function Editor() {
                 className={`${styles.answer} ${
                   !q3Empty ? `${styles.whiteText}` : ""
                 }`}
-                placeholder="Resposta 4 (optional)"
+                placeholder="Answer 4 (optional)"
                 onInput={answerInputHandler(3)}
                 suppressContentEditableWarning
                 ref={a4}
