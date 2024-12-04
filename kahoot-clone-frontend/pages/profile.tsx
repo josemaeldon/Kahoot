@@ -1,199 +1,53 @@
-import Questions from "@components/Questions";
-import Header from "@components/Header";
-import styles from "@styles/profile.module.css";
-import React, { useEffect, useState } from "react";
-import useUser from "@lib/useSSRUser";
-import type { db } from "../kahoot";
-import { postData } from "@lib/postData";
-import {
-  APIRequest as GetGameReq,
-  APIResponse as GetGameRes,
-} from "./api/getGames";
-import { TiDelete, TiEdit } from "react-icons/ti";
-import { useRouter } from "next/router";
-import { APIRequest, APIResponse } from "./api/deleteOneGame";
-import { BsTrash } from "react-icons/bs";
-
-function Profile() {
-  const { loggedIn, user } = useUser();
-  const [data, setData] = useState<null | db.KahootGame[]>(null);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [sortByMonth, setSortByMonth] = useState(false); // Estado para ordenar por mês
-
-  function getSetUserData() {
-    postData<GetGameReq, GetGameRes>("/api/getGames", {
-      type: "userId",
-      userId: user._id,
-    }).then((res) => {
-      if (res.error === true) {
-        //Todo: error gui
-      } else {
-        setData(res.games);
-        console.log(res.games);
-      }
-    });
-  }
-
-  useEffect(() => {
-    if (loggedIn) {
-      getSetUserData();
-    }
-  }, [loggedIn]);
-
-  const router = useRouter();
-  if (!loggedIn) return <></>;
-
-  // Função para ordenar por data ou por mês
-  const sortedData = data
-    ? [...data].sort((a, b) => {
-        const dateA = new Date(a.date).getTime();
-        const dateB = new Date(b.date).getTime();
-
-        if (sortByMonth) {
-          // Ordenação por mês (comparar ano e mês)
-          const monthA = new Date(a.date).getMonth();
-          const monthB = new Date(b.date).getMonth();
-          return sortOrder === "asc" ? monthA - monthB : monthB - monthA;
-        } else {
-          // Ordenação por data
-          return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
-        }
-      })
-    : [];
-
-  // Função para formatar o mês de forma legível
-  const formatMonth = (date: number) => {
-    const months = [
-      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
-      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-    ];
-    return months[new Date(date).getMonth()];
-  };
-
-  // Função para agrupar jogos por mês
-  const groupByMonth = (games: db.KahootGame[]) => {
-    const grouped: { [month: string]: db.KahootGame[] } = {};
-    games.forEach((game) => {
-      const month = formatMonth(game.date);
-      if (!grouped[month]) {
-        grouped[month] = [];
-      }
-      grouped[month].push(game);
-    });
-    return grouped;
-  };
-
-  const groupedGames = data ? groupByMonth(sortedData) : {};
-
-  return (
-    <div className={`${styles.container}`}>
-      <div className={`${styles.otherContainer}`}>
-        <Header></Header>
-      </div>
-      <div className={`${styles.innerContainer}`}>
-        <div className={`${styles.innerInnerContainer}`}>
-          <div className={`${styles.flexContainer}`}>
-            <p className={`${styles.headerMessage}`}>Meus Kahoots:</p>
-            {data !== null && data.length !== 0 && (
-              <>
-                <button
-                  className={`${styles.playButton}`}
-                  onClick={() => router.push("/create")}
-                >
-                  Criar Kahoot
-                </button>
-                <button
-                  className={`${styles.sortButton}`}
-                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                >
-                  Ordenar por data ({sortOrder === "asc" ? "Crescente" : "Decrescente"})
-                </button>
-                <button
-                  className={`${styles.sortButton}`}
-                  onClick={() => setSortByMonth(!sortByMonth)}
-                >
-                  Ordenar por mês ({sortByMonth ? "Ano" : "Mês"})
-                </button>
-              </>
-            )}
-          </div>
-
-          {data !== null && data.length === 0 && (
-            <div className={`${styles.emptyMessage}`}>
-              <p>Parece que você não tem Kahoots :(</p>
-              <button
-                className={`${styles.playButton}`}
-                onClick={() => router.push("/create")}
-              >
-                Crie um
-              </button>
-            </div>
-          )}
-          <div className={`${styles.kahootGrid}`}>
-            {Object.keys(groupedGames).map((month) => (
-              <div key={month} className={`${styles.monthGroup}`}>
-                <h3>{month}</h3> {/* Exibe o nome do mês */}
-                {groupedGames[month].map((game) => {
-                  const date = new Date();
-                  date.setTime(game.date);
-
-                  return (
-                    <div className={`${styles.gameElement}`} key={game._id}>
-                      <p>
-                        <b>{game.title}</b>
-                      </p>
-                      <p>
-                        {game.questions.length}{" "}
-                        {game.questions.length === 1 ? "Pergunta" : "Perguntas"}
-                      </p>
-                      <p>{`Criado: ${date.toLocaleDateString()}`}</p>
-                      <button
-                        className={`${styles.playButton}`}
-                        onClick={() => {
-                          router.push({
-                            pathname: "/host",
-                            query: { gameId: game._id },
-                          });
-                        }}
-                      >
-                        Começar
-                      </button>
-                      <div
-                        className={`${styles.edit}`}
-                        onClick={() => {
-                          router.push({
-                            pathname: "/create",
-                            query: { editingId: game._id },
-                          });
-                        }}
-                      >
-                        <TiEdit></TiEdit>
-                      </div>
-                      <div
-                        className={`${styles.delete}`}
-                        onClick={() => {
-                          postData<APIRequest, APIResponse>(
-                            "/api/deleteOneGame",
-                            { gameId: game._id }
-                          ).then((res) => {
-                            if (res.error === false) {
-                              getSetUserData();
-                            }
-                          });
-                        }}
-                      >
-                        <BsTrash />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+.kahootGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: flex-start;
 }
 
-export default Profile;
+.monthGroup {
+  width: 100%;
+  margin-bottom: 30px;
+}
+
+.gridContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.gameElement {
+  background-color: #f0f0f0;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gameElement:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+}
+
+.gameElement p {
+  margin: 10px 0;
+}
+
+.gameElement button {
+  margin-top: 10px;
+}
+
+@media (max-width: 768px) {
+  .gridContainer {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .gridContainer {
+    grid-template-columns: 1fr;
+  }
+}
