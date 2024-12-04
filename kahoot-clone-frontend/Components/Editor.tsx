@@ -9,10 +9,11 @@ import {
 import { FaCheck } from "react-icons/fa";
 import type { db } from "../kahoot";
 
-// Função para substituir o caret ao final do campo de texto
 function replaceCaret(el: HTMLElement) {
+  // Place the caret at the end of the element
   const target = document.createTextNode("");
   el.appendChild(target);
+  // do not move caret if element was not focused
   const isTargetFocused = document.activeElement === el;
   if (target !== null && target.nodeValue !== null && isTargetFocused) {
     var sel = window.getSelection();
@@ -27,7 +28,6 @@ function replaceCaret(el: HTMLElement) {
   }
 }
 
-// Componente de Checkbox com círculo
 function CheckboxCircle({
   onClick,
   checked,
@@ -69,23 +69,13 @@ function Editor() {
     formErrors.questionErrors[questionNumber].ignoreErrors !== true &&
     formErrors.questionErrors[questionNumber].questionBlankError;
 
-  // Função para lidar com a alteração da categoria
-  function categoryInputHandler(e: React.FormEvent<HTMLParagraphElement>) {
-    e.preventDefault();
-    const gameCopy = { ...game };
-    gameCopy.questions[questionNumber].category = e.currentTarget.innerText;
-    setGame({ ...game });
-
-    if (questionError.categoryBlankError) validateForm({ ...game });
-  }
-
-  // Função para lidar com a alteração das respostas
   function answerInputHandler(answerIndex: number) {
     return (e: React.FormEvent<HTMLParagraphElement>) => {
       e.preventDefault();
       const gameCopy = { ...game };
       gameCopy.questions[questionNumber].choices[answerIndex] =
         e.currentTarget.innerText;
+      console.log(e.currentTarget.innerText);
       setGame({ ...game });
 
       if (questionError.choicesRequiredError) validateForm({ ...game });
@@ -94,6 +84,7 @@ function Editor() {
 
   function onCheckboxClickHandler(index: number) {
     return () => {
+      console.log(index);
       const gameCopy = { ...game };
       gameCopy.questions[questionNumber].correctAnswer = index;
       setGame(gameCopy);
@@ -101,11 +92,11 @@ function Editor() {
       if (questionError.correctChoiceError) validateForm(gameCopy);
     };
   }
-
   function questionInputHandler(e: React.FormEvent<HTMLParagraphElement>) {
     e.preventDefault();
     const gameCopy = { ...game };
     gameCopy.questions[questionNumber].question = e.currentTarget.innerText;
+    console.log(e.currentTarget.innerText);
     setGame({ ...game });
 
     if (questionError.questionBlankError) validateForm({ ...game });
@@ -148,25 +139,16 @@ function Editor() {
       >
         {game.questions[questionNumber].question}
       </p>
-
-      {/* Adicionando campo de categoria abaixo da pergunta */}
-      <p
-        contentEditable="true"
-        className={`${styles.category} ${
-          questionError.categoryBlankError ? styles.lightRed : ""
-        }`}
-        placeholder="Categoria da pergunta"
-        onInput={categoryInputHandler}
-        suppressContentEditableWarning
-      >
-        {game.questions[questionNumber].category}
-      </p>
-
       <div>
         <div className={`${styles.grid}`}>
           <div
             className={`${styles.wrapper} ${
               !q0Empty ? `${styles.red}` : `${styles.white}`
+            } ${
+              questionError.choicesRequiredError &&
+              game.questions[questionNumber].choices[0] === ""
+                ? styles.lightRed
+                : ""
             }`}
           >
             <span className={`${styles.shapeContainer} ${styles.red}`}>
@@ -193,7 +175,100 @@ function Editor() {
               ></CheckboxCircle>
             )}
           </div>
-          {/* Adicionando o restante das respostas */}
+          <div
+            className={`${styles.wrapper} ${
+              !q1Empty ? `${styles.blue}` : `${styles.white}`
+            } ${
+              questionError.choicesRequiredError &&
+              game.questions[questionNumber].choices[1] === ""
+                ? styles.lightRed
+                : ""
+            }`}
+          >
+            <span className={`${styles.shapeContainer} ${styles.blue}`}>
+              <BsFillSquareFill></BsFillSquareFill>
+            </span>
+            <div className={`${styles.answerContainer}`}>
+              <p
+                contentEditable="true"
+                className={`${styles.answer} ${
+                  !q1Empty ? `${styles.whiteText}` : ""
+                }`}
+                placeholder="Resposta 2"
+                onInput={answerInputHandler(1)}
+                suppressContentEditableWarning
+                ref={a2}
+              >
+                {game.questions[questionNumber].choices[1]}
+              </p>
+            </div>
+            {!q1Empty && (
+              <CheckboxCircle
+                onClick={onCheckboxClickHandler(1)}
+                checked={q1Checked}
+              ></CheckboxCircle>
+            )}
+          </div>
+          <div
+            className={`${styles.wrapper} ${
+              !q2Empty ? `${styles.yellow}` : `${styles.white}`
+            }`}
+          >
+            <span className={`${styles.shapeContainer} ${styles.yellow}`}>
+              <BsFillCircleFill></BsFillCircleFill>
+            </span>
+            <div className={`${styles.answerContainer}`}>
+              <p
+                contentEditable="true"
+                className={`${styles.answer} ${
+                  !q2Empty ? `${styles.whiteText}` : ""
+                }`}
+                placeholder="Resposta 3 (opcional)"
+                onInput={answerInputHandler(2)}
+                suppressContentEditableWarning
+                ref={a3}
+              >
+                {game.questions[questionNumber].choices[2]}
+              </p>
+            </div>
+            {!q2Empty && (
+              <CheckboxCircle
+                onClick={onCheckboxClickHandler(2)}
+                checked={q2Checked}
+              ></CheckboxCircle>
+            )}
+          </div>
+          <div
+            className={`${styles.wrapper} ${
+              !q3Empty ? `${styles.green}` : `${styles.white}`
+            }`}
+          >
+            <span className={`${styles.shapeContainer} ${styles.green}`}>
+              <BsFillSquareFill
+                style={{ transform: "rotate(45deg)" }}
+              ></BsFillSquareFill>
+            </span>
+            <div className={`${styles.answerContainer}`}>
+              <p
+                contentEditable="true"
+                className={`${styles.answer} ${
+                  !q3Empty ? `${styles.whiteText}` : ""
+                }`}
+                placeholder="Resposta 4 (opcional)"
+                onInput={answerInputHandler(3)}
+                suppressContentEditableWarning
+                ref={a4}
+              >
+                {game.questions[questionNumber].choices[3]}
+              </p>
+            </div>
+            {!q3Empty && (
+              <CheckboxCircle
+                onClick={onCheckboxClickHandler(3)}
+                checked={q3Checked}
+              ></CheckboxCircle>
+            )}
+          </div>
         </div>
       </div>
     </div>
