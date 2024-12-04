@@ -1,3 +1,4 @@
+/* Estilos originais */
 .backdrop {
   background: rgb(70, 23, 143);
   width: 100%;
@@ -5,7 +6,6 @@
   min-height: 100vh;
   position: relative;
   overflow: hidden;
-  box-sizing: border-box;
 }
 
 .backdrop::before {
@@ -52,12 +52,6 @@
   margin: 0 0 20px 0;
 }
 
-@media (max-width: 600px) {
-  .logo {
-    font-size: 2.5rem;
-  }
-}
-
 .gameButton {
   background-color: black;
   border: 0px;
@@ -79,6 +73,8 @@
 }
 
 .gameButton span:active {
+  height: 100%;
+  width: 100%;
   transform: translateY(-2px);
 }
 
@@ -88,8 +84,8 @@
   padding: 20px;
   background-color: white;
   border-radius: 4px;
-  width: 90%;
-  max-width: 320px;
+  width: 320px;
+  height: 138px;
   gap: 10px;
 }
 
@@ -104,6 +100,7 @@
 
 .gameInputPin {
   border: lightgrey solid;
+
   outline: none;
   transition: border-color 0.25s linear;
   font-weight: bold;
@@ -111,6 +108,7 @@
 
 .gameInputPin:focus {
   border: black solid;
+  outline: none;
 }
 
 .answerGrid {
@@ -118,12 +116,6 @@
   grid-template-columns: minmax(200px, 1fr) minmax(200px, 1fr);
   min-width: 500px;
   gap: 10px;
-}
-
-@media (max-width: 600px) {
-  .answerGrid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .red,
@@ -148,4 +140,34 @@
 
 .green {
   background-color: rgb(47, 172, 16);
+}
+
+/* Responsividade para dispositivos móveis */
+@media (max-width: 768px) {
+  .backdrop {
+    min-height: 100vh;
+  }
+
+  .backdrop::before,
+  .backdrop::after {
+    min-width: 200px;
+    width: 40vw;
+  }
+
+  .gameBox {
+    padding: 20px;
+  }
+
+  .logo {
+    font-size: 2.5rem;
+  }
+
+  .gameInput {
+    width: 90%;
+  }
+
+  .answerGrid {
+    grid-template-columns: 1fr;
+    min-width: auto;
+  }
 }
