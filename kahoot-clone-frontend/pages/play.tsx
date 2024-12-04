@@ -146,7 +146,7 @@ function StartScreen() {
     window.location.href = "https://kahoot.cloudbr.app";
   }}
 >
-  Go to Kahoot
+  Voltar
 </button>
 
 
