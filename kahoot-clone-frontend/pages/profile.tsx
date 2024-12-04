@@ -95,7 +95,7 @@ function Profile() {
                         });
                       }}
                     >
-                      Começar
+                      Jogar
                     </button>
                     <div
                       className={`${styles.edit}`}
