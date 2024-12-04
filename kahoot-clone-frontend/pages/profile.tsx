@@ -19,6 +19,7 @@ function Profile() {
   const [data, setData] = useState<null | db.KahootGame[]>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [sortByMonth, setSortByMonth] = useState(false); // Estado para ordenar por mês
+  const [filteredData, setFilteredData] = useState<db.KahootGame[]>([]); // Para armazenar dados filtrados
 
   function getSetUserData() {
     postData<GetGameReq, GetGameRes>("/api/getGames", {
@@ -29,6 +30,7 @@ function Profile() {
         //Todo: error gui
       } else {
         setData(res.games);
+        setFilteredData(res.games);
         console.log(res.games);
       }
     });
@@ -44,8 +46,8 @@ function Profile() {
   if (!loggedIn) return <></>;
 
   // Função para ordenar por data ou por mês
-  const sortedData = data
-    ? [...data].sort((a, b) => {
+  const sortedData = filteredData
+    ? [...filteredData].sort((a, b) => {
         const dateA = new Date(a.date).getTime();
         const dateB = new Date(b.date).getTime();
 
@@ -70,16 +72,16 @@ function Profile() {
     return months[new Date(date).getMonth()];
   };
 
-  // Agrupar os jogos por mês
-  const groupedByMonth = data?.reduce((groups, game) => {
-    const date = new Date(game.date);
-    const monthKey = `${formatMonth(game.date)} ${date.getFullYear()}`;
-    if (!groups[monthKey]) {
-      groups[monthKey] = [];
+  // Função para filtrar os jogos por mês
+  const handleMonthFilter = (month: string) => {
+    if (!month) {
+      setFilteredData(data); // Se não houver filtro, exibe todos
+    } else {
+      setFilteredData(
+        data.filter((game) => formatMonth(game.date) === month)
+      );
     }
-    groups[monthKey].push(game);
-    return groups;
-  }, {} as Record<string, db.KahootGame[]>);
+  };
 
   return (
     <div className={`${styles.container}`}>
@@ -110,6 +112,24 @@ function Profile() {
                 >
                   Ordenar por mês ({sortByMonth ? "Ano" : "Mês"})
                 </button>
+                <div>
+                  <label>Filtrar por mês:</label>
+                  <select onChange={(e) => handleMonthFilter(e.target.value)} defaultValue="">
+                    <option value="">Todos</option>
+                    <option value="Janeiro">Janeiro</option>
+                    <option value="Fevereiro">Fevereiro</option>
+                    <option value="Março">Março</option>
+                    <option value="Abril">Abril</option>
+                    <option value="Maio">Maio</option>
+                    <option value="Junho">Junho</option>
+                    <option value="Julho">Julho</option>
+                    <option value="Agosto">Agosto</option>
+                    <option value="Setembro">Setembro</option>
+                    <option value="Outubro">Outubro</option>
+                    <option value="Novembro">Novembro</option>
+                    <option value="Dezembro">Dezembro</option>
+                  </select>
+                </div>
               </>
             )}
           </div>
@@ -127,67 +147,62 @@ function Profile() {
           )}
 
           <div className={`${styles.kahootGrid}`}>
-            {groupedByMonth &&
-              Object.keys(groupedByMonth).map((monthKey) => (
-                <div key={monthKey}>
-                  <h2>{monthKey}</h2> {/* Exibe o mês e ano */}
-                  <div className={`${styles.gameGrid}`}>
-                    {groupedByMonth[monthKey].map((game) => {
-                      const date = new Date(game.date);
+            {sortedData.map((game) => {
+              const date = new Date();
+              date.setTime(game.date);
+              const month = formatMonth(game.date); // Mês formatado
 
-                      return (
-                        <div className={`${styles.gameElement}`} key={game._id}>
-                          <p>
-                            <b>{game.title}</b>
-                          </p>
-                          <p>
-                            {game.questions.length}{" "}
-                            {game.questions.length === 1 ? "Pergunta" : "Perguntas"}
-                          </p>
-                          <p>{`Criado: ${date.toLocaleDateString()}`}</p>
-                          <button
-                            className={`${styles.playButton}`}
-                            onClick={() => {
-                              router.push({
-                                pathname: "/host",
-                                query: { gameId: game._id },
-                              });
-                            }}
-                          >
-                            Começar
-                          </button>
-                          <div
-                            className={`${styles.edit}`}
-                            onClick={() => {
-                              router.push({
-                                pathname: "/create",
-                                query: { editingId: game._id },
-                              });
-                            }}
-                          >
-                            <TiEdit></TiEdit>
-                          </div>
-                          <div
-                            className={`${styles.delete}`}
-                            onClick={() => {
-                              postData<APIRequest, APIResponse>(
-                                "/api/deleteOneGame",
-                                { gameId: game._id }
-                              ).then((res) => {
-                                if (res.error === false) {
-                                  getSetUserData();
-                                }
-                              });
-                            }}
-                          >
-                            <BsTrash />
-                          </div>
-                        </div>
-                      );
-                    })}
+              return (
+                <div className={`${styles.gameElement}`} key={game._id}>
+                  <p>
+                    <b>{game.title}</b>
+                  </p>
+                  <p>
+                    {game.questions.length}{" "}
+                    {game.questions.length === 1 ? "Pergunta" : "Perguntas"}
+                  </p>
+                  <p>{`Criado: ${date.toLocaleDateString()}`}</p>
+                  <p>{`Mês: ${month}`}</p> {/* Exibindo o mês */}
+                  <button
+                    className={`${styles.playButton}`}
+                    onClick={() => {
+                      router.push({
+                        pathname: "/host",
+                        query: { gameId: game._id },
+                      });
+                    }}
+                  >
+                    Começar
+                  </button>
+                  <div
+                    className={`${styles.edit}`}
+                    onClick={() => {
+                      router.push({
+                        pathname: "/create",
+                        query: { editingId: game._id },
+                      });
+                    }}
+                  >
+                    <TiEdit></TiEdit>
+                  </div>
+                  <div
+                    className={`${styles.delete}`}
+                    onClick={() => {
+                      postData<APIRequest, APIResponse>(
+                        "/api/deleteOneGame",
+                        { gameId: game._id }
+                      ).then((res) => {
+                        if (res.error === false) {
+                          getSetUserData();
+                        }
+                      });
+                    }}
+                  >
+                    <BsTrash />
                   </div>
                 </div>
-              ))}
+              );
+            })}
           </div>
         </div>
       </div>
