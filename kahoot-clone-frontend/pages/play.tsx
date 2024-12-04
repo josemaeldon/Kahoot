@@ -120,22 +120,37 @@ function StartScreen() {
             value={username}
             readOnly={inputLocked}
           ></input>
+
+
+          
           <button
-            className={`${styles.gameButton}`}
-            onClick={() => {
-              setInputLocked(true);
-            }}
-          >
-            {inputLocked && (
-              <span>
-                <Spinner
-                  animation="border"
-                  style={{ height: "24px", width: "24px" }}
-                ></Spinner>
-              </span>
-            )}
-            {!inputLocked && <span>Enter</span>}
-          </button>
+  className={`${styles.gameButton}`}
+  onClick={() => {
+    setInputLocked(true);
+  }}
+>
+  {inputLocked && (
+    <span>
+      <Spinner
+        animation="border"
+        style={{ height: "24px", width: "24px" }}
+      ></Spinner>
+    </span>
+  )}
+  {!inputLocked && <span>Enter</span>}
+</button>
+
+<button
+  className={`${styles.gameButton}`}
+  onClick={() => {
+    window.location.href = "https://kahoot.cloudbr.app";
+  }}
+>
+  Go to Kahoot
+</button>
+
+
+          
         </div>
       </div>
     </div>
