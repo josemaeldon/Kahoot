@@ -1,5 +1,5 @@
 // Create WebSocket connection.
-const socket = new WebSocket("ws://kahoot-server.cloudbr.app/ws");
+const socket = new WebSocket("wss://kahoot-server.cloudbr.app/ws");
 // buttons
 const joinBtn = document.getElementById("joinBtn");
 // code box
