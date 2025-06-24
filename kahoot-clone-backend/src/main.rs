@@ -55,7 +55,7 @@ async fn main() {
         .init();
 
     // Set the host address to `localhost:3000`
-    let addr = SocketAddr::from(([127, 0, 0, 1], 49152));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 49152));
 
     tracing::debug!("Listening on {addr}");
 
