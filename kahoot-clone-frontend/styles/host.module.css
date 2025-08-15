@@ -32,7 +32,6 @@
   }
 }
 
-
 .playHeader {
   padding: 10px;
   font-size: 24px;
@@ -154,7 +153,6 @@
 .leaderboard {
   display: flex;
   flex-direction: column;
-
   padding: 20px;
   align-items: center;
 }
@@ -200,4 +198,25 @@
   color: black;
   font-size: 24px;
   font-weight: bold;
+}
+
+/* ---- ESTILOS PARA IMPRESSÃO ---- */
+@media print {
+  /* Esconde tudo da tela */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Mostra apenas a área de classificação */
+  .printable-area, .printable-area * {
+    visibility: visible;
+  }
+
+  /* Garante que a área fique centralizada na impressão */
+  .printable-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
 }
