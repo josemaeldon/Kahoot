@@ -62,7 +62,8 @@ function JoinHeader() {
 }
 
 function Lobby() {
-  const { socket, players, setPlayers, setPhase } = useContext(HostContext);
+  const { game, roomId, socket, players, setPlayers, setPhase } =
+    useContext(HostContext);
 
   useEffect(() => {
     let aborter = new AbortController();
@@ -102,9 +103,7 @@ function Lobby() {
         <div style={{ position: "relative", top: "10px" }}>
           <GameButton
             onClick={(e) => {
-              if (players.length !== 0) {
-                setPhase("questions");
-              }
+              if (players.length !== 0) setPhase("questions");
               e.preventDefault();
             }}
             backgroundStyle={{
@@ -115,7 +114,7 @@ function Lobby() {
             foregroundStyle={{
               backgroundColor: players.length === 0 ? "lightgray" : "white",
               cursor: players.length === 0 ? "not-allowed" : "pointer",
-              padding: "3px 13px 3px 13px",
+              padding: "3px 13px",
             }}
           >
             Começar
@@ -131,6 +130,14 @@ function Lobby() {
       </div>
     </div>
   );
+}
+
+interface Props {
+  question: rustServerQuestion;
+  showAnswer: boolean;
+  nextScreenHandler: () => void;
+  timeLeft: number;
+  answered: number;
 }
 
 function CheckboxCircle({ checked }: { checked: boolean }) {
@@ -149,13 +156,7 @@ function QuestionDisplay({
   nextScreenHandler,
   answered,
   timeLeft,
-}: {
-  question: rustServerQuestion;
-  showAnswer: boolean;
-  nextScreenHandler: () => void;
-  answered: number;
-  timeLeft: number;
-}) {
+}: Props) {
   return (
     <section>
       <div className={qStyles.gameButtonFlex}>
@@ -169,7 +170,7 @@ function QuestionDisplay({
           foregroundStyle={{
             backgroundColor: "rgb(244,244,244)",
             cursor: "pointer",
-            padding: "3px 13px 3px 13px",
+            padding: "3px 13px",
           }}
         >
           Próximo
@@ -180,50 +181,31 @@ function QuestionDisplay({
         <section className={`${styles.middleContainer}`}>
           <div className={`${styles.timerBubble}`}>{timeLeft}</div>
           <div className={`${styles.imageContainer}`}>
-            <Image src={"/kahootBalls.gif"} layout="fill" objectFit="contain" />
+            <Image
+              src={"/kahootBalls.gif"}
+              layout="fill"
+              objectFit="contain"
+            />
           </div>
-          <div className={`${styles.answerNotifier}`}>
-            {`${answered} Respostas`}
-          </div>
+          <div className={`${styles.answerNotifier}`}>{`${answered} Respostas`}</div>
         </section>
-        <div>
-          <div className={`${qStyles.grid}`}>
-            {question.choices.map((choice, idx) => (
-              <div
-                key={idx}
-                className={`${qStyles.wrapper} ${[
-                  qStyles.red,
-                  qStyles.blue,
-                  qStyles.yellow,
-                  qStyles.green,
-                ][idx]}`}
-              >
-                <span
-                  className={`${qStyles.shapeContainer} ${[
-                    qStyles.red,
-                    qStyles.blue,
-                    qStyles.yellow,
-                    qStyles.green,
-                  ][idx]}`}
-                >
-                  {idx === 0 && <BsFillTriangleFill />}
-                  {idx === 1 && <BsFillSquareFill />}
-                  {idx === 2 && <BsFillCircleFill />}
-                  {idx === 3 && (
-                    <BsFillSquareFill style={{ transform: "rotate(45deg)" }} />
-                  )}
+        <div className={`${qStyles.grid}`}>
+          {question.choices.map((choice, idx) => {
+            const colorClass = [qStyles.red, qStyles.blue, qStyles.yellow, qStyles.green][idx];
+            const ShapeIcon = [BsFillTriangleFill, BsFillSquareFill, BsFillCircleFill, BsFillSquareFill][idx];
+            const rotateStyle = idx === 3 ? { transform: "rotate(45deg)" } : {};
+            return (
+              <div key={idx} className={`${qStyles.wrapper} ${colorClass}`}>
+                <span className={`${qStyles.shapeContainer} ${colorClass}`}>
+                  <ShapeIcon style={rotateStyle} />
                 </span>
                 <div className={`${qStyles.answerContainer}`}>
-                  <p className={`${qStyles.answer} ${qStyles.whiteText}`}>
-                    {choice}
-                  </p>
+                  <p className={`${qStyles.answer} ${qStyles.whiteText}`}>{choice}</p>
                 </div>
-                {showAnswer && question.answer === idx && (
-                  <CheckboxCircle checked={true} />
-                )}
+                {showAnswer && question.answer === idx && <CheckboxCircle checked />}
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -234,54 +216,57 @@ function Leaderboard({ nextScreenHandler }) {
   const { players } = useContext(HostContext);
   const playerCopy = [...players].sort((a, b) => b.points - a.points);
 
-  const imprimirClassificacao = () => {
-    window.print();
-  };
+  function printLeaderboard() {
+    const printContent = document.getElementById("leaderboardTable")?.outerHTML;
+    if (printContent) {
+      const newWin = window.open("");
+      newWin.document.write(`<html><body>${printContent}</body></html>`);
+      newWin.document.close();
+      newWin.print();
+    }
+  }
 
   return (
     <div className={`${styles.leaderboardContainer}`}>
       <p className={`${styles.leaderboardHeader}`}>
         Classificação:
-        <GameButton
-          onClick={nextScreenHandler}
-          backgroundStyle={{
-            backgroundColor: "lightgray",
-            color: "black",
-            fontSize: "19px",
-          }}
-          foregroundStyle={{
-            backgroundColor: "white",
-            cursor: "pointer",
-            padding: "3px 13px 3px 13px",
-          }}
-        >
-          Próximo
-        </GameButton>
+        <div>
+          <GameButton
+            onClick={nextScreenHandler}
+            backgroundStyle={{
+              backgroundColor: "lightgray",
+              color: "black",
+              fontSize: "19px",
+            }}
+            foregroundStyle={{
+              backgroundColor: "white",
+              cursor: "pointer",
+              padding: "3px 13px",
+            }}
+          >
+            Próximo
+          </GameButton>
+          <GameButton
+            onClick={printLeaderboard}
+            backgroundStyle={{
+              backgroundColor: "lightgray",
+              color: "black",
+              fontSize: "19px",
+              marginLeft: "10px",
+            }}
+            foregroundStyle={{
+              backgroundColor: "white",
+              cursor: "pointer",
+              padding: "3px 13px",
+            }}
+          >
+            Imprimir
+          </GameButton>
+        </div>
       </p>
-
-      {/* Botão de imprimir */}
-      <div style={{ marginBottom: "10px" }}>
-        <GameButton
-          onClick={imprimirClassificacao}
-          backgroundStyle={{
-            backgroundColor: "#4CAF50",
-            color: "white",
-            fontSize: "16px",
-          }}
-          foregroundStyle={{
-            backgroundColor: "white",
-            cursor: "pointer",
-            padding: "3px 13px",
-          }}
-        >
-          Imprimir
-        </GameButton>
-      </div>
-
-      {/* Área a ser impressa */}
-      <div className={`printable-area ${styles.leaderboard}`}>
+      <div id="leaderboardTable" className={`${styles.leaderboard}`}>
         {playerCopy.map((user, index) => (
-          <div className={`${styles.leaderboardUser}`} key={user.username}>
+          <div key={user.username} className={`${styles.leaderboardUser}`}>
             <span>
               {index + 1}. {user.username}
             </span>
@@ -294,16 +279,17 @@ function Leaderboard({ nextScreenHandler }) {
 }
 
 function QuestionsPhase() {
-  const { players, setPlayers, socket } = useContext(HostContext);
-  const [question, setQuestion] = useState<rustServerQuestion | null>(null);
+  const { game, players, roomId, setPhase, setPlayers, socket } =
+    useContext(HostContext);
+  const [question, setQuestion] = useState<null | rustServerQuestion>(null);
   const [answered, setAnswered] = useState<string[]>([]);
   const [timer, setTimer] = useState<{ timer: number; timeLeft: number }>({
     timer: 0,
     timeLeft: 0,
   });
-  const [subscreen, setSubscreen] = useState<
-    "question" | "results" | "leaderboard"
-  >("question");
+  const [subscreen, setSubscreen] = useState<"question" | "results" | "leaderboard">(
+    "question"
+  );
 
   useEffect(() => {
     let aborter = new AbortController();
@@ -320,8 +306,8 @@ function QuestionsPhase() {
           case "roundEnd":
             setPlayers((players) => {
               const copy = [...players];
-              Object.entries(hostEvent.pointGains).forEach(([name, points]) => {
-                const user = copy.find((u) => u.username === name);
+              Object.entries(hostEvent.pointGains).forEach(([username, points]) => {
+                const user = copy.find((u) => u.username === username);
                 if (user) user.points += points;
               });
               return copy;
@@ -332,44 +318,56 @@ function QuestionsPhase() {
           case "userAnswered":
             setAnswered((a) => [...a, hostEvent.username]);
             break;
+          case "userJoined":
+            setPlayers((players) => [...players, { username: hostEvent.username, points: 0 }]);
+            break;
+          case "userLeft":
+            setPlayers((players) => players.filter((p) => p.username !== hostEvent.username));
+            break;
         }
       },
       { signal: aborter.signal }
     );
 
-    socket.send(JSON.stringify({ type: "beginRound" } as action.BeginRound));
+    const startGameRequest: action.BeginRound = { type: "beginRound" };
+    socket.send(JSON.stringify(startGameRequest));
+
     return () => aborter.abort();
   }, []);
 
   useLayoutEffect(() => {
-    if (question) {
+    if (question !== null) {
       let timeLeft = question.time;
-      const t = setInterval(() => {
-        if (timeLeft <= 0) {
-          clearInterval(t);
+      const timerInterval = setInterval(() => {
+        if (timeLeft === 0) {
+          clearInterval(timerInterval);
           socket.send(JSON.stringify({ type: "endRound" } as action.EndRound));
-        } else {
-          timeLeft -= 1;
-          setTimer({ timeLeft, timer: t as unknown as number });
+          return;
         }
+        timeLeft -= 1;
+        setTimer({ timeLeft, timer: timerInterval as unknown as number });
       }, 1000);
-      setTimer({ timeLeft, timer: t as unknown as number });
-      return () => clearInterval(t);
+      setTimer({ timer: timerInterval as unknown as number, timeLeft });
+      return () => clearInterval(timerInterval);
     }
   }, [question]);
 
   function nextScreenHandler() {
-    if (subscreen === "question") {
-      clearInterval(timer.timer);
-      socket.send(JSON.stringify({ type: "endRound" } as action.EndRound));
-    } else if (subscreen === "results") {
-      setSubscreen("leaderboard");
-    } else {
-      socket.send(JSON.stringify({ type: "beginRound" } as action.BeginRound));
+    switch (subscreen) {
+      case "question":
+        clearInterval(timer.timer);
+        socket.send(JSON.stringify({ type: "endRound" } as action.EndRound));
+        break;
+      case "results":
+        setSubscreen("leaderboard");
+        break;
+      case "leaderboard":
+        socket.send(JSON.stringify({ type: "beginRound" } as action.BeginRound));
+        break;
     }
   }
 
-  if (!question) return null;
+  if (question === null) return <></>;
 
   return (
     <div className={`vh100 ${styles.fullscreenHeight}`}>
@@ -409,76 +407,85 @@ function StartScreen() {
 
 function Host() {
   const router = useRouter();
-  const { loggedIn } = useUser();
+  const { loggedIn, user } = useUser();
   const [players, setPlayers] = useState<Players>([]);
-  const [socket, setSocket] = useState<WebSocket | null>(null);
-  const [game, setGame] = useState<db.KahootGame | null>(null);
-  const [roomId, setRoomId] = useState<number | null>(null);
+  const [socket, setSocket] = useState<null | WebSocket>(null);
+  const [game, setGame] = useState<null | db.KahootGame>(null);
+  const [roomId, setRoomId] = useState<null | number>(null);
+  const [connectionClosed, setConnectionClosed] = useState(false);
   const [phase, setPhase] = useState<"lobby" | "questions" | "leaderboard">(
     "lobby"
   );
 
+  const gameId = router.query.gameId as string;
+
   useEffect(() => {
     if (loggedIn && router.isReady) {
-      const socket = new WebSocket("wss://servidor-kahoot.cloudbr.app/ws");
+      const ws = new WebSocket("wss://servidor-kahoot.cloudbr.app/ws");
       const aborter = new AbortController();
 
       const socketPromise = new Promise<WebSocket>((resolve, reject) => {
-        socket.addEventListener("open", () => resolve(socket), {
-          signal: aborter.signal,
-        });
-        socket.addEventListener("error", reject, { signal: aborter.signal });
+        ws.addEventListener("open", () => resolve(ws), { signal: aborter.signal });
+        ws.addEventListener("error", (e) => reject(e), { signal: aborter.signal });
       });
 
       const gamePromise = postData<APIRequest, APIResponse>(
         "/api/getOneGame",
-        { gameId: router.query.gameId as string },
+        { gameId },
         aborter.signal
-      ).then((res) => (res.error ? null : res.game));
-
-      Promise.all([socketPromise, gamePromise]).then(([ws, game]) => {
-        if (!game) return;
-        ws.addEventListener("message", function RoomListener(res) {
-          const roomData = JSON.parse(res.data) as HostEvent.RoomCreated;
-          if (roomData.type === "roomCreated") {
-            setRoomId(roomData.roomId);
-            setGame(game);
-            setSocket(ws);
-            ws.removeEventListener("message", RoomListener);
-          }
-        });
-        ws.send(
-          JSON.stringify({
-            type: "createRoom",
-            questions: game.questions.map((q) => ({
-              ...q,
-              answer: q.correctAnswer,
-              correctAnswer: undefined,
-            })),
-          })
-        );
+      ).then((res) => {
+        if ("error" in res && res.error) return null;
+        if ("game" in res) return res.game;
+        return null;
       });
+
+      Promise.all([socketPromise, gamePromise])
+        .then(([ws, gameData]) => {
+          if (!gameData) return;
+          setGame(gameData);
+
+          ws.addEventListener("message", function RoomListener(res) {
+            const roomData = JSON.parse(res.data) as HostEvent.RoomCreated;
+            if (roomData.type === "roomCreated") {
+              setRoomId(roomData.roomId);
+              setSocket(ws);
+              ws.onclose = () => {
+                console.log("socket closed");
+                setConnectionClosed(true);
+                location.reload();
+              };
+              ws.removeEventListener("message", RoomListener);
+            }
+          });
+
+          ws.send(
+            JSON.stringify({
+              type: "createRoom",
+              questions: gameData.questions.map((q) => ({
+                ...q,
+                answer: q.correctAnswer,
+              })),
+            })
+          );
+        })
+        .catch(() => {
+          console.log("O websocket ou a solicitação de fetch falharam");
+          aborter.abort();
+        });
 
       return () => {
         aborter.abort();
-        socket.close();
+        ws.close();
       };
     }
   }, [loggedIn, router.isReady]);
 
   if (!loggedIn || !router.isReady || !game || !socket || !roomId) {
     return (
-      <div
-        style={{
-          backgroundColor: "rgb(70, 23, 143)",
-          display: "grid",
-          placeItems: "center",
-          height: "100vh",
-        }}
-      >
-        <SSRProvider>
-          <Spinner animation="border" style={{ color: "white" }} />
-        </SSRProvider>
+      <div className="vh100">
+        <Spinner animation="border" role="status">
+          <span className="sr-only">Carregando...</span>
+        </Spinner>
       </div>
     );
   }
@@ -489,6 +496,7 @@ function Host() {
     >
       {phase === "lobby" && <StartScreen />}
       {phase === "questions" && <QuestionsPhase />}
+      {phase === "leaderboard" && <Leaderboard nextScreenHandler={() => {}} />}
     </HostContext.Provider>
   );
 }
