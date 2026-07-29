@@ -6,11 +6,13 @@ import { query } from "@lib/db";
 import {
   validatePassword,
   validateUsername,
+  validateWhatsapp,
   ValidationError,
 } from "@lib/validation";
 
 export interface APIRequest {
   username: string;
+  whatsapp: string;
   currentPassword: string;
   newPassword?: string;
 }
@@ -34,6 +36,7 @@ export default async function handler(
 
   try {
     const username = validateUsername(req.body?.username);
+    const whatsapp = validateWhatsapp(req.body?.whatsapp);
     const currentPassword = validatePassword(req.body?.currentPassword);
     const newPassword =
       typeof req.body?.newPassword === "string" && req.body.newPassword !== ""
@@ -60,16 +63,21 @@ export default async function handler(
     const passwordHash = newPassword
       ? await bcrypt.hash(newPassword, 12)
       : current.rows[0].password_hash;
-    const updated = await query<{ id: string; username: string }>(
+    const updated = await query<{
+      id: string;
+      username: string;
+      whatsapp: string;
+    }>(
       `update users
-       set username = $1, password_hash = $2
-       where id = $3::uuid
-       returning id::text, username`,
-      [username, passwordHash, authenticatedUser._id]
+       set username = $1, whatsapp = $2, password_hash = $3
+       where id = $4::uuid
+       returning id::text, username, whatsapp`,
+      [username, whatsapp, passwordHash, authenticatedUser._id]
     );
     const user: auth.accessTokenPayload = {
       _id: updated.rows[0].id,
       username: updated.rows[0].username,
+      whatsapp: updated.rows[0].whatsapp,
     };
     setSessionCookie(res, user);
     return res.status(200).json({ error: false, user });

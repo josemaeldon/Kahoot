@@ -92,6 +92,7 @@ function Header({ authMode = false }: { authMode?: boolean }) {
             <button
               type="button"
               className={styles.logoutButton}
+              aria-label="Sair"
               onClick={() => {
                 postData("/api/signout", {}).then(() => {
                   window.location.assign("/auth/login");

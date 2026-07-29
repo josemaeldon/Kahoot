@@ -110,6 +110,13 @@
   font-weight: 740;
 }
 
+.field > small {
+  display: block;
+  margin-top: 7px;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
 .inputShell {
   min-height: 54px;
   display: flex;

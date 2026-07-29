@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import type { auth } from "kahoot";
-import { FiLock, FiUser, FiX } from "react-icons/fi";
+import { FiLock, FiPhone, FiUser, FiX } from "react-icons/fi";
 import { postData } from "@lib/postData";
 import type {
   APIRequest,
@@ -22,6 +22,7 @@ export default function AccountModal({
   onUpdated,
 }: AccountModalProps) {
   const [username, setUsername] = useState(user.username);
+  const [whatsapp, setWhatsapp] = useState(user.whatsapp);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
@@ -33,6 +34,7 @@ export default function AccountModal({
   useEffect(() => {
     if (!open) return;
     setUsername(user.username);
+    setWhatsapp(user.whatsapp);
     setCurrentPassword("");
     setNewPassword("");
     setError("");
@@ -65,7 +67,7 @@ export default function AccountModal({
       document.removeEventListener("keydown", handleKeyDown);
       previouslyFocused?.focus();
     };
-  }, [onClose, open, user.username]);
+  }, [onClose, open, user.username, user.whatsapp]);
 
   if (!open) return null;
 
@@ -77,6 +79,7 @@ export default function AccountModal({
     try {
       const response = await postData<APIRequest, APIResponse>("/api/account", {
         username,
+        whatsapp,
         currentPassword,
         newPassword: newPassword || undefined,
       });
@@ -139,6 +142,22 @@ export default function AccountModal({
                 onChange={(event) => setUsername(event.target.value)}
                 autoComplete="username"
                 maxLength={40}
+                required
+              />
+            </div>
+          </label>
+
+          <label className={styles.field}>
+            <span>WhatsApp</span>
+            <div className={styles.inputShell}>
+              <FiPhone aria-hidden="true" />
+              <input
+                type="tel"
+                value={whatsapp}
+                onChange={(event) => setWhatsapp(event.target.value)}
+                autoComplete="tel"
+                inputMode="tel"
+                placeholder="(91) 99999-9999"
                 required
               />
             </div>

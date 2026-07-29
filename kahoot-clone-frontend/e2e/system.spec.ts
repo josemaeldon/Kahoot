@@ -79,7 +79,7 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   );
 
   await host.goto("/");
-  await expect(host).toHaveTitle("Kahoot Clone");
+  await expect(host).toHaveTitle("Kahoot");
   await expect(host.getByRole("button", { name: "Entrar" })).toBeVisible();
   await host.screenshot({ path: "/tmp/kahoot-home-desktop.png" });
 
@@ -102,6 +102,18 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   await host.getByLabel("Usuário").fill(uniqueUsername);
   await host.getByPlaceholder("Digite sua senha").fill("SenhaTeste123!");
   await host.getByRole("button", { name: "Criar conta" }).click();
+  const whatsappRequiredModal = host.getByRole("alertdialog", {
+    name: "Não foi possível criar a conta",
+  });
+  await expect(
+    whatsappRequiredModal.getByText(
+      "Informe um número de WhatsApp válido com DDD."
+    )
+  ).toBeVisible();
+  await whatsappRequiredModal.getByRole("button", { name: "Entendi" }).click();
+  browserProblems.length = 0;
+  await host.getByLabel("WhatsApp").fill("(91) 99999-9999");
+  await host.getByRole("button", { name: "Criar conta" }).click();
   await expect(host).toHaveURL("/");
 
   await host.getByRole("button", { name: "Criar um quiz" }).click();
@@ -115,8 +127,10 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   await expect(accountModal).toBeVisible();
   const editedUsername = `editado_${Date.now()}`;
   await accountModal.getByLabel("Usuário").fill(editedUsername);
+  await accountModal.getByLabel("WhatsApp").fill("(91) 98888-7777");
   await accountModal.getByLabel("Senha atual").fill("SenhaTeste123!");
   await accountModal.getByLabel("Nova senha").fill("NovaSenhaTeste123!");
+  await expect(accountModal).toHaveCSS("opacity", "1");
   await host.screenshot({ path: "/tmp/kahoot-account-modal.png" });
   await accountModal.getByRole("button", { name: "Salvar alterações" }).click();
   const accountUpdatedModal = host.getByRole("alertdialog", {
@@ -127,6 +141,15 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   await expect(
     host.getByRole("button", { name: "Editar dados do usuário" })
   ).toContainText(editedUsername);
+
+  await host.getByRole("button", { name: "Sair" }).click();
+  await expect(host).toHaveURL("/auth/login");
+  await host.getByLabel("Usuário").fill(editedUsername);
+  await host.getByLabel("Senha").fill("NovaSenhaTeste123!");
+  await host.getByRole("button", { name: "Entrar" }).click();
+  await expect(host).toHaveURL("/");
+  await host.getByRole("button", { name: "Criar um quiz" }).click();
+  await expect(host).toHaveURL("/profile");
 
   await host.getByRole("button", { name: "Criar meu primeiro quiz" }).click();
   await expect(host).toHaveURL("/create");

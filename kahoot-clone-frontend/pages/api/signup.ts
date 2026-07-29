@@ -5,10 +5,15 @@ import type { auth, db } from "../../kahoot";
 import bcrypt from "bcryptjs";
 import { query } from "@lib/db";
 import { setSessionCookie } from "@lib/auth";
-import { validateCredentials, ValidationError } from "@lib/validation";
+import {
+  validateCredentials,
+  validateWhatsapp,
+  ValidationError,
+} from "@lib/validation";
 
 export interface APIRequest {
   username: string;
+  whatsapp: string;
   password: string;
 }
 
@@ -38,16 +43,22 @@ export default async function handler(
       req.body?.username,
       req.body?.password
     );
+    const whatsapp = validateWhatsapp(req.body?.whatsapp);
     const passwordHash = await bcrypt.hash(password, 12);
-    const inserted = await query<{ id: string; username: string }>(
-      `insert into users (username, password_hash)
-       values ($1, $2)
-       returning id::text, username`,
-      [username, passwordHash]
+    const inserted = await query<{
+      id: string;
+      username: string;
+      whatsapp: string;
+    }>(
+      `insert into users (username, whatsapp, password_hash)
+       values ($1, $2, $3)
+       returning id::text, username, whatsapp`,
+      [username, whatsapp, passwordHash]
     );
     const payload: auth.accessTokenPayload = {
       _id: inserted.rows[0].id,
       username: inserted.rows[0].username,
+      whatsapp: inserted.rows[0].whatsapp,
     };
     setSessionCookie(res, payload);
     return res.status(201).json({ error: false, user: payload });

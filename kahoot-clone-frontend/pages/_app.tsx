@@ -43,7 +43,7 @@ function MyApp({ Component, pageProps }) {
   return (
     <UserProvider>
       <Head>
-        <title>Kahoot Clone</title>
+        <title>Kahoot</title>
         <meta
           name="description"
           content="Jogo multiplayer de perguntas e respostas"

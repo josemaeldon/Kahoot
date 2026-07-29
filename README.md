@@ -1,4 +1,4 @@
-# Kahoot Clone
+# Kahoot
 
 Jogo multiplayer de perguntas e respostas com criação de quizzes, salas ao
 vivo, respostas em tempo real e classificação.
@@ -109,7 +109,8 @@ Tabelas:
 
 - `users`: contas e hashes de senha.
 - `games`: título, autor e datas do quiz.
-- `questions`: texto, posição, tempo e índice da resposta correta.
+- `questions`: texto, imagem opcional, posição, tempo e índice da resposta
+  correta.
 - `choices`: alternativas de cada pergunta.
 - `schema_migrations`: histórico das migrações aplicadas.
 

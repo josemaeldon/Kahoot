@@ -48,9 +48,10 @@ export default async function handler(
     const result = await query<{
       id: string;
       username: string;
+      whatsapp: string | null;
       password_hash: string;
     }>(
-      `select id::text, username, password_hash
+      `select id::text, username, whatsapp, password_hash
        from users
        where lower(username) = lower($1)
        limit 1`,
@@ -71,6 +72,7 @@ export default async function handler(
     const payload: auth.accessTokenPayload = {
       _id: user.id,
       username: user.username,
+      whatsapp: user.whatsapp || "",
     };
     setSessionCookie(res, payload);
     return res.status(200).json({ error: false, user: payload });

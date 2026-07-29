@@ -19,6 +19,7 @@ export namespace db {
   declare interface User {
     _id: string;
     username: string;
+    whatsapp: string;
     passwordHash: string;
   }
 }
@@ -27,6 +28,7 @@ export namespace auth {
   declare interface accessTokenPayload {
     _id: string;
     username: string;
+    whatsapp: string;
   }
 }
 

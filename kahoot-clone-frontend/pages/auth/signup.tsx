@@ -7,15 +7,20 @@ import { useRouter } from "next/router";
 import Header from "@components/Header";
 import NoticeModal from "@components/NoticeModal";
 import useUser from "@lib/useUser";
-import { FiEye, FiEyeOff, FiLock, FiUser } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiLock, FiPhone, FiUser } from "react-icons/fi";
 
 interface Info {
   username: string;
+  whatsapp: string;
   password: string;
 }
 
 function Signup() {
-  const [info, setInfo] = useState<Info>({ username: "", password: "" });
+  const [info, setInfo] = useState<Info>({
+    username: "",
+    whatsapp: "",
+    password: "",
+  });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -32,6 +37,7 @@ function Signup() {
     try {
       const response = await postData<APIRequest, APIResponse>("/api/signup", {
         username: info.username,
+        whatsapp: info.whatsapp,
         password: info.password,
       });
       if (response.error) {
@@ -93,6 +99,31 @@ function Signup() {
                   autoComplete="username"
                 />
               </div>
+            </label>
+
+            <label className={styles.field}>
+              <span>WhatsApp</span>
+              <div className={styles.inputShell}>
+                <FiPhone aria-hidden="true" />
+                <input
+                  type="tel"
+                  id="whatsapp"
+                  value={info.whatsapp}
+                  onChange={(event) =>
+                    setInfo((current) => ({
+                      ...current,
+                      whatsapp: event.target.value,
+                    }))
+                  }
+                  placeholder="(91) 99999-9999"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  aria-describedby="whatsapp-hint"
+                />
+              </div>
+              <small id="whatsapp-hint">
+                Obrigatório. Informe o número com DDD.
+              </small>
             </label>
 
             <label className={styles.field}>

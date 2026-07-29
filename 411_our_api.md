@@ -1,5 +1,5 @@
-# Kahoot Clone API
-Hello and welcome to a quick explanation of the Kahoot clone API! This is an in-house API, written in Rust, that powers the Kahoot clone app. All requests and responses are written in JSON.
+# Kahoot API
+Hello and welcome to a quick explanation of the Kahoot API! This is an in-house API, written in Rust, that powers the Kahoot app. All requests and responses are written in JSON.
 ## Player Side
 The player side has the following commands it sends from the client to the server:
 1. Joining Game

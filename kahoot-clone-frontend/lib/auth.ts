@@ -46,7 +46,11 @@ export function getAuthenticatedUser(
     ) {
       return null;
     }
-    return { _id: decoded._id, username: decoded.username };
+    return {
+      _id: decoded._id,
+      username: decoded.username,
+      whatsapp: typeof decoded.whatsapp === "string" ? decoded.whatsapp : "",
+    };
   } catch {
     return null;
   }
@@ -62,8 +66,12 @@ export async function getActiveAuthenticatedUser(
     return null;
   }
 
-  const result = await query<{ id: string; username: string }>(
-    `select id::text, username
+  const result = await query<{
+    id: string;
+    username: string;
+    whatsapp: string | null;
+  }>(
+    `select id::text, username, whatsapp
      from users
      where id = $1::uuid
      limit 1`,
@@ -75,7 +83,11 @@ export async function getActiveAuthenticatedUser(
     return null;
   }
 
-  return { _id: activeUser.id, username: activeUser.username };
+  return {
+    _id: activeUser.id,
+    username: activeUser.username,
+    whatsapp: activeUser.whatsapp || "",
+  };
 }
 
 export async function requireAuthenticatedUser(

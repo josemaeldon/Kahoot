@@ -21,6 +21,20 @@ export function validatePassword(passwordValue: unknown) {
   return password;
 }
 
+export function validateWhatsapp(whatsappValue: unknown) {
+  const whatsapp =
+    typeof whatsappValue === "string"
+      ? whatsappValue.replace(/\D/g, "")
+      : "";
+
+  if (!/^[0-9]{10,15}$/.test(whatsapp)) {
+    throw new ValidationError(
+      "Informe um número de WhatsApp válido com DDD."
+    );
+  }
+  return whatsapp;
+}
+
 export function validateCredentials(usernameValue: unknown, passwordValue: unknown) {
   return {
     username: validateUsername(usernameValue),
