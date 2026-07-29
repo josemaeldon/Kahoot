@@ -135,5 +135,9 @@ export namespace UserEvent {
 
   declare interface GameEnd {
     type: "gameEnd";
+    ranking: Array<{
+      username: string;
+      points: number;
+    }>;
   }
 }

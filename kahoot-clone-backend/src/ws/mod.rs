@@ -13,7 +13,7 @@ pub mod api;
 /// Contains data for representing game states.
 pub mod state;
 
-use api::{Action, HostEvent, Question, RoomId, UserEvent};
+use api::{Action, HostEvent, Question, RankingEntry, RoomId, UserEvent};
 
 use state::{GameEvent, PlayerAnswer, Room, SharedState, Users};
 
@@ -192,6 +192,15 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
 
     tracing::debug!("Starting game...");
 
+    let mut total_points: HashMap<String, u32> = room
+        .users
+        .users
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|username| (username.clone(), 0))
+        .collect();
+
     for question in questions.into_iter() {
         let mut point_gains = HashMap::new();
         let mut answered = HashSet::new();
@@ -291,6 +300,10 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
 
         tracing::debug!("End of round...");
 
+        for (username, point_gain) in &point_gains {
+            *total_points.entry(username.clone()).or_insert(0) += point_gain;
+        }
+
         // Tell host that the round ended
         tracing::debug!("Alerting host that round ended...");
         let _ = host_tx
@@ -334,7 +347,19 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
     heartbeat.abort();
 
     // Alert players game ended
-    let _ = result_tx.send(GameEvent::GameEnd);
+    let mut ranking: Vec<RankingEntry> = total_points
+        .into_iter()
+        .map(|(username, points)| RankingEntry { username, points })
+        .collect();
+    ranking.sort_by(|first, second| {
+        second
+            .points
+            .cmp(&first.points)
+            .then_with(|| first.username.cmp(&second.username))
+    });
+    let _ = result_tx.send(GameEvent::GameEnd {
+        ranking: Arc::new(ranking),
+    });
 
     state.remove_room(&room_id).await;
 }
@@ -411,9 +436,11 @@ async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, u
                         // Get event
                         let event = { event_watch.borrow().clone() };
                         match event {
-                            GameEvent::GameEnd => {
+                            GameEvent::GameEnd { ranking } => {
                                 tracing::debug!("Game ended, closing user connection...");
-                                let event = UserEvent::GameEnd;
+                                let event = UserEvent::GameEnd {
+                                    ranking: ranking.as_ref().clone(),
+                                };
                                 let _ = user_tx.send(event.to_message()).await;
                                 
                                 // Close connection
@@ -470,7 +497,9 @@ async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, u
 #[cfg(test)]
 mod tests {
     use crate::ws::router;
-    use crate::ws::api::{Action, HostEvent, UserEvent, Question};
+    use crate::ws::api::{
+        Action, HostEvent, Question, RankingEntry, UserEvent,
+    };
 
     use std::collections::HashSet;
     use std::sync::atomic::{AtomicU16, Ordering};
@@ -697,7 +726,14 @@ mod tests {
             assert_eq!(point_gain, 1000);
 
             // Game end event
-            let_assert!(UserEvent::GameEnd = user_ws.recv().await.unwrap());
+            let_assert!(UserEvent::GameEnd { ranking } = user_ws.recv().await.unwrap());
+            assert_eq!(
+                ranking,
+                vec![RankingEntry {
+                    username: String::from("Johnny"),
+                    points: 1000,
+                }]
+            );
         });
 
         // Wait for both tasks to complete

@@ -1,6 +1,6 @@
 import { action, UserEvent } from "kahoot";
 import { useRouter } from "next/router";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import styles from "../styles/Play.module.css";
 import { getWebSocketUrl } from "@lib/websocket";
 import NoticeModal from "@components/NoticeModal";
@@ -10,9 +10,16 @@ import {
   BsFillTriangleFill,
 } from "react-icons/bs";
 import { FaCheck } from "react-icons/fa";
-import { FiArrowLeft, FiClock, FiWifi } from "react-icons/fi";
+import { FiArrowLeft, FiClock, FiRefreshCw, FiWifi } from "react-icons/fi";
 
 const PlayerContext = React.createContext<Context>(null);
+
+type PlayerSubpage =
+  | "StartScreen"
+  | "LobbyWaiting"
+  | "ChooseAnswer"
+  | "Result"
+  | "Finished";
 
 interface Context {
   socket: WebSocket;
@@ -21,15 +28,7 @@ interface Context {
   setPoints: React.Dispatch<React.SetStateAction<number>>;
   username: string;
   setUsername: React.Dispatch<React.SetStateAction<string>>;
-  setSubpage: React.Dispatch<
-    React.SetStateAction<
-      | "StartScreen"
-      | "LobbyWaiting"
-      | "ChooseAnswer"
-      | "ResultWaiting"
-      | "Result"
-    >
-  >;
+  setSubpage: React.Dispatch<React.SetStateAction<PlayerSubpage>>;
 }
 
 function PlayerFrame({
@@ -319,15 +318,62 @@ function Result({ data }: { data: UserEvent.event }) {
   );
 }
 
+function FinalRanking({
+  data,
+  onJoinAnotherRoom,
+}: {
+  data: UserEvent.GameEnd;
+  onJoinAnotherRoom: () => void;
+}) {
+  const { username } = useContext(PlayerContext);
+  const playerPosition =
+    data.ranking.findIndex((player) => player.username === username) + 1;
+
+  return (
+    <PlayerFrame stage="Partida concluída">
+      <section className={`${styles.statusCard} ${styles.finalCard}`}>
+        <p className={styles.eyebrow}>Resultado final</p>
+        <h1>Classificação</h1>
+        {playerPosition > 0 && (
+          <p className={styles.finalPosition}>
+            Sua posição: <strong>{playerPosition}º lugar</strong>
+          </p>
+        )}
+        <div className={styles.finalRanking}>
+          {data.ranking.map((player, index) => (
+            <div
+              className={`${styles.rankingRow} ${
+                player.username === username ? styles.currentPlayer : ""
+              }`}
+              key={player.username}
+            >
+              <span className={styles.rankingPosition}>{index + 1}</span>
+              <strong>{player.username}</strong>
+              <span>{player.points} pontos</span>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          className={styles.newRoomButton}
+          onClick={onJoinAnotherRoom}
+        >
+          <FiRefreshCw aria-hidden="true" />
+          Entrar em uma nova sala
+        </button>
+      </section>
+    </PlayerFrame>
+  );
+}
+
 function Play() {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [points, setPoints] = useState(0);
   const [username, setUsername] = useState("");
-  const [subpage, setSubpage] = useState<
-    "StartScreen" | "LobbyWaiting" | "ChooseAnswer" | "ResultWaiting" | "Result"
-  >("StartScreen");
+  const [subpage, setSubpage] = useState<PlayerSubpage>("StartScreen");
   const router = useRouter();
   const [subpageData, setSubpageData] = useState<UserEvent.event | null>(null);
+  const gameFinishedRef = useRef(false);
 
   useEffect(() => {
     if (!socket) return;
@@ -338,7 +384,9 @@ function Play() {
         const hostEvent = JSON.parse(event.data) as UserEvent.event;
         switch (hostEvent.type) {
           case "gameEnd":
-            void router.push("/");
+            gameFinishedRef.current = true;
+            setSubpage("Finished");
+            setSubpageData(hostEvent);
             break;
           case "roundBegin":
             setSubpage("ChooseAnswer");
@@ -355,11 +403,21 @@ function Play() {
     );
     socket.addEventListener(
       "close",
-      () => void router.push("/"),
+      () => {
+        if (!gameFinishedRef.current) void router.push("/");
+      },
       { signal: aborter.signal }
     );
     return () => aborter.abort();
   }, [router, socket]);
+
+  function joinAnotherRoom() {
+    gameFinishedRef.current = false;
+    setSocket(null);
+    setPoints(0);
+    setSubpageData(null);
+    setSubpage("StartScreen");
+  }
 
   return (
     <PlayerContext.Provider
@@ -379,6 +437,12 @@ function Play() {
         <ChooseAnswer data={subpageData} />
       )}
       {subpage === "Result" && subpageData && <Result data={subpageData} />}
+      {subpage === "Finished" && subpageData?.type === "gameEnd" && (
+        <FinalRanking
+          data={subpageData}
+          onJoinAnotherRoom={joinAnotherRoom}
+        />
+      )}
     </PlayerContext.Provider>
   );
 }

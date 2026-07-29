@@ -108,7 +108,7 @@ pub enum UserEvent {
     RoundEnd { point_gain: Option<u32> },
 
     /// Sent when the game is over.
-    GameEnd,
+    GameEnd { ranking: Vec<RankingEntry> },
 }
 
 /// A type alias representing a room's id.
@@ -117,6 +117,12 @@ pub enum UserEvent {
 //
 // Relevant: https://doc.rust-lang.org/reference/items/type-aliases.html
 pub type RoomId = u32;
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct RankingEntry {
+    pub username: String,
+    pub points: u32,
+}
 
 /// A structure containing all relevant information of a question.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

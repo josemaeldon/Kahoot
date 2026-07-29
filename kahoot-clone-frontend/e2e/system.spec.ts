@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 import jwt from "jsonwebtoken";
 import path from "node:path";
 
+const baseUrl = process.env.E2E_BASE_URL || "http://127.0.0.1:3000";
+
 const staleSessionToken = jwt.sign(
   {
     _id: "00000000-0000-4000-8000-000000000999",
@@ -17,7 +19,7 @@ test("sessão sem usuário é encerrada antes de salvar", async ({ browser }) =>
     {
       name: "accessToken",
       value: staleSessionToken,
-      url: "http://127.0.0.1:3000",
+      url: baseUrl,
     },
   ]);
 
@@ -54,7 +56,7 @@ test("sessão sem usuário é encerrada antes de salvar", async ({ browser }) =>
     {
       name: "accessToken",
       value: staleSessionToken,
-      url: "http://127.0.0.1:3000",
+      url: baseUrl,
     },
   ]);
   const page = await pageContext.newPage();
@@ -248,9 +250,22 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   await host.getByRole("button", { name: "Próximo" }).click();
   await expect(host.getByText("Resultado final")).toBeVisible();
   await expect(host.getByText("1000 pontos")).toBeVisible();
+  await expect(player).toHaveURL("/play");
+  await expect(
+    player.getByRole("heading", { name: "Classificação" })
+  ).toBeVisible();
+  await expect(player.getByText("Sua posição:")).toContainText("1º lugar");
+  await expect(player.getByText("Jogador E2E")).toBeVisible();
+  await expect(player.getByText("1000 pontos")).toBeVisible();
+  await player
+    .getByRole("button", { name: "Entrar em uma nova sala" })
+    .click();
+  await expect(
+    player.getByRole("heading", { name: "Entre na sala" })
+  ).toBeVisible();
+  await expect(player.getByPlaceholder("Game PIN")).toHaveValue("");
   await host.waitForTimeout(250);
   await host.screenshot({ path: "/tmp/kahoot-final-ranking.png" });
-  await expect(player).toHaveURL("/");
 
   const mobileOverflow = await player.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth

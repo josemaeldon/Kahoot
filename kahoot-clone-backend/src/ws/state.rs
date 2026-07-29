@@ -1,4 +1,4 @@
-use super::api::RoomId;
+use super::api::{RankingEntry, RoomId};
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
@@ -49,7 +49,9 @@ pub enum GameEvent {
     RoundEnd {
         point_gains: Arc<HashMap<String, u32>>,
     },
-    GameEnd,
+    GameEnd {
+        ranking: Arc<Vec<RankingEntry>>,
+    },
 }
 
 pub enum PlayerEvent {

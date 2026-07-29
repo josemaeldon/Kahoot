@@ -280,6 +280,103 @@
   font-weight: 900;
 }
 
+.finalCard {
+  align-self: stretch;
+}
+
+.finalPosition {
+  margin: 14px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.finalPosition strong {
+  color: white;
+}
+
+.finalRanking {
+  width: 100%;
+  max-height: min(46svh, 420px);
+  margin-top: 26px;
+  padding-right: 4px;
+  display: grid;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.rankingRow {
+  min-height: 58px;
+  padding: 10px 14px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.rankingRow > strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rankingRow > span:last-child {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.currentPlayer {
+  border-color: rgba(202, 186, 255, 0.7);
+  background: rgba(129, 88, 245, 0.3);
+  box-shadow: 0 0 0 3px rgba(129, 88, 245, 0.12);
+}
+
+.rankingPosition {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.newRoomButton {
+  width: 100%;
+  min-height: 54px;
+  margin-top: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: white;
+  color: var(--color-brand-800);
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.22);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.newRoomButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 0 rgba(0, 0, 0, 0.22);
+}
+
+.newRoomButton:active {
+  transform: translateY(2px);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.22);
+}
+
 .answerPanel {
   align-self: stretch;
   display: grid;
@@ -379,6 +476,11 @@
 
   .joinPanel {
     padding: 26px 22px;
+  }
+
+  .rankingRow {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    padding-inline: 10px;
   }
 
   .answerGrid {
