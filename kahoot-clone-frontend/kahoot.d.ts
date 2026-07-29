@@ -1,5 +1,3 @@
-import { ObjectId } from "mongodb";
-
 export namespace db {
   declare interface KahootGame {
     _id: string; //uuid of the game
@@ -12,6 +10,7 @@ export namespace db {
 
   declare interface Question {
     question: string;
+    image?: string | null;
     choices: string[];
     correctAnswer: number; //index of the correct answer
     time: number; // integer
@@ -33,6 +32,7 @@ export namespace auth {
 
 export interface rustServerQuestion {
   question: string;
+  image?: string | null;
   choices: string[];
   answer: number;
   time: number;
@@ -64,6 +64,7 @@ export namespace action {
 export namespace HostEvent {
   declare type Event =
     | RoomCreated
+    | RoomCreationFailed
     | UserJoined
     | UserLeft
     | UserAnswered
@@ -73,6 +74,10 @@ export namespace HostEvent {
   declare interface RoomCreated {
     type: "roomCreated";
     roomId: number;
+  }
+  declare interface RoomCreationFailed {
+    type: "roomCreationFailed";
+    reason: string;
   }
 
   declare interface UserJoined {
@@ -97,7 +102,7 @@ export namespace HostEvent {
 
   declare interface RoundEnd {
     type: "roundEnd";
-    pointGains: Map<string, number>;
+    pointGains: Record<string, number>;
   }
 
   declare interface GameEnd {
@@ -123,7 +128,7 @@ export namespace UserEvent {
 
   declare interface RoundEnd {
     type: "roundEnd";
-    pointGain: number;
+    pointGain: number | null;
   }
 
   declare interface GameEnd {

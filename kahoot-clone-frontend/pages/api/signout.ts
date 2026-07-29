@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import * as cookie from "cookie";
-import type { auth, db } from "kahoot";
+import { clearSessionCookie } from "@lib/auth";
 
 interface APIResponse {
   error: boolean;
@@ -11,22 +10,8 @@ export default async function signout(
   res: NextApiResponse<APIResponse>
 ) {
   if (req.method !== "POST") {
-    res.status(200).json({ error: true });
+    return res.status(405).json({ error: true });
   }
-
-  res.setHeader("Set-Cookie", [
-    cookie.serialize("accessToken", "", {
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-    }),
-    cookie.serialize("loggedIn", "", {
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-    }),
-  ]);
-
-  res.status(200).json({ error: false });
+  clearSessionCookie(res);
+  return res.status(200).json({ error: false });
 }

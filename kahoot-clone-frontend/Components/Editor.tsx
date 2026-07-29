@@ -1,274 +1,294 @@
-import React, { useContext, useEffect, useRef } from "react";
+import React, { useContext, useState } from "react";
 import { GameContext } from "../pages/create";
 import styles from "../styles/Editor.module.css";
 import {
-  BsFillTriangleFill,
-  BsFillSquareFill,
   BsFillCircleFill,
+  BsFillSquareFill,
+  BsFillTriangleFill,
 } from "react-icons/bs";
 import { FaCheck } from "react-icons/fa";
-import type { db } from "../kahoot";
+import { FiImage, FiTrash2, FiUploadCloud } from "react-icons/fi";
+import NoticeModal from "./NoticeModal";
 
-function replaceCaret(el: HTMLElement) {
-  // Place the caret at the end of the element
-  const target = document.createTextNode("");
-  el.appendChild(target);
-  // do not move caret if element was not focused
-  const isTargetFocused = document.activeElement === el;
-  if (target !== null && target.nodeValue !== null && isTargetFocused) {
-    var sel = window.getSelection();
-    if (sel !== null) {
-      var range = document.createRange();
-      range.setStart(target, target.nodeValue.length);
-      range.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(range);
+const supportedImageTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+async function prepareQuestionImage(file: File) {
+  if (!supportedImageTypes.has(file.type)) {
+    throw new Error("Use uma imagem JPG, PNG ou WebP.");
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    throw new Error("A imagem original deve ter no máximo 8 MB.");
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new window.Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error("Não foi possível ler a imagem."));
+      element.src = objectUrl;
+    });
+    const maxDimension = 960;
+    const scale = Math.min(
+      1,
+      maxDimension / Math.max(image.naturalWidth, image.naturalHeight)
+    );
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Não foi possível processar a imagem.");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.76);
+    if (dataUrl.length > 750000) {
+      throw new Error(
+        "A imagem continuou muito grande após a compactação. Escolha outra."
+      );
     }
-    if (el instanceof HTMLElement) el.focus();
+    return dataUrl;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
   }
 }
 
-function CheckboxCircle({
-  onClick,
-  checked,
-}: {
-  onClick: React.MouseEventHandler<HTMLDivElement>;
-  checked: boolean;
-}) {
-  return (
-    <div
-      className={`${styles.checkBoxOuter} ${checked ? styles.green : ""}`}
-      onClick={onClick}
-    >
-      <div className={`${styles.checkBoxInner}`}>
-        <FaCheck className={`${!checked ? styles.hidden : ""}`}></FaCheck>
-      </div>
-    </div>
-  );
+const answerLabels = [
+  "Resposta 1",
+  "Resposta 2",
+  "Resposta 3 (opcional)",
+  "Resposta 4 (opcional)",
+];
+
+const answerStyles = [
+  styles.red,
+  styles.blue,
+  styles.yellow,
+  styles.green,
+];
+
+function AnswerShape({ index }: { index: number }) {
+  if (index === 0) return <BsFillTriangleFill aria-hidden="true" />;
+  if (index === 1)
+    return <BsFillSquareFill className={styles.diamond} aria-hidden="true" />;
+  if (index === 2) return <BsFillCircleFill aria-hidden="true" />;
+  return <BsFillSquareFill aria-hidden="true" />;
 }
 
 function Editor() {
-  const {
-    game,
-    setGame,
-    questionNumber,
-    setQuestionNumber,
-    formErrors,
-    validateForm,
-  } = useContext(GameContext);
+  const { game, setGame, questionNumber, formErrors, validateForm } =
+    useContext(GameContext);
+  const question = game.questions[questionNumber];
+  const questionError = formErrors?.questionErrors[questionNumber];
+  const [imageError, setImageError] = useState("");
+  const [processingImage, setProcessingImage] = useState(false);
 
-  const questionError =
-    formErrors !== null &&
-    formErrors.questionErrors[questionNumber] !== undefined &&
-    formErrors.questionErrors[questionNumber].ignoreErrors !== true &&
-    formErrors.questionErrors[questionNumber];
-
-  function answerInputHandler(answerIndex: number) {
-    return (e: React.FormEvent<HTMLParagraphElement>) => {
-      e.preventDefault();
-      const gameCopy = { ...game };
-      gameCopy.questions[questionNumber].choices[answerIndex] =
-        e.currentTarget.innerText;
-      console.log(e.currentTarget.innerText);
-      setGame({ ...game });
-
-      if (questionError.choicesRequiredError) validateForm({ ...game });
+  function updateQuestionText(value: string) {
+    const nextGame = {
+      ...game,
+      questions: game.questions.map((item, index) =>
+        index === questionNumber ? { ...item, question: value } : item
+      ),
     };
+    setGame(nextGame);
+    if (questionError?.questionBlankError) validateForm(nextGame);
   }
 
-  function onCheckboxClickHandler(index: number) {
-    return () => {
-      console.log(index);
-      const gameCopy = { ...game };
-      gameCopy.questions[questionNumber].correctAnswer = index;
-      setGame(gameCopy);
-
-      if (questionError.correctChoiceError) validateForm(gameCopy);
+  function updateChoice(answerIndex: number, value: string) {
+    const nextGame = {
+      ...game,
+      questions: game.questions.map((item, index) =>
+        index === questionNumber
+          ? {
+              ...item,
+              choices: item.choices.map((choice, choiceIndex) =>
+                choiceIndex === answerIndex ? value : choice
+              ),
+            }
+          : item
+      ),
     };
-  }
-  function questionInputHandler(e: React.FormEvent<HTMLParagraphElement>) {
-    e.preventDefault();
-    const gameCopy = { ...game };
-    gameCopy.questions[questionNumber].question = e.currentTarget.innerText;
-    console.log(e.currentTarget.innerText);
-    setGame({ ...game });
-
-    if (questionError.questionBlankError) validateForm({ ...game });
+    setGame(nextGame);
+    if (
+      questionError?.choicesRequiredError ||
+      questionError?.correctChoiceError
+    ) {
+      validateForm(nextGame);
+    }
   }
 
-  const question = useRef();
-  const a1 = useRef();
-  const a2 = useRef();
-  const a3 = useRef();
-  const a4 = useRef();
+  function setCorrectAnswer(answerIndex: number) {
+    const nextGame = {
+      ...game,
+      questions: game.questions.map((item, index) =>
+        index === questionNumber
+          ? { ...item, correctAnswer: answerIndex }
+          : item
+      ),
+    };
+    setGame(nextGame);
+    if (questionError?.correctChoiceError) validateForm(nextGame);
+  }
 
-  useEffect(() => {
-    replaceCaret(question.current);
-    replaceCaret(a1.current);
-    replaceCaret(a2.current);
-    replaceCaret(a3.current);
-    replaceCaret(a4.current);
-  });
+  function updateQuestionImage(image: string | null) {
+    setGame((current) => ({
+      ...current,
+      questions: current.questions.map((item, index) =>
+        index === questionNumber ? { ...item, image } : item
+      ),
+    }));
+  }
 
-  const q0Empty = game.questions[questionNumber].choices[0] === "";
-  const q1Empty = game.questions[questionNumber].choices[1] === "";
-  const q2Empty = game.questions[questionNumber].choices[2] === "";
-  const q3Empty = game.questions[questionNumber].choices[3] === "";
-  const q0Checked = game.questions[questionNumber].correctAnswer === 0;
-  const q1Checked = game.questions[questionNumber].correctAnswer === 1;
-  const q2Checked = game.questions[questionNumber].correctAnswer === 2;
-  const q3Checked = game.questions[questionNumber].correctAnswer === 3;
+  async function selectImage(file: File | undefined) {
+    if (!file) return;
+    setProcessingImage(true);
+    setImageError("");
+    try {
+      updateQuestionImage(await prepareQuestionImage(file));
+    } catch (error) {
+      setImageError(
+        error instanceof Error ? error.message : "Não foi possível usar a imagem."
+      );
+    } finally {
+      setProcessingImage(false);
+    }
+  }
 
   return (
-    <div className={`${styles.container}`}>
-      <p
-        contentEditable="true"
-        className={`${styles.question} ${
-          questionError.questionBlankError &&
-          game.questions[questionNumber].choices[0] === ""
-            ? styles.lightRed
-            : ""
-        }`}
-        placeholder="Questão..."
-        ref={question}
-        onInput={questionInputHandler}
-        suppressContentEditableWarning
-      >
-        {game.questions[questionNumber].question}
-      </p>
-      <div>
-        <div className={`${styles.grid}`}>
-          <div
-            className={`${styles.wrapper} ${
-              !q0Empty ? `${styles.red}` : `${styles.white}`
-            } ${
-              questionError.choicesRequiredError &&
-              game.questions[questionNumber].choices[0] === ""
-                ? styles.lightRed
+    <section className={styles.container} aria-label="Editor da pergunta">
+      <div className={styles.canvas}>
+        <label className={styles.questionField}>
+          <span>Questão</span>
+          <textarea
+            data-placeholder="Questão..."
+            placeholder="Questão..."
+            value={question.question}
+            maxLength={120}
+            className={
+              questionError?.questionBlankError &&
+              !questionError.ignoreErrors
+                ? styles.invalid
                 : ""
-            }`}
-          >
-            <span className={`${styles.shapeContainer} ${styles.red}`}>
-              <BsFillTriangleFill></BsFillTriangleFill>
-            </span>
-            <div className={`${styles.answerContainer}`}>
-              <p
-                contentEditable="true"
-                placeholder="Resposta 1"
-                className={`${styles.answer} ${
-                  !q0Empty ? styles.whiteText : ""
-                }`}
-                onInput={answerInputHandler(0)}
-                suppressContentEditableWarning
-                ref={a1}
-              >
-                {game.questions[questionNumber].choices[0]}
-              </p>
+            }
+            onChange={(event) => updateQuestionText(event.target.value)}
+          />
+          <small>{question.question.length} / 120</small>
+        </label>
+
+        <section className={styles.imageSection} aria-label="Imagem da pergunta">
+          <div className={styles.imageSectionHeading}>
+            <div>
+              <FiImage aria-hidden="true" />
+              <span>Imagem da questão</span>
+              <small>Opcional</small>
             </div>
-            {!q0Empty && (
-              <CheckboxCircle
-                onClick={onCheckboxClickHandler(0)}
-                checked={q0Checked}
-              ></CheckboxCircle>
-            )}
+            <label className={styles.imageUploadButton}>
+              <FiUploadCloud aria-hidden="true" />
+              {processingImage
+                ? "Processando..."
+                : question.image
+                  ? "Trocar imagem"
+                  : "Adicionar imagem"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={processingImage}
+                onChange={(event) => {
+                  void selectImage(event.target.files?.[0]);
+                  event.target.value = "";
+                }}
+              />
+            </label>
           </div>
-          <div
-            className={`${styles.wrapper} ${
-              !q1Empty ? `${styles.blue}` : `${styles.white}`
-            } ${
-              questionError.choicesRequiredError &&
-              game.questions[questionNumber].choices[1] === ""
-                ? styles.lightRed
-                : ""
-            }`}
-          >
-            <span className={`${styles.shapeContainer} ${styles.blue}`}>
-              <BsFillSquareFill></BsFillSquareFill>
-            </span>
-            <div className={`${styles.answerContainer}`}>
-              <p
-                contentEditable="true"
-                className={`${styles.answer} ${
-                  !q1Empty ? `${styles.whiteText}` : ""
-                }`}
-                placeholder="Resposta 2"
-                onInput={answerInputHandler(1)}
-                suppressContentEditableWarning
-                ref={a2}
+          {question.image ? (
+            <div className={styles.imagePreview}>
+              <img src={question.image} alt="Prévia da imagem da questão" />
+              <button
+                type="button"
+                aria-label="Remover imagem da questão"
+                onClick={() => updateQuestionImage(null)}
               >
-                {game.questions[questionNumber].choices[1]}
-              </p>
+                <FiTrash2 aria-hidden="true" />
+                Remover
+              </button>
             </div>
-            {!q1Empty && (
-              <CheckboxCircle
-                onClick={onCheckboxClickHandler(1)}
-                checked={q1Checked}
-              ></CheckboxCircle>
-            )}
-          </div>
-          <div
-            className={`${styles.wrapper} ${
-              !q2Empty ? `${styles.yellow}` : `${styles.white}`
-            }`}
-          >
-            <span className={`${styles.shapeContainer} ${styles.yellow}`}>
-              <BsFillCircleFill></BsFillCircleFill>
-            </span>
-            <div className={`${styles.answerContainer}`}>
-              <p
-                contentEditable="true"
-                className={`${styles.answer} ${
-                  !q2Empty ? `${styles.whiteText}` : ""
+          ) : (
+            <p className={styles.imageHint}>
+              A imagem aparecerá abaixo do título durante a partida.
+            </p>
+          )}
+        </section>
+
+        <div className={styles.answersHeading}>
+          <h2>Respostas</h2>
+          <p>Marque a alternativa correta.</p>
+        </div>
+
+        <div className={styles.grid}>
+          {question.choices.map((choice, index) => {
+            const requiredChoiceMissing =
+              index < 2 &&
+              questionError?.choicesRequiredError &&
+              !questionError.ignoreErrors &&
+              choice.trim() === "";
+            const isCorrect = question.correctAnswer === index;
+
+            return (
+              <article
+                className={`${styles.answerCard} ${answerStyles[index]} ${
+                  requiredChoiceMissing ? styles.invalid : ""
                 }`}
-                placeholder="Resposta 3 (optional)"
-                onInput={answerInputHandler(2)}
-                suppressContentEditableWarning
-                ref={a3}
+                key={index}
               >
-                {game.questions[questionNumber].choices[2]}
-              </p>
-            </div>
-            {!q2Empty && (
-              <CheckboxCircle
-                onClick={onCheckboxClickHandler(2)}
-                checked={q2Checked}
-              ></CheckboxCircle>
-            )}
-          </div>
-          <div
-            className={`${styles.wrapper} ${
-              !q3Empty ? `${styles.green}` : `${styles.white}`
-            }`}
-          >
-            <span className={`${styles.shapeContainer} ${styles.green}`}>
-              <BsFillSquareFill
-                style={{ transform: "rotate(45deg)" }}
-              ></BsFillSquareFill>
-            </span>
-            <div className={`${styles.answerContainer}`}>
-              <p
-                contentEditable="true"
-                className={`${styles.answer} ${
-                  !q3Empty ? `${styles.whiteText}` : ""
-                }`}
-                placeholder="Resposta 4 (optional)"
-                onInput={answerInputHandler(3)}
-                suppressContentEditableWarning
-                ref={a4}
-              >
-                {game.questions[questionNumber].choices[3]}
-              </p>
-            </div>
-            {!q3Empty && (
-              <CheckboxCircle
-                onClick={onCheckboxClickHandler(3)}
-                checked={q3Checked}
-              ></CheckboxCircle>
-            )}
-          </div>
+                <div className={styles.shape}>
+                  <AnswerShape index={index} />
+                </div>
+                <div className={styles.answerField}>
+                  <label htmlFor={`answer-${index}`}>
+                    {answerLabels[index]}
+                  </label>
+                  <textarea
+                    id={`answer-${index}`}
+                    data-placeholder={answerLabels[index]}
+                    placeholder={
+                      index < 2 ? `Digite a resposta ${index + 1}` : "Opcional"
+                    }
+                    value={choice}
+                    maxLength={120}
+                    onChange={(event) => updateChoice(index, event.target.value)}
+                  />
+                  <small>{choice.length} / 120</small>
+                </div>
+                <button
+                  type="button"
+                  className={`${styles.correctButton} ${
+                    isCorrect ? styles.correctButtonSelected : ""
+                  }`}
+                  aria-label={`Marcar ${answerLabels[index]} como correta`}
+                  aria-pressed={isCorrect}
+                  onClick={() => setCorrectAnswer(index)}
+                >
+                  {isCorrect && <FaCheck aria-hidden="true" />}
+                </button>
+              </article>
+            );
+          })}
         </div>
       </div>
-    </div>
+      <NoticeModal
+        open={imageError !== ""}
+        title="Não foi possível adicionar a imagem"
+        messages={imageError ? [imageError] : []}
+        tone="error"
+        onClose={() => setImageError("")}
+      />
+    </section>
   );
 }
 

@@ -1,26 +1,52 @@
-version: "3.8"
+name: kahoot
 
 services:
-  backend:
-    build:
-      context: ./kahoot-clone-backend
-      dockerfile: Dockerfile
-    container_name: kahoot-backend
-    ports:
-      - "8000:8000"
+  postgres:
+    image: postgres:17-alpine
     environment:
-      - RUST_LOG=info
+      POSTGRES_DB: kahoot
+      POSTGRES_USER: kahoot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kahoot_local_password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kahoot -d kahoot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
-  frontend:
+  app:
+    image: ${KAHOOT_IMAGE:-ghcr.io/josemaeldon/kahoot:latest}
     build:
-      context: ./kahoot-clone-frontend
+      context: .
       dockerfile: Dockerfile
-    container_name: kahoot-frontend
-    ports:
-      - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      DATABASE_URL: postgresql://kahoot:${POSTGRES_PASSWORD:-kahoot_local_password}@postgres:5432/kahoot
+      DATABASE_POOL_SIZE: 10
+      JWT_SECRET: ${JWT_SECRET:-local_development_secret_change_me_123456789}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      NODE_ENV: production
+      PORT: 3000
+      BACKEND_PORT: 8000
     depends_on:
-      - backend
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
     restart: unless-stopped
+
+volumes:
+  postgres_data:

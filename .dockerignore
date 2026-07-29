@@ -1,0 +1,14 @@
+.git
+.github
+**/node_modules
+**/.next
+**/target
+**/.DS_Store
+*.log
+.env
+.env.*
+design.pdf
+flag.jpg
+kahoot-css
+other
+pages

@@ -1,8 +1,7 @@
-import { connectToDatabase } from "@serverless/mongoCache";
-import { verify } from "jsonwebtoken";
-import { FindCursor, FindOptions } from "mongodb";
 import type { NextApiRequest, NextApiResponse } from "next";
-import { db, auth } from "../../kahoot";
+import { db } from "../../kahoot";
+import { requireAuthenticatedUser } from "@lib/auth";
+import { findOwnedGame } from "@lib/gameRepository";
 
 export type APIRequest = {
   gameId: string;
@@ -25,28 +24,24 @@ export default async function handler(
   res: NextApiResponse<APIResponse>
 ) {
   if (req.method !== "POST")
-    res
-      .status(200)
-      .json({ error: true, errorDescription: "Not a POST request" });
+    return res
+      .status(405)
+      .json({ error: true, errorDescription: "Método não permitido" });
+  const user = await requireAuthenticatedUser(req, res);
+  if (!user) return;
   try {
     const request = req.body as APIRequest;
-    const payload = verify(req.cookies["accessToken"], "secret", {
-      complete: false,
-    }) as auth.accessTokenPayload;
-
-    const client = await connectToDatabase();
-    const games = client.db("kahoot-clone").collection<db.KahootGame>("game");
-    const result = await games.findOne({ _id: request.gameId });
-    if (result !== null) {
-      return res.status(200).json({ error: false, game: result });
-    } else {
-      res
-        .status(200)
-        .json({ error: true, errorDescription: "Error finding game" });
+    const game = await findOwnedGame(request.gameId, user._id);
+    if (game) {
+      return res.status(200).json({ error: false, game });
     }
-  } catch (e) {
-    res
-      .status(200)
-      .json({ error: true, errorDescription: "Something went wrong" });
+    return res
+      .status(404)
+      .json({ error: true, errorDescription: "Quiz não encontrado." });
+  } catch (error) {
+    console.error("Falha ao buscar quiz", error);
+    return res
+      .status(400)
+      .json({ error: true, errorDescription: "ID de quiz inválido." });
   }
 }

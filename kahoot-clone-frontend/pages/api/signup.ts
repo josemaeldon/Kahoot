@@ -1,12 +1,11 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectToDatabase } from "@serverless/mongoCache";
 import type { auth, db } from "../../kahoot";
-import * as bcrypt from "bcrypt";
-import { ObjectId } from "mongodb";
-import * as cookie from "cookie";
-import * as jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import { query } from "@lib/db";
+import { setSessionCookie } from "@lib/auth";
+import { validateCredentials, ValidationError } from "@lib/validation";
 
 export interface APIRequest {
   username: string;
@@ -31,58 +30,41 @@ export default async function handler(
 ) {
   if (req.method !== "POST") {
     return res
-      .status(401)
-      .json({ error: true, errorDescription: "Not a POST request" });
+      .status(405)
+      .json({ error: true, errorDescription: "Método não permitido" });
   }
-  const { username, password }: APIRequest = req.body;
-
-  const client = await connectToDatabase();
-  const user = client.db("kahoot-clone").collection<db.User>("user");
-
-  //Does user already exist?
-  const results = await user.findOne({ username });
-  if (results !== null) {
-    return res.status(200).json({
-      error: true,
-      errorDescription: "User already exists",
-    });
+  try {
+    const { username, password } = validateCredentials(
+      req.body?.username,
+      req.body?.password
+    );
+    const passwordHash = await bcrypt.hash(password, 12);
+    const inserted = await query<{ id: string; username: string }>(
+      `insert into users (username, password_hash)
+       values ($1, $2)
+       returning id::text, username`,
+      [username, passwordHash]
+    );
+    const payload: auth.accessTokenPayload = {
+      _id: inserted.rows[0].id,
+      username: inserted.rows[0].username,
+    };
+    setSessionCookie(res, payload);
+    return res.status(201).json({ error: false, user: payload });
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      return res
+        .status(400)
+        .json({ error: true, errorDescription: error.message });
+    }
+    if ((error as { code?: string }).code === "23505") {
+      return res
+        .status(409)
+        .json({ error: true, errorDescription: "Este usuário já existe." });
+    }
+    console.error("Falha ao criar usuário", error);
+    return res
+      .status(500)
+      .json({ error: true, errorDescription: "Não foi possível criar a conta." });
   }
-
-  //Create new user with hashed and salted password and add it to the database
-  const salt = await bcrypt.genSalt(10, "b");
-  const passwordHash = await bcrypt.hash(password, salt);
-  const userDoc: db.User = {
-    _id: new ObjectId().toHexString(),
-    username,
-    passwordHash,
-  };
-
-  await user.insertOne(userDoc);
-
-  //Give user an access token cookie and JSON response
-
-  const payload: auth.accessTokenPayload = {
-    _id: userDoc._id,
-    username: userDoc.username,
-  };
-  const token = jwt.sign(payload, "secret", {});
-
-  res.setHeader("Set-Cookie", [
-    cookie.serialize("accessToken", token, {
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-    }),
-    cookie.serialize("loggedIn", "true", {
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-    }),
-  ]);
-
-  res.status(200).json({
-    error: false,
-    user: { _id: userDoc._id, username },
-  });
 }

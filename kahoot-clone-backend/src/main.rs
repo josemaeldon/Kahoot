@@ -9,6 +9,7 @@ use std::net::SocketAddr;
 
 // `axum` is a Rust web server framework
 use axum::Router;
+use axum::routing::get;
 
 // `tracing` is an async logging library
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -55,7 +56,11 @@ async fn main() {
         .init();
 
     // Set the host address to `localhost:3000`
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8000));
+    let port = std::env::var("BACKEND_PORT")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(8000);
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
     tracing::debug!("Listening on {addr}");
 
@@ -69,6 +74,7 @@ async fn main() {
 /// The server router
 fn app() -> Router {
     Router::new()
+        .route("/health", get(|| async { "ok" }))
         // GET /ws
         .nest("/ws", ws::router())
 }

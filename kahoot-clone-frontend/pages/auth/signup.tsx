@@ -1,11 +1,13 @@
-import React, { useState } from "react";
-import styles from "@styles/signupnew.module.css";
+import React, { useEffect, useState } from "react";
+import styles from "@styles/Auth.module.css";
 import Link from "next/link";
 import { postData } from "@lib/postData";
 import { APIRequest, APIResponse } from "pages/api/signup";
 import { useRouter } from "next/router";
 import Header from "@components/Header";
+import NoticeModal from "@components/NoticeModal";
 import useUser from "@lib/useUser";
+import { FiEye, FiEyeOff, FiLock, FiUser } from "react-icons/fi";
 
 interface Info {
   username: string;
@@ -18,131 +20,137 @@ function Signup() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
-  const { loggedIn } = useUser();
+  const { loggedIn, loading } = useUser();
 
-  if (loggedIn) {
-    if (typeof window !== "undefined") {
-      window.location.href = "/";
-    }
-    return null;
-  }
+  useEffect(() => {
+    if (!loading && loggedIn) void router.replace("/");
+  }, [loading, loggedIn, router]);
 
   const signupHandler = async () => {
     setIsLoading(true);
     setError(null);
-    const request: APIRequest = {
-      username: info.username,
-      password: info.password,
-    };
     try {
-      const response = await postData<APIRequest, APIResponse>(
-        "/api/signup",
-        request
-      );
+      const response = await postData<APIRequest, APIResponse>("/api/signup", {
+        username: info.username,
+        password: info.password,
+      });
       if (response.error) {
-        setError(response.errorDescription || "An unexpected error occurred.");
+        setError(response.errorDescription || "Ocorreu um erro inesperado.");
       } else {
-        localStorage.setItem(
-          "accessTokenPayload",
-          //@ts-ignore
-          JSON.stringify(response.user)
-        );
-        router.push("/");
+        window.location.assign("/");
       }
     } catch (err) {
-      setError("Falha ao conectar-se ao servidor. Por favor, tente novamente.");
+      setError("Falha ao conectar-se ao servidor. Tente novamente.");
       console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (loading || loggedIn) return null;
+
   return (
-    <div className={styles.vh100}>
-      <Header />
-      <div className={styles.container}>
-        <div className={styles.card}>
+    <main className={styles.page}>
+      <Header authMode />
+      <div className={styles.layout}>
+        <aside className={styles.art} aria-hidden="true">
+          <span className={`${styles.artBlock} ${styles.artRed}`} />
+          <span className={`${styles.artBlock} ${styles.artBlue}`} />
+          <span className={`${styles.artBlock} ${styles.artYellow}`} />
+          <span className={`${styles.artBlock} ${styles.artGreen}`} />
+          <span className={styles.questionMark}>?</span>
+        </aside>
+
+        <section className={styles.formRegion}>
           <form
             className={styles.form}
-            onSubmit={(e) => {
-              e.preventDefault();
-              signupHandler();
+            noValidate
+            onSubmit={(event) => {
+              event.preventDefault();
+              void signupHandler();
             }}
           >
-            <h2 className={styles.title}>Inscrver-se</h2>
-
-            {error && <p className={styles.error}>{error}</p>}
-
-            <div className={styles.inputGroup}>
-              <label htmlFor="username" className={styles.label}>
-                Usuário
-              </label>
-              <input
-                type="text"
-                id="username"
-                className={styles.input}
-                value={info.username}
-                onChange={(e) => setInfo({ ...info, username: e.target.value })}
-                placeholder="Digite seu nome de usuário - Ex.: joaoemaria -"
-                required
-              />
+            <div className={styles.heading}>
+              <h1>Crie sua conta</h1>
+              <p>Salve seus quizzes e inicie partidas quando quiser.</p>
             </div>
 
-            <div className={styles.inputGroup}>
-              <label htmlFor="password" className={styles.label}>
-                Senha
-              </label>
-              <div className={styles.passwordWrapper}>
+            <label className={styles.field}>
+              <span>Usuário</span>
+              <div className={styles.inputShell}>
+                <FiUser aria-hidden="true" />
+                <input
+                  type="text"
+                  id="username"
+                  value={info.username}
+                  onChange={(event) =>
+                    setInfo((current) => ({
+                      ...current,
+                      username: event.target.value,
+                    }))
+                  }
+                  placeholder="Digite seu nome de usuário"
+                  autoComplete="username"
+                />
+              </div>
+            </label>
+
+            <label className={styles.field}>
+              <span>Senha</span>
+              <div className={styles.inputShell}>
+                <FiLock aria-hidden="true" />
                 <input
                   type={showPassword ? "text" : "password"}
                   id="password"
-                  className={styles.input}
                   value={info.password}
-                  onChange={(e) =>
-                    setInfo({ ...info, password: e.target.value })
+                  onChange={(event) =>
+                    setInfo((current) => ({
+                      ...current,
+                      password: event.target.value,
+                    }))
                   }
                   placeholder="Digite sua senha"
-                  required
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
-                  className={styles.togglePassword}
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Ocultar senha" : "Mostrar Senha"}
+                  className={styles.passwordToggle}
+                  onClick={() => setShowPassword((current) => !current)}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                 >
-                  {showPassword ? "Ocultar" : "Mostrar"}
+                  {showPassword ? (
+                    <FiEyeOff aria-hidden="true" />
+                  ) : (
+                    <FiEye aria-hidden="true" />
+                  )}
                 </button>
               </div>
-            </div>
+            </label>
 
             <button
               type="submit"
-              className={styles.button}
+              className={styles.primaryButton}
               disabled={isLoading}
             >
-              {isLoading ? "Inscrever-se..." : "Inscreva-se"}
-            </button><br />
-
-            <button
-              type="button"
-              className={styles.button}
-              onClick={() => {
-                        window.location.href = "https://kahoot.cloudbr.app";
-                          }}
-                            >
-                Voltar
+              {isLoading ? "Criando conta..." : "Criar conta"}
             </button>
 
-            <p className={styles.loginPrompt}>
+            <p className={styles.switchText}>
               Já tem uma conta?{" "}
-              <Link href="/auth/login">
-                <a className={styles.loginLink}>Login</a>
-              </Link>
+              <Link href="/auth/login">Entrar</Link>
             </p>
           </form>
-        </div>
+        </section>
       </div>
-    </div>
+
+      <NoticeModal
+        open={error !== null}
+        title="Não foi possível criar a conta"
+        messages={error ? [error] : []}
+        tone="error"
+        onClose={() => setError(null)}
+      />
+    </main>
   );
 }
 

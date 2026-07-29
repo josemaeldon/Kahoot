@@ -1,15 +1,23 @@
 import { action, UserEvent } from "kahoot";
 import { useRouter } from "next/router";
-import React, { useEffect, useState, useContext } from "react";
-import { Spinner } from "react-bootstrap";
+import React, { useContext, useEffect, useState } from "react";
 import styles from "../styles/Play.module.css";
+import { getWebSocketUrl } from "@lib/websocket";
+import NoticeModal from "@components/NoticeModal";
+import {
+  BsFillCircleFill,
+  BsFillSquareFill,
+  BsFillTriangleFill,
+} from "react-icons/bs";
+import { FaCheck } from "react-icons/fa";
+import { FiArrowLeft, FiClock, FiWifi } from "react-icons/fi";
 
 const PlayerContext = React.createContext<Context>(null);
 
 interface Context {
   socket: WebSocket;
   points: number;
-  setSocket: React.Dispatch<React.SetStateAction<null | WebSocket>>;
+  setSocket: React.Dispatch<React.SetStateAction<WebSocket | null>>;
   setPoints: React.Dispatch<React.SetStateAction<number>>;
   username: string;
   setUsername: React.Dispatch<React.SetStateAction<string>>;
@@ -24,200 +32,295 @@ interface Context {
   >;
 }
 
-function LobbyWaiting() {
+function PlayerFrame({
+  children,
+  stage,
+}: {
+  children: React.ReactNode;
+  stage?: string;
+}) {
   return (
-    <div className={styles.backdrop}>
-      <div className={styles.gameBox}>
-        <p>Você está dentro! Vê seu nome na tela?</p>
-        <p>Esperando para começar...</p>
-      </div>
-    </div>
+    <main className={styles.backdrop}>
+      <div className={styles.ambientOrb} aria-hidden="true" />
+      <header className={styles.topbar}>
+        <strong>Kahoot!</strong>
+        {stage && <span>{stage}</span>}
+      </header>
+      <div className={styles.gameBox}>{children}</div>
+    </main>
+  );
+}
+
+function LobbyWaiting() {
+  const { username } = useContext(PlayerContext);
+
+  return (
+    <PlayerFrame stage="Sala de espera">
+      <section className={styles.statusCard}>
+        <span className={styles.statusIcon}>
+          <FiWifi aria-hidden="true" />
+        </span>
+        <p className={styles.eyebrow}>Você está dentro!</p>
+        <h1>Vê seu nome na tela?</h1>
+        <div className={styles.playerName}>{username}</div>
+        <p className={styles.muted}>
+          Esperando o apresentador começar a partida...
+        </p>
+      </section>
+    </PlayerFrame>
   );
 }
 
 function StartScreen() {
   const [pin, setPin] = useState("");
   const [connectionClosed, setConnectionClosed] = useState(false);
+  const [error, setError] = useState("");
   const { setUsername, username, setSocket, setSubpage } =
     useContext(PlayerContext);
   const [inputLocked, setInputLocked] = useState(false);
-  useEffect(() => {
-    if (inputLocked) {
-      const socket = new WebSocket("wss://servidor-kahoot.cloudbr.app/ws");
-      const aborter = new AbortController();
-      socket.addEventListener(
-        "message",
-        function handler(e) {
-          const userEvent = JSON.parse(e.data) as UserEvent.event;
-          switch (userEvent.type) {
-            case "joined":
-              setSocket(socket);
-              socket.removeEventListener("message", handler);
-              setSubpage("LobbyWaiting");
 
-              break;
-            case "joinFailed":
-              setInputLocked(false);
-              console.log(userEvent.reason);
-              //todo: join fail handling
-              break;
-          }
-        },
-        { signal: aborter.signal }
-      );
-      socket.addEventListener(
-        "open",
-        function handler(e) {
-          const request: action.JoinRoom = {
-            type: "joinRoom",
-            roomId: parseInt(pin.replace(/\s/g, "")),
-            username: username,
-          };
-          socket.send(JSON.stringify(request));
-          console.log(socket);
-          console.log(request);
-        },
-        { signal: aborter.signal }
-      );
-      socket.onclose = () => {
-        console.log("connection closed");
-        setConnectionClosed(true);
-      };
-      return () => {
-        if (inputLocked) {
-          aborter.abort();
+  useEffect(() => {
+    if (!inputLocked) return;
+
+    setError("");
+    const socket = new WebSocket(getWebSocketUrl());
+    const aborter = new AbortController();
+    socket.addEventListener(
+      "message",
+      function handler(event) {
+        const userEvent = JSON.parse(event.data) as UserEvent.event;
+        switch (userEvent.type) {
+          case "joined":
+            setSocket(socket);
+            socket.removeEventListener("message", handler);
+            setSubpage("LobbyWaiting");
+            break;
+          case "joinFailed":
+            setInputLocked(false);
+            setError(
+              userEvent.reason === "Duplicate user"
+                ? "Esse nome já está sendo usado na sala."
+                : "Sala não encontrada ou partida já iniciada."
+            );
+            socket.close();
+            break;
         }
-      };
-    }
-  }, [inputLocked]);
+      },
+      { signal: aborter.signal }
+    );
+    socket.addEventListener(
+      "open",
+      () => {
+        const request: action.JoinRoom = {
+          type: "joinRoom",
+          roomId: parseInt(pin.replace(/\s/g, ""), 10),
+          username,
+        };
+        socket.send(JSON.stringify(request));
+      },
+      { signal: aborter.signal }
+    );
+    socket.onclose = () => setConnectionClosed(true);
+    socket.onerror = () => {
+      setError("Não foi possível conectar ao servidor da partida.");
+      setInputLocked(false);
+    };
+
+    return () => aborter.abort();
+  }, [inputLocked, pin, setSocket, setSubpage, username]);
+
   useEffect(() => {
-    if (connectionClosed) {
-      console.log("Connection was closed");
+    if (connectionClosed && inputLocked) {
+      setError("A conexão com a sala foi encerrada.");
+      setInputLocked(false);
     }
-  }, [connectionClosed]);
-  return (
-    <div className={`${styles.backdrop}`}>
-      <div className={`${styles.gameBox}`}>
-        <p className={`${styles.logo}`}>Kahoot!</p>
-        <div className={`${styles.gameInput}`}>
-          <input
-            type="text"
-            placeholder="Game PIN"
-            className={`${styles.gameInputPin}`}
-            onChange={(e) => {
-              setPin(e.target.value);
-            }}
-            value={pin}
-            readOnly={inputLocked}
-          ></input>
-          <input
-            type="text"
-            placeholder="Seu nome"
-            className={`${styles.gameInputPin}`}
-            onChange={(e) => {
-              setUsername(e.target.value);
-            }}
-            value={username}
-            readOnly={inputLocked}
-          ></input>
+  }, [connectionClosed, inputLocked]);
 
-
-          
-          <button
-  className={`${styles.gameButton}`}
-  onClick={() => {
+  function joinRoom() {
+    const normalizedPin = pin.replace(/\s/g, "");
+    const normalizedUsername = username.trim();
+    if (!/^\d{6}$/.test(normalizedPin)) {
+      setError("Informe um PIN de 6 números.");
+      return;
+    }
+    if (normalizedUsername.length < 2 || normalizedUsername.length > 24) {
+      setError("Seu nome deve ter entre 2 e 24 caracteres.");
+      return;
+    }
+    setUsername(normalizedUsername);
     setInputLocked(true);
-  }}
->
-  {inputLocked && (
-    <span>
-      <Spinner
-        animation="border"
-        style={{ height: "24px", width: "24px" }}
-      ></Spinner>
-    </span>
-  )}
-  {!inputLocked && <span>ENTRAR NA SALA</span>}
-</button>
+  }
 
-<button
-  className={`${styles.gameButton}`}
-  onClick={() => {
-    window.location.href = "https://kahoot.cloudbr.app";
-  }}
->
-  Voltar
-</button>
-
-
-          
+  return (
+    <PlayerFrame>
+      <section className={styles.joinPanel}>
+        <p className={styles.eyebrow}>Jogar ao vivo</p>
+        <h1>Entre na sala</h1>
+        <p className={styles.intro}>
+          Digite o PIN mostrado pelo apresentador e escolha como quer aparecer.
+        </p>
+        <div className={styles.gameInput}>
+          <label>
+            <span>Game PIN</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="Game PIN"
+              className={styles.gameInputPin}
+              onChange={(event) => setPin(event.target.value)}
+              value={pin}
+              readOnly={inputLocked}
+              maxLength={7}
+            />
+          </label>
+          <label>
+            <span>Seu nome</span>
+            <input
+              type="text"
+              autoComplete="nickname"
+              placeholder="Seu nome"
+              className={styles.gameInputPin}
+              onChange={(event) => setUsername(event.target.value)}
+              value={username}
+              readOnly={inputLocked}
+              maxLength={24}
+            />
+          </label>
+          <button
+            type="button"
+            className={styles.gameButton}
+            onClick={joinRoom}
+            disabled={inputLocked}
+          >
+            {inputLocked ? (
+              <>
+                <span className={styles.inlineSpinner} aria-hidden="true" />
+                Entrando...
+              </>
+            ) : (
+              "Entrar na sala"
+            )}
+          </button>
+          <button
+            type="button"
+            className={styles.backButton}
+            onClick={() => window.location.assign("/")}
+          >
+            <FiArrowLeft aria-hidden="true" />
+            Voltar ao início
+          </button>
         </div>
-      </div>
-    </div>
+      </section>
+      <NoticeModal
+        open={error !== ""}
+        title="Não foi possível entrar na sala"
+        messages={error ? [error] : []}
+        tone="error"
+        onClose={() => setError("")}
+      />
+    </PlayerFrame>
   );
 }
 
-function ChooseAnswer({ data }) {
+function AnswerShape({ index }: { index: number }) {
+  if (index === 0) return <BsFillTriangleFill aria-hidden="true" />;
+  if (index === 1)
+    return <BsFillSquareFill className={styles.diamond} aria-hidden="true" />;
+  if (index === 2) return <BsFillCircleFill aria-hidden="true" />;
+  return <BsFillSquareFill aria-hidden="true" />;
+}
+
+function ChooseAnswer({ data }: { data: UserEvent.event }) {
   const { socket } = useContext(PlayerContext);
   const choices = (data as UserEvent.RoundBegin).choices;
   const [madeChoice, setMadeChoice] = useState(false);
-  const onChoiceMade = (index) => () => {
+  const colors = [styles.red, styles.blue, styles.yellow, styles.green];
+
+  function onChoiceMade(index: number) {
     setMadeChoice(true);
     const request: action.Answer = { type: "answer", choice: index };
     socket.send(JSON.stringify(request));
-  };
+  }
+
+  if (madeChoice) {
+    return (
+      <PlayerFrame stage="Resposta enviada">
+        <section className={styles.statusCard}>
+          <span className={`${styles.statusIcon} ${styles.successIcon}`}>
+            <FaCheck aria-hidden="true" />
+          </span>
+          <p className={styles.eyebrow}>Tudo certo</p>
+          <h1>Resposta registrada</h1>
+          <p className={styles.muted}>
+            Agora é só esperar a rodada terminar.
+          </p>
+        </section>
+      </PlayerFrame>
+    );
+  }
+
   return (
-    <>
-      {madeChoice === false && (
-        <div className={`${styles.backdrop}`}>
-          <div className={`${styles.gameBox}`}>
-            <div className={styles.answerGrid}>
-              {choices[0] && (
-                <div className={styles.red} onClick={onChoiceMade(0)}></div>
-              )}
-              {choices[1] && (
-                <div className={styles.blue} onClick={onChoiceMade(1)}></div>
-              )}
-              {choices[2] && (
-                <div className={styles.yellow} onClick={onChoiceMade(2)}></div>
-              )}
-              {choices[3] && (
-                <div className={styles.green} onClick={onChoiceMade(3)}></div>
-              )}
-            </div>
-          </div>
+    <PlayerFrame stage="Escolha uma resposta">
+      <section className={styles.answerPanel}>
+        <div className={styles.answerHeading}>
+          <FiClock aria-hidden="true" />
+          <h1>Toque na sua resposta</h1>
         </div>
-      )}
-      {madeChoice === true && (
-        <div className={`${styles.backdrop}`}>
-          <div className={`${styles.gameBox}`}>
-            <p>Você fez sua resposta. Esperando a rodada terminar...</p>
-          </div>
+        <div className={styles.answerGrid}>
+          {choices.map((choice, index) => {
+            if (!choice) return null;
+            return (
+              <button
+                type="button"
+                className={`${styles.answerButton} ${colors[index]}`}
+                aria-label={`Resposta ${index + 1}`}
+                key={`${choice}-${index}`}
+                onClick={() => onChoiceMade(index)}
+              >
+                <AnswerShape index={index} />
+                <span>{index + 1}</span>
+              </button>
+            );
+          })}
         </div>
-      )}
-    </>
+      </section>
+    </PlayerFrame>
   );
 }
 
-function Result({ data }) {
+function Result({ data }: { data: UserEvent.event }) {
   const pointGain = (data as UserEvent.RoundEnd).pointGain;
-  console.log(pointGain);
+  const { points } = useContext(PlayerContext);
+  const isCorrect = pointGain !== null;
+
   return (
-    <div className={`${styles.backdrop}`}>
-      <div className={`${styles.gameBox}`}>
-        {pointGain && `Você acertou! +${pointGain} points`}
-        {pointGain === null && (
-          <div>
-            <p>Você errou :(</p> <p>Você não recebeu nenhum ponto</p>
-          </div>
+    <PlayerFrame stage="Resultado da rodada">
+      <section className={styles.statusCard}>
+        <span
+          className={`${styles.statusIcon} ${
+            isCorrect ? styles.successIcon : styles.errorIcon
+          }`}
+        >
+          {isCorrect ? <FaCheck aria-hidden="true" /> : "×"}
+        </span>
+        <p className={styles.eyebrow}>
+          {isCorrect ? "Boa resposta" : "Quase lá"}
+        </p>
+        <h1>{isCorrect ? "Você acertou!" : "Você errou :("}</h1>
+        {isCorrect ? (
+          <p className={styles.pointGain}>+{pointGain} pontos</p>
+        ) : (
+          <p className={styles.muted}>Você não recebeu nenhum ponto.</p>
         )}
-      </div>
-    </div>
+        <div className={styles.totalPoints}>Total: {points} pontos</div>
+      </section>
+    </PlayerFrame>
   );
 }
 
 function Play() {
-  const [socket, setSocket] = useState<null | WebSocket>(null);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
   const [points, setPoints] = useState(0);
   const [username, setUsername] = useState("");
   const [subpage, setSubpage] = useState<
@@ -225,50 +328,58 @@ function Play() {
   >("StartScreen");
   const router = useRouter();
   const [subpageData, setSubpageData] = useState<UserEvent.event | null>(null);
+
   useEffect(() => {
-    if (socket) {
-      socket.addEventListener("message", (e) => {
-        const hostEvent = JSON.parse(e.data) as UserEvent.event;
+    if (!socket) return;
+    const aborter = new AbortController();
+    socket.addEventListener(
+      "message",
+      (event) => {
+        const hostEvent = JSON.parse(event.data) as UserEvent.event;
         switch (hostEvent.type) {
           case "gameEnd":
-            router.push("/");
+            void router.push("/");
             break;
           case "roundBegin":
             setSubpage("ChooseAnswer");
             setSubpageData(hostEvent);
             break;
           case "roundEnd":
+            setPoints((current) => current + (hostEvent.pointGain || 0));
             setSubpage("Result");
             setSubpageData(hostEvent);
             break;
         }
-      });
-      socket.addEventListener("close", () => {
-        router.push("/");
-      });
-    }
-  }, [socket]);
+      },
+      { signal: aborter.signal }
+    );
+    socket.addEventListener(
+      "close",
+      () => void router.push("/"),
+      { signal: aborter.signal }
+    );
+    return () => aborter.abort();
+  }, [router, socket]);
+
   return (
-    <>
-      <PlayerContext.Provider
-        value={{
-          socket,
-          points,
-          setSocket,
-          setPoints,
-          username,
-          setUsername,
-          setSubpage,
-        }}
-      >
-        {subpage === "StartScreen" && <StartScreen></StartScreen>}
-        {subpage === "LobbyWaiting" && <LobbyWaiting></LobbyWaiting>}
-        {subpage === "ChooseAnswer" && (
-          <ChooseAnswer data={subpageData}></ChooseAnswer>
-        )}
-        {subpage === "Result" && <Result data={subpageData}></Result>}
-      </PlayerContext.Provider>
-    </>
+    <PlayerContext.Provider
+      value={{
+        socket,
+        points,
+        setSocket,
+        setPoints,
+        username,
+        setUsername,
+        setSubpage,
+      }}
+    >
+      {subpage === "StartScreen" && <StartScreen />}
+      {subpage === "LobbyWaiting" && <LobbyWaiting />}
+      {subpage === "ChooseAnswer" && subpageData && (
+        <ChooseAnswer data={subpageData} />
+      )}
+      {subpage === "Result" && subpageData && <Result data={subpageData} />}
+    </PlayerContext.Provider>
   );
 }
 

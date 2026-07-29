@@ -1,11 +1,10 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectToDatabase } from "@serverless/mongoCache";
-import * as bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import type { auth, db } from "kahoot";
-import * as jwt from "jsonwebtoken";
-import * as cookie from "cookie";
+import { query } from "@lib/db";
+import { setSessionCookie } from "@lib/auth";
 export interface APIRequest {
   username: string;
   password: string;
@@ -28,59 +27,58 @@ export default async function handler(
   res: NextApiResponse
 ) {
   if (req.method !== "POST") {
-    res.status(401).json({});
-  }
-  const { username, password }: APIRequest = req.body;
-
-  const client = await connectToDatabase();
-  const user = client.db("kahoot-clone").collection<db.User>("user");
-
-  //Does the user exist?
-  const query = await user.findOne({ username });
-  if (query === null) {
-    const response: APIResponse = {
+    return res.status(405).json({
       error: true,
-      errorDescription: "User not found",
-    };
-    res.status(200).json(response);
+      errorDescription: "Método não permitido",
+    });
   }
 
-  //User exists, but is the password correct?
-  const correct = await bcrypt.compare(password, query.passwordHash);
-  if (correct) {
-    //Give user an access token stored as a cookie
+  const username =
+    typeof req.body?.username === "string" ? req.body.username.trim() : "";
+  const password =
+    typeof req.body?.password === "string" ? req.body.password : "";
+  if (!username || !password) {
+    return res.status(400).json({
+      error: true,
+      errorDescription: "Informe usuário e senha.",
+    });
+  }
+
+  try {
+    const result = await query<{
+      id: string;
+      username: string;
+      password_hash: string;
+    }>(
+      `select id::text, username, password_hash
+       from users
+       where lower(username) = lower($1)
+       limit 1`,
+      [username]
+    );
+    const user = result.rows[0];
+    const correct = user
+      ? await bcrypt.compare(password, user.password_hash)
+      : false;
+
+    if (!user || !correct) {
+      return res.status(401).json({
+        error: true,
+        errorDescription: "Usuário ou senha inválidos.",
+      });
+    }
+
     const payload: auth.accessTokenPayload = {
-      _id: query._id,
-      username: query.username,
+      _id: user.id,
+      username: user.username,
     };
-    const token = jwt.sign(payload, "secret", {});
-
-    res.setHeader("Set-Cookie", [
-      cookie.serialize("accessToken", token, {
-        secure: process.env.NODE_ENV === "production",
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-      }),
-      cookie.serialize("loggedIn", "true", {
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        httpOnly: false,
-        path: "/",
-      }),
-    ]);
-
-    const response: APIResponse = {
-      error: false,
-      user: payload,
-    };
-
-    res.status(200).json(response);
-  } else {
-    const response: APIResponse = {
+    setSessionCookie(res, payload);
+    return res.status(200).json({ error: false, user: payload });
+  } catch (error) {
+    console.error("Falha no login", error);
+    return res.status(500).json({
       error: true,
-      errorDescription: "Password is incorrect",
-    };
-    res.status(200).json(response);
+      errorDescription: "Não foi possível entrar agora.",
+    });
   }
 }

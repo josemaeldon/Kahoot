@@ -43,6 +43,9 @@ pub enum HostEvent {
     RoomCreated {
         room_id: RoomId,
     },
+    RoomCreationFailed {
+        reason: String,
+    },
 
     /// Sent whenever a user joins the room.
     UserJoined {
@@ -119,12 +122,36 @@ pub type RoomId = u32;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Question {
     pub question: String,
+    #[serde(default)]
+    pub image: Option<String>,
     /// All of the valid choices.
     pub choices: Vec<String>,
     /// The index of the correct answer.
     pub answer: usize,
     /// The maximum number of seconds for this question.
     pub time: u16,
+}
+
+impl Question {
+    pub fn is_valid(&self) -> bool {
+        let question_length = self.question.trim().chars().count();
+        let choice_count = self.choices.len();
+        let image_is_valid = self.image.as_ref().map_or(true, |image| {
+            image.len() <= 750_000
+                && (image.starts_with("data:image/jpeg;base64,")
+                    || image.starts_with("data:image/png;base64,")
+                    || image.starts_with("data:image/webp;base64,"))
+        });
+        (1..=500).contains(&question_length)
+            && image_is_valid
+            && (2..=4).contains(&choice_count)
+            && self
+                .choices
+                .iter()
+                .all(|choice| (1..=300).contains(&choice.trim().chars().count()))
+            && self.answer < choice_count
+            && (5..=300).contains(&self.time)
+    }
 }
 
 // Trait implementation stuff. Doesn't matter too much.

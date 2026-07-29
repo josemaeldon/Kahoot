@@ -1,68 +1,44 @@
-import React, { useContext, useState } from "react";
+import React, { useContext } from "react";
 import { GameContext } from "../pages/create";
 import styles from "../styles/Options.module.css";
-import {
-  MdOutlineArrowForwardIos,
-  MdOutlineArrowBackIos,
-  MdTimer,
-} from "react-icons/md";
-import Button from "react-bootstrap/Button";
-import { Dropdown, DropdownButton, SSRProvider } from "react-bootstrap";
+import { FiClock, FiInfo } from "react-icons/fi";
 
 function Options() {
-  const { game, setGame, questionNumber, setQuestionNumber } =
-    useContext(GameContext);
-  const [open, setOpen] = useState(true);
+  const { game, setGame, questionNumber } = useContext(GameContext);
+  const question = game.questions[questionNumber];
+
   return (
-    <div
-      className={`${styles.container} ${
-        open ? styles.containerOpen : styles.containerClosed
-      }`}
-    >
-      <div
-        className={`${styles.toggleSwitch}`}
-        onClick={() => {
-          setOpen(!open);
-        }}
-      >
-        {open ? (
-          <MdOutlineArrowForwardIos></MdOutlineArrowForwardIos>
-        ) : (
-          <MdOutlineArrowBackIos></MdOutlineArrowBackIos>
-        )}
+    <aside className={styles.container}>
+      <h2>Configurações</h2>
+      <label className={styles.setting}>
+        <span>
+          <FiClock aria-hidden="true" />
+          Tempo
+        </span>
+        <select
+          value={question.time}
+          onChange={(event) => {
+            const time = Number(event.target.value);
+            setGame((current) => ({
+              ...current,
+              questions: current.questions.map((item, index) =>
+                index === questionNumber ? { ...item, time } : item
+              ),
+            }));
+          }}
+        >
+          {[15, 30, 45, 60, 90].map((time) => (
+            <option key={time} value={time}>
+              {time} segundos
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className={styles.helper}>
+        <FiInfo aria-hidden="true" />
+        <p>Selecione a resposta correta antes de salvar.</p>
       </div>
-      <section className={`${styles.outerContainer}`}>
-        <section className={`${styles.innerContainer}`}>
-          <div>
-            <label htmlFor="timer" className={`${styles.alignmentContainer}`}>
-              <MdTimer></MdTimer>
-              <span>Tempo</span>
-            </label>
-            <DropdownButton
-              id="dropdown-basic-button"
-              title={`${game.questions[questionNumber].time} segundos`}
-              variant="outline-secondary"
-              className={`${styles.getRidOfOutline}`}
-            >
-              {[15, 30, 45, 60, 90].map((val) => {
-                return (
-                  <Dropdown.Item
-                    key={val}
-                    onClick={() => {
-                      setGame((game) => {
-                        const gameCopy = { ...game };
-                        gameCopy.questions[questionNumber].time = val;
-                        return gameCopy;
-                      });
-                    }}
-                  >{`${val} segundos`}</Dropdown.Item>
-                );
-              })}
-            </DropdownButton>
-          </div>
-        </section>
-      </section>
-    </div>
+    </aside>
   );
 }
 

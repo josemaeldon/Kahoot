@@ -1,9 +1,8 @@
 import useUser from "@lib/useSSRUser";
 import { useRouter } from "next/router";
-import React, { useContext, useEffect, useState, useLayoutEffect } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import styles from "@styles/host.module.css";
 import { IoMdPerson } from "react-icons/io";
-import GameButton from "@components/GameButton";
 import type { action, db, HostEvent, rustServerQuestion } from "kahoot";
 import { postData } from "@lib/postData";
 import { APIRequest, APIResponse } from "./api/getOneGame";
@@ -14,11 +13,14 @@ import {
   BsFillTriangleFill,
 } from "react-icons/bs";
 import { FaCheck } from "react-icons/fa";
-import { Spinner, SSRProvider } from "react-bootstrap";
 import Image from "next/image";
+import { QRCodeSVG } from "qrcode.react";
+import { getWebSocketUrl } from "@lib/websocket";
+import NoticeModal from "@components/NoticeModal";
 
 const HostContext = React.createContext<Context>(null);
 type Players = { username: string; points: number }[];
+
 interface Context {
   roomId: number;
   game: db.KahootGame;
@@ -26,128 +28,154 @@ interface Context {
   players: Players;
   setPlayers: React.Dispatch<React.SetStateAction<Players>>;
   setPhase: React.Dispatch<
-    React.SetStateAction<"lobby" | "questions" | "leaderboard">
+    React.SetStateAction<"lobby" | "questions" | "finished">
   >;
+  gameFinishedRef: React.MutableRefObject<boolean>;
+}
+
+function formatPin(roomId: number) {
+  const value = String(roomId).padStart(6, "0");
+  return `${value.slice(0, 3)} ${value.slice(3, 6)}`;
+}
+
+function HostTopbar({
+  action,
+  onAction,
+}: {
+  action: string;
+  onAction: () => void;
+}) {
+  return (
+    <header className={styles.hostTopbar}>
+      <Image
+        src="/kahootLogo.svg"
+        width={116}
+        height={40}
+        alt="Kahoot!"
+        priority
+      />
+      <p>Abra no celular e participe da partida.</p>
+      <button type="button" onClick={onAction}>
+        {action}
+      </button>
+    </header>
+  );
 }
 
 function JoinHeader() {
   const { roomId } = useContext(HostContext);
-  const roomString = roomId + "";
-  const r1 = roomString.slice(0, 3);
-  const r2 = roomString.slice(3, 6);
-  const r3 = roomString.slice(6);
-  console.log(roomId);
+  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  const playUrl =
+    configuredUrl ||
+    (typeof window !== "undefined" ? window.location.origin : "");
 
-// URL fixa para o QR Code
- const qrCodeImageUrl = "https://raw.githubusercontent.com/josemaeldon/Kahoot/423004878480c915ac5f049fc39f656fce431993/kahoot-clone-frontend/pages/qr_karoot.png";
-  
   return (
-    <div className={`${styles.darkBackground}`}>
-      <div className={`${styles.outerContainer}`}>
-        <div className={`${styles.playHeader}`}>
-          <p>Acesse kahoot.cloudbr.app/play ou pelo QrCode</p>
-          <p><a href="https://kahoot.cloudbr.app">Recomeçar</a></p>
+    <>
+      <HostTopbar
+        action="Recomeçar"
+        onAction={() => window.location.assign("/profile")}
+      />
+      <section className={styles.pinStage} aria-label="Dados da sala">
+        <div className={styles.pinCopy}>
+          <span>Game Pin:</span>
+          <strong>{formatPin(roomId)}</strong>
+          <p>
+            Acesse <b>{playUrl ? `${playUrl}/play` : "/play"}</b>
+          </p>
         </div>
-        <div className={`${styles.pinHeader}`}>
-          <p>Game Pin:</p>
-          <p>{`${r1} ${r2} ${r3}`}</p>
-<p>  {/* Linha com a imagem do QR Code abaixo */}
-          <img src={qrCodeImageUrl} alt="QR Code para acessar o jogo" />
-           </p>
-          
-        </div>        
-      </div>
-    </div>
+        <div
+          className={styles.qrCard}
+          aria-label="QR Code para acessar o jogo"
+        >
+          <QRCodeSVG
+            value={`${playUrl}/play`}
+            size={150}
+            bgColor="#ffffff"
+            fgColor="#25144f"
+            marginSize={1}
+          />
+          <span>Escaneie para entrar</span>
+        </div>
+      </section>
+    </>
   );
 }
 
 function Lobby() {
-  const { game, roomId, socket, players, setPlayers, setPhase } =
-    useContext(HostContext);
+  const { socket, players, setPlayers, setPhase } = useContext(HostContext);
+
   useEffect(() => {
-    console.log("Lobby running");
-    let aborter = new AbortController();
+    const aborter = new AbortController();
     socket.addEventListener(
-      // receives a message from the server
       "message",
-      function lobbyHandler(e) {
-        const hostEvent = JSON.parse(e.data) as HostEvent.Event;
+      (event) => {
+        const hostEvent = JSON.parse(event.data) as HostEvent.Event;
         switch (hostEvent.type) {
           case "userJoined":
-            // sets player points
-            setPlayers((players) => {
-              const copy = [...players];
-              copy.push({ username: hostEvent.username, points: 0 });
-              return copy;
-            });
+            setPlayers((current) => [
+              ...current,
+              { username: hostEvent.username, points: 0 },
+            ]);
             break;
           case "userLeft":
-            console.log("Someone left");
-            setPlayers((players) => {
-              const copy = [...players];
-              // removes player from leaderboard
-              const indexToDelete = copy.findIndex((player) => {
-                return player.username === hostEvent.username;
-              });
-              copy.splice(indexToDelete, 1);
-              return copy;
-            });
+            setPlayers((current) =>
+              current.filter(
+                (player) => player.username !== hostEvent.username
+              )
+            );
             break;
         }
       },
       { signal: aborter.signal }
     );
-    return () => {
-      aborter.abort();
-    };
-  }, []);
+    return () => aborter.abort();
+  }, [setPlayers, socket]);
+
   return (
-    <div className={`${styles.lobby}`}>
-      <div className={`${styles.lobbyHeaderContainer}`}>
-        <div className={`${styles.lobbyPeople}`}>
-          <IoMdPerson></IoMdPerson>
+    <section className={styles.lobby}>
+      <div className={styles.lobbyToolbar}>
+        <div className={styles.lobbyPeople}>
+          <IoMdPerson aria-hidden="true" />
           <span>{players.length}</span>
+          <small>{players.length === 1 ? "jogador" : "jogadores"}</small>
         </div>
-        <div style={{ fontSize: "32px", fontWeight: "bold" }}>
-          <span>Kahoot!</span>
-        </div>
-        <div style={{ position: "relative", top: "10px" }}>
-          <GameButton
-            onClick={(e) => {
-              if (players.length !== 0) {
-                setPhase("questions");
-              }
-              e.preventDefault();
-            }}
-            backgroundStyle={{
-              backgroundColor: "lightgray",
-              color: "black",
-              fontSize: "19px",
-            }}
-            foregroundStyle={{
-              backgroundColor: players.length === 0 ? "lightgray" : "white",
-              cursor: players.length === 0 ? "not-allowed" : "pointer",
-              padding: "3px 13px 3px 13px",
-            }}
-          >
-            Começar
-          </GameButton>
-        </div>
+        <button
+          type="button"
+          className={styles.startButton}
+          disabled={players.length === 0}
+          onClick={() => setPhase("questions")}
+        >
+          Começar
+        </button>
       </div>
-      <div className={`${styles.lobbyUserContainer}`}>
-        {players.map((player) => {
-          return (
-            <span key={player.username} className={`${styles.lobbyUser}`}>
+
+      <div className={styles.lobbyContent}>
+        <div className={styles.pulse} aria-hidden="true">
+          <span />
+        </div>
+        <h1>
+          {players.length === 0
+            ? "Aguardando jogadores"
+            : "Sala pronta para começar"}
+        </h1>
+        <p>
+          {players.length === 0
+            ? "Os nomes aparecerão aqui assim que entrarem."
+            : "Confira os participantes e inicie quando quiser."}
+        </p>
+        <div className={styles.lobbyUserContainer}>
+          {players.map((player) => (
+            <span key={player.username} className={styles.lobbyUser}>
               {player.username}
             </span>
-          );
-        })}
+          ))}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
-interface Props {
+interface QuestionDisplayProps {
   question: rustServerQuestion;
   showAnswer: boolean;
   nextScreenHandler: () => void;
@@ -155,13 +183,21 @@ interface Props {
   answered: number;
 }
 
-function CheckboxCircle({ checked }: { checked: boolean }) {
+function AnswerShape({ index }: { index: number }) {
+  if (index === 0) return <BsFillTriangleFill aria-hidden="true" />;
+  if (index === 1)
+    return (
+      <BsFillSquareFill className={qStyles.diamond} aria-hidden="true" />
+    );
+  if (index === 2) return <BsFillCircleFill aria-hidden="true" />;
+  return <BsFillSquareFill aria-hidden="true" />;
+}
+
+function CheckboxCircle() {
   return (
-    <div className={`${qStyles.checkBoxOuter} ${checked ? qStyles.green : ""}`}>
-      <div className={`${qStyles.checkBoxInner}`}>
-        <FaCheck className={`${!checked ? qStyles.hidden : ""}`}></FaCheck>
-      </div>
-    </div>
+    <span className={qStyles.correctMarker} aria-label="Resposta correta">
+      <FaCheck aria-hidden="true" />
+    </span>
   );
 }
 
@@ -171,205 +207,121 @@ function QuestionDisplay({
   nextScreenHandler,
   answered,
   timeLeft,
-}: Props) {
+}: QuestionDisplayProps) {
+  const { players, roomId } = useContext(HostContext);
+  const colors = [qStyles.red, qStyles.blue, qStyles.yellow, qStyles.green];
+
   return (
-    <section>
-      <div className={qStyles.gameButtonFlex}>
-        <GameButton
-          onClick={(e) => {
-            nextScreenHandler();
-          }}
-          backgroundStyle={{
-            backgroundColor: "lightgray",
-            color: "black",
-            fontSize: "19px",
-          }}
-          foregroundStyle={{
-            backgroundColor: "rgb(244,244,244)",
-            cursor: "pointer",
-            padding: "3px 13px 3px 13px",
-          }}
-        >
+    <main className={qStyles.screen}>
+      <header className={qStyles.topbar}>
+        <strong>Kahoot!</strong>
+        <div className={qStyles.sessionData}>
+          <span>PIN {formatPin(roomId)}</span>
+          <span>
+            <IoMdPerson aria-hidden="true" /> {players.length}
+          </span>
+        </div>
+        <button type="button" onClick={nextScreenHandler}>
           Próximo
-        </GameButton>
-      </div>
-      <div className={`${qStyles.container}`}>
-        <p
-          className={`${qStyles.question}`}
-          placeholder="Pergunta..."
-          suppressContentEditableWarning
-        >
-          {question.question}
-        </p>
-        <section className={`${styles.middleContainer}`}>
-          <div className={`${styles.timerBubble}`}>{timeLeft}</div>
-          <div className={`${styles.imageContainer}`}>
-            <Image
-              src={"/kahootBalls.gif"}
-              layout="fill"
-              objectFit="contain"
-            ></Image>
+        </button>
+      </header>
+
+      <section className={qStyles.container}>
+        <div className={qStyles.statusRow}>
+          <div className={qStyles.timerBubble}>
+            <span>{timeLeft}</span>
+            <small>seg</small>
           </div>
-          <div
-            className={`${styles.answerNotifier}`}
-          >{`${answered} Respostas`}</div>
-        </section>
-        <div>
-          <div className={`${qStyles.grid}`}>
-            {question.choices[0] && (
-              <div className={`${qStyles.wrapper} ${qStyles.red}`}>
-                <span className={`${qStyles.shapeContainer} ${qStyles.red}`}>
-                  <BsFillTriangleFill></BsFillTriangleFill>
-                </span>
-                <div className={`${qStyles.answerContainer}`}>
-                  <p
-                    placeholder="Resposta 1"
-                    className={`${qStyles.answer} ${qStyles.whiteText}`}
-                    suppressContentEditableWarning
-                  >
-                    {question.choices[0]}
-                  </p>
-                </div>
-                {showAnswer && question.answer === 0 && (
-                  <CheckboxCircle checked={true}></CheckboxCircle>
-                )}
-              </div>
-            )}
-            <div
-              className={`${qStyles.wrapper}
-          ${qStyles.blue}`}
-            >
-              <span className={`${qStyles.shapeContainer} ${qStyles.blue}`}>
-                <BsFillSquareFill></BsFillSquareFill>
-              </span>
-              <div className={`${qStyles.answerContainer}`}>
-                <p
-                  className={`${qStyles.answer} ${qStyles.whiteText}
-            `}
-                  placeholder="Resposta 2"
-                  suppressContentEditableWarning
-                >
-                  {question.choices[1]}
-                </p>
-              </div>
-              {showAnswer && question.answer === 1 && (
-                <CheckboxCircle checked={true}></CheckboxCircle>
-              )}
-            </div>
-            {question.choices[2] && (
-              <div className={`${qStyles.wrapper} ${qStyles.yellow}`}>
-                <span className={`${qStyles.shapeContainer} ${qStyles.yellow}`}>
-                  <BsFillCircleFill></BsFillCircleFill>
-                </span>
-                <div className={`${qStyles.answerContainer}`}>
-                  <p
-                    className={`${qStyles.answer}
-              ${qStyles.whiteText}`}
-                    suppressContentEditableWarning
-                  >
-                    {question.choices[2]}
-                  </p>
-                </div>
-                {showAnswer && question.answer === 2 && (
-                  <CheckboxCircle checked={true}></CheckboxCircle>
-                )}
-              </div>
-            )}
-            {question.choices[3] && (
-              <div className={`${qStyles.wrapper} ${qStyles.green}`}>
-                <span className={`${qStyles.shapeContainer} ${qStyles.green}`}>
-                  <BsFillSquareFill
-                    style={{ transform: "rotate(45deg)" }}
-                  ></BsFillSquareFill>
-                </span>
-                <div className={`${qStyles.answerContainer}`}>
-                  <p
-                    className={`${qStyles.answer} ${qStyles.whiteText}`}
-                    suppressContentEditableWarning
-                  >
-                    {question.choices[3]}
-                  </p>
-                </div>
-                {showAnswer && question.answer === 3 && (
-                  <CheckboxCircle checked={true}></CheckboxCircle>
-                )}
-              </div>
-            )}
+          <div className={qStyles.answerNotifier}>
+            <strong>{answered}</strong>
+            <span>{answered === 1 ? "resposta" : "respostas"}</span>
           </div>
         </div>
-      </div>
-    </section>
+
+        <div className={qStyles.questionPresentation}>
+          <h1 className={qStyles.question}>{question.question}</h1>
+          {question.image && (
+            <img
+              className={qStyles.questionImage}
+              src={question.image}
+              alt={`Imagem da pergunta: ${question.question}`}
+            />
+          )}
+        </div>
+
+        <div className={qStyles.grid}>
+          {question.choices.map((choice, index) => {
+            if (!choice) return null;
+            const correct = question.answer === index;
+            return (
+              <article
+                className={`${qStyles.wrapper} ${colors[index]} ${
+                  showAnswer && !correct ? qStyles.incorrect : ""
+                }`}
+                key={`${choice}-${index}`}
+              >
+                <span className={qStyles.shapeContainer}>
+                  <AnswerShape index={index} />
+                </span>
+                <p className={qStyles.answer}>{choice}</p>
+                {showAnswer && correct && <CheckboxCircle />}
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    </main>
   );
 }
 
-function Leaderboard({ nextScreenHandler }) {
-  const { players } = useContext(HostContext);
-  const playerCopy = [...players];
-  playerCopy.sort((a, b) => {
-    return b.points - a.points;
-  });
+function Leaderboard({
+  nextScreenHandler,
+}: {
+  nextScreenHandler: () => void;
+}) {
+  const { players, roomId } = useContext(HostContext);
+  const ranking = [...players].sort((a, b) => b.points - a.points);
+
   return (
-    <div className={`${styles.leaderboardContainer}`}>
-      <p className={`${styles.leaderboardHeader}`}>
-        Classificação:
-        <GameButton
-          onClick={(e) => {
-            nextScreenHandler();
-          }}
-          backgroundStyle={{
-            backgroundColor: "lightgray",
-            color: "black",
-            fontSize: "19px",
-          }}
-          foregroundStyle={{
-            backgroundColor: "white",
-            cursor: "pointer",
-            padding: "3px 13px 3px 13px",
-          }}
-        >
-          Próximo
-        </GameButton>
-      </p>
-      <div className={`${styles.leaderboard}`}>
-        {playerCopy.map((user, index) => {
-          return (
-            <div className={`${styles.leaderboardUser}`} key={user.username}>
-              <span>
-                {index + 1}. {user.username}
-              </span>
+    <main className={styles.rankingScreen}>
+      <HostTopbar action="Próximo" onAction={nextScreenHandler} />
+      <section className={styles.rankingContent}>
+        <span className={styles.eyebrow}>PIN {formatPin(roomId)}</span>
+        <h1>Classificação:</h1>
+        <p>Placar atualizado após esta pergunta.</p>
+        <div className={styles.leaderboard}>
+          {ranking.map((user, index) => (
+            <div className={styles.leaderboardUser} key={user.username}>
+              <span className={styles.position}>{index + 1}</span>
+              <strong>{user.username}</strong>
               <span>{user.points} pontos</span>
             </div>
-          );
-        })}
-      </div>
-    </div>
+          ))}
+        </div>
+      </section>
+    </main>
   );
 }
 
 function QuestionsPhase() {
-  const { game, players, roomId, setPhase, setPlayers, socket } =
+  const { players, setPhase, setPlayers, socket, gameFinishedRef } =
     useContext(HostContext);
-  const [question, setQuestion] = useState<null | rustServerQuestion>(null);
+  const [question, setQuestion] = useState<rustServerQuestion | null>(null);
   const [answered, setAnswered] = useState<string[]>([]);
   const [timer, setTimer] = useState<{ timer: number; timeLeft: number }>({
     timer: 0,
     timeLeft: 0,
   });
-
-  const [results, setResults] = useState<null | { correctAnswers: number }>(
-    null
-  );
-
   const [subscreen, setSubscreen] = useState<
     "question" | "results" | "leaderboard"
   >("question");
 
   useEffect(() => {
-    let aborter = new AbortController();
+    const aborter = new AbortController();
     socket.addEventListener(
       "message",
-      (e) => {
-        const hostEvent = JSON.parse(e.data) as HostEvent.Event;
+      (event) => {
+        const hostEvent = JSON.parse(event.data) as HostEvent.Event;
         switch (hostEvent.type) {
           case "roundBegin":
             setQuestion(hostEvent.question);
@@ -377,57 +329,38 @@ function QuestionsPhase() {
             setAnswered([]);
             break;
           case "roundEnd":
-            setPlayers((players) => {
-              const copy = [...players];
-              //todo: n^2 to n
-              Object.entries(hostEvent.pointGains).forEach((pair) => {
-                const user = copy.find((user) => user.username === pair[0]);
-                if (user) user.points += pair[1];
-              });
-
+            setPlayers((current) => {
+              const copy = current.map((player) => ({ ...player }));
+              Object.entries(hostEvent.pointGains).forEach(
+                ([username, pointGain]) => {
+                  const player = copy.find(
+                    (item) => item.username === username
+                  );
+                  if (player) player.points += pointGain;
+                }
+              );
               return copy;
             });
-            console.log(timer);
-            setTimer((timer) => {
-              clearInterval(timer.timer);
+            setTimer((current) => {
+              clearInterval(current.timer);
               return { timeLeft: 0, timer: 0 };
-            });
-            setResults(() => {
-              let correct = 0;
-              Object.values(hostEvent.pointGains).forEach((val) => {
-                if (val !== 0) correct += 1;
-              });
-              return { correctAnswers: correct };
             });
             setSubscreen("results");
             break;
           case "userAnswered":
-            setAnswered((a) => {
-              let copy = [...a];
-              copy.push(hostEvent.username);
-              return copy;
-            });
+            setAnswered((current) => [...current, hostEvent.username]);
             break;
           case "gameEnd":
-            console.log("game ended");
+            gameFinishedRef.current = true;
+            setPhase("finished");
             break;
           case "userJoined":
-            setPlayers((players) => {
-              const copy = [...players];
-              copy.push({ username: hostEvent.username, points: 0 });
-              return copy;
-            });
+            setPlayers((current) => [
+              ...current,
+              { username: hostEvent.username, points: 0 },
+            ]);
             break;
           case "userLeft":
-            console.log("Someone left");
-            setPlayers((players) => {
-              const copy = [...players];
-              const indexToDelete = copy.findIndex((player) => {
-                return player.username === hostEvent.username;
-              });
-              copy.splice(indexToDelete, 1);
-              return copy;
-            });
             break;
         }
       },
@@ -436,55 +369,59 @@ function QuestionsPhase() {
 
     const startGameRequest: action.BeginRound = { type: "beginRound" };
     socket.send(JSON.stringify(startGameRequest));
-    return () => {
-      aborter.abort();
-    };
-  }, []);
+    return () => aborter.abort();
+  }, [gameFinishedRef, setPhase, setPlayers, socket]);
 
-  useLayoutEffect(() => {
-    if (question !== null) {
-      let timeLeft = question.time;
+  useEffect(() => {
+    if (!question) return;
+    let timeLeft = question.time;
+    setTimer((current) => ({ ...current, timeLeft }));
 
-      const timer = setInterval(() => {
-        if (timeLeft === 0) {
-          clearInterval(timer);
-          const endRoundRequest: action.EndRound = { type: "endRound" };
-          socket.send(JSON.stringify(endRoundRequest));
-          return;
-        }
-        timeLeft -= 1;
-        setTimer({ timeLeft, timer });
-      }, 1000) as unknown as number;
-      setTimer({ timer, timeLeft });
-      return () => {
-        clearInterval(timer);
-      };
-    }
-  }, [question]);
+    const timerId = window.setInterval(() => {
+      if (timeLeft === 0) {
+        window.clearInterval(timerId);
+        const endRoundRequest: action.EndRound = { type: "endRound" };
+        socket.send(JSON.stringify(endRoundRequest));
+        return;
+      }
+      timeLeft -= 1;
+      setTimer({ timeLeft, timer: timerId });
+    }, 1000);
 
-  if (question === null) {
-    return <></>;
+    setTimer({ timer: timerId, timeLeft });
+    return () => window.clearInterval(timerId);
+  }, [question, socket]);
+
+  if (!question) {
+    return (
+      <main className={styles.loadingScreen}>
+        <span className="appSpinner" />
+        <p>Preparando a primeira pergunta...</p>
+      </main>
+    );
   }
 
   function nextScreenHandler() {
     switch (subscreen) {
-      case "question":
+      case "question": {
         clearInterval(timer.timer);
         const endRoundRequest: action.EndRound = { type: "endRound" };
         socket.send(JSON.stringify(endRoundRequest));
         break;
+      }
       case "results":
         setSubscreen("leaderboard");
         break;
-      case "leaderboard":
+      case "leaderboard": {
         const beginRoundRequest: action.BeginRound = { type: "beginRound" };
         socket.send(JSON.stringify(beginRoundRequest));
         break;
+      }
     }
   }
 
   return (
-    <div className={`vh100 ${styles.fullscreenHeight}`}>
+    <>
       {subscreen === "question" && (
         <QuestionDisplay
           question={question}
@@ -492,163 +429,199 @@ function QuestionsPhase() {
           nextScreenHandler={nextScreenHandler}
           timeLeft={timer.timeLeft}
           answered={answered.length}
-        ></QuestionDisplay>
+        />
       )}
       {subscreen === "results" && (
         <QuestionDisplay
           question={question}
-          showAnswer={true}
+          showAnswer
           nextScreenHandler={nextScreenHandler}
           timeLeft={timer.timeLeft}
           answered={answered.length}
-        ></QuestionDisplay>
+        />
       )}
       {subscreen === "leaderboard" && (
-        <Leaderboard nextScreenHandler={nextScreenHandler}></Leaderboard>
+        <Leaderboard nextScreenHandler={nextScreenHandler} />
       )}
-    </div>
+    </>
   );
 }
 
 function StartScreen() {
   return (
-    <div className={`${styles.startScreenContainer} vh100`}>
-      <JoinHeader></JoinHeader>
-      <Lobby></Lobby>
-    </div>
+    <main className={styles.startScreenContainer}>
+      <JoinHeader />
+      <Lobby />
+    </main>
+  );
+}
+
+function FinishedScreen() {
+  const { players } = useContext(HostContext);
+  const ranking = [...players].sort((a, b) => b.points - a.points);
+
+  return (
+    <main className={styles.rankingScreen}>
+      <HostTopbar
+        action="Meus quizzes"
+        onAction={() => window.location.assign("/profile")}
+      />
+      <section className={styles.rankingContent}>
+        <span className={styles.eyebrow}>Partida concluída</span>
+        <h1>Resultado final</h1>
+        <p>Obrigado por jogar. Aqui está o pódio da partida.</p>
+        <div className={styles.leaderboard}>
+          {ranking.map((player, index) => (
+            <div className={styles.leaderboardUser} key={player.username}>
+              <span className={styles.position}>{index + 1}</span>
+              <strong>{player.username}</strong>
+              <span>{player.points} pontos</span>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          className={styles.playAgainButton}
+          onClick={() => window.location.assign("/profile")}
+        >
+          Voltar aos meus quizzes
+        </button>
+      </section>
+    </main>
   );
 }
 
 function Host() {
   const router = useRouter();
-  const { loggedIn, user } = useUser();
+  const { loggedIn } = useUser();
   const [players, setPlayers] = useState<Players>([]);
-  const [socket, setSocket] = useState<null | WebSocket>(null);
-  const [game, setGame] = useState<null | db.KahootGame>(null);
-  const [roomId, setRoomId] = useState<null | number>(null);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [game, setGame] = useState<db.KahootGame | null>(null);
+  const [roomId, setRoomId] = useState<number | null>(null);
   const [connectionClosed, setConnectionClosed] = useState(false);
-  const [phase, setPhase] = useState<"lobby" | "questions" | "leaderboard">(
+  const gameFinishedRef = useRef(false);
+  const [error, setError] = useState("");
+  const [phase, setPhase] = useState<"lobby" | "questions" | "finished">(
     "lobby"
   );
-
   const gameId = router.query.gameId as string;
+
   useEffect(() => {
-    if (loggedIn && router.isReady) {
-      const socket = new WebSocket("wss://servidor-kahoot.cloudbr.app/ws");
-      const aborter = new AbortController();
-      const socketPromise = new Promise((resolve, reject) => {
-        socket.addEventListener(
-          "open",
-          () => {
-            resolve(socket);
-          },
-          { signal: aborter.signal }
-        );
-        socket.addEventListener(
-          "error",
-          (e) => {
-            reject(e);
-          },
-          { signal: aborter.signal }
-        );
+    if (!loggedIn || !router.isReady) return;
+
+    const activeSocket = new WebSocket(getWebSocketUrl());
+    const aborter = new AbortController();
+    const socketPromise = new Promise<WebSocket>((resolve, reject) => {
+      activeSocket.addEventListener("open", () => resolve(activeSocket), {
+        signal: aborter.signal,
       });
-      const gamePromise = postData<APIRequest, APIResponse>(
-        "/api/getOneGame",
-        {
-          gameId: gameId,
-        },
-        aborter.signal
-      ).then((res) => {
-        if (res.error === false) {
-          return res.game;
-        } else {
-          //todo: error handling for could not find game
-        }
+      activeSocket.addEventListener("error", reject, {
+        signal: aborter.signal,
       });
-      Promise.all([socketPromise, gamePromise])
-        .then((results) => {
-          console.log(results);
-          console.log(socket);
-          socket.addEventListener("message", function RoomListener(res) {
-            const roomData = JSON.parse(res.data) as HostEvent.RoomCreated;
+    });
+    const gamePromise = postData<APIRequest, APIResponse>(
+      "/api/getOneGame",
+      { gameId },
+      aborter.signal
+    ).then((response) => {
+      if (!("game" in response)) throw new Error(response.errorDescription);
+      return response.game;
+    });
+
+    Promise.all([socketPromise, gamePromise])
+      .then(([connectedSocket, loadedGame]) => {
+        connectedSocket.addEventListener(
+          "message",
+          function roomListener(event) {
+            const roomData = JSON.parse(event.data) as HostEvent.Event;
             if (roomData.type === "roomCreated") {
               setRoomId(roomData.roomId);
-              setGame(results[1]);
-              setSocket(socket);
-              socket.removeEventListener("message", RoomListener);
-              socket.onclose = () => {
-                console.log("socket closed");
-                setConnectionClosed(true);
-                location.reload();
+              setGame(loadedGame);
+              setSocket(connectedSocket);
+              connectedSocket.removeEventListener("message", roomListener);
+              connectedSocket.onclose = () => {
+                if (!gameFinishedRef.current) setConnectionClosed(true);
               };
+            } else if (roomData.type === "roomCreationFailed") {
+              setError("O quiz contém uma pergunta inválida.");
+              connectedSocket.close();
             }
-          });
-          socket.send(
-            JSON.stringify({
-              type: "createRoom",
-              questions: results[1].questions.map((question) => {
-                const formattedQuestion = { ...question } as any;
-                formattedQuestion.answer = formattedQuestion.correctAnswer;
-                delete formattedQuestion.correctAnswer;
-                return formattedQuestion;
-              }),
-            })
-          );
-        })
+          }
+        );
+        connectedSocket.send(
+          JSON.stringify({
+            type: "createRoom",
+            questions: loadedGame.questions.map((question) => {
+              const formattedQuestion = { ...question } as any;
+              formattedQuestion.answer = formattedQuestion.correctAnswer;
+              delete formattedQuestion.correctAnswer;
+              return formattedQuestion;
+            }),
+          })
+        );
+      })
+      .catch((cause) => {
+        console.error("Falha ao iniciar sala", cause);
+        setError("Não foi possível iniciar a sala.");
+        aborter.abort();
+      });
 
-        .catch(() => {
-          console.log("O websocket ou a solicitação de reta falharam");
-          aborter.abort(); //Cancel websocket or fetch request if either fails.
-        });
-      return () => {
-        if (loggedIn && router.isReady) {
-          aborter.abort();
-          socket.close();
-        }
-      };
-    }
-  }, [loggedIn, router.isReady]);
+    return () => {
+      aborter.abort();
+      activeSocket.close();
+    };
+  }, [gameId, loggedIn, router.isReady]);
 
   useEffect(() => {
     if (connectionClosed) {
-      console.log("Connection was closed");
+      setError((current) => current || "A conexão com a partida foi encerrada.");
     }
   }, [connectionClosed]);
 
-  if (!loggedIn || !router.isReady || !game || !socket || !roomId) {
-    //Loading screen
+  if (error) {
     return (
-      <div
-        style={{
-          backgroundColor: "rgb(70, 23, 143)",
-          display: "grid",
-          placeItems: "center",
-          height: "100vh",
-        }}
-      >
-        <SSRProvider>
-          <Spinner
-            animation="border"
-            style={{
-              color: "white",
-              width: "48px",
-              height: "48px",
-              fontSize: "24px",
-            }}
-          ></Spinner>
-        </SSRProvider>
-      </div>
+      <>
+        <main className={styles.loadingScreen}>
+          <span className="appSpinner" />
+          <p>Interrompendo a sala...</p>
+        </main>
+        <NoticeModal
+          open
+          title="Não foi possível continuar"
+          messages={[error]}
+          tone="error"
+          closeLabel="Voltar aos meus quizzes"
+          onClose={() => void router.push("/profile")}
+        />
+      </>
     );
   }
+
+  if (!loggedIn || !router.isReady || !game || !socket || !roomId) {
+    return (
+      <main className={styles.loadingScreen}>
+        <span className="appSpinner" />
+        <p>Preparando sua sala...</p>
+      </main>
+    );
+  }
+
   return (
-    <div>
-      <HostContext.Provider
-        value={{ game, socket, roomId, players, setPlayers, setPhase }}
-      >
-        {phase === "lobby" && <StartScreen></StartScreen>}
-        {phase === "questions" && <QuestionsPhase></QuestionsPhase>}
-      </HostContext.Provider>
-    </div>
+    <HostContext.Provider
+      value={{
+        game,
+        socket,
+        roomId,
+        players,
+        setPlayers,
+        setPhase,
+        gameFinishedRef,
+      }}
+    >
+      {phase === "lobby" && <StartScreen />}
+      {phase === "questions" && <QuestionsPhase />}
+      {phase === "finished" && <FinishedScreen />}
+    </HostContext.Provider>
   );
 }
 

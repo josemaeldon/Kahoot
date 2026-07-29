@@ -1,8 +1,7 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import type { auth, db } from "../../kahoot";
+import type { auth } from "../../kahoot";
 import { NextApiRequest, NextApiResponse } from "next";
-import { verify } from "jsonwebtoken";
-import * as cookie from "cookie";
+import { getActiveAuthenticatedUser } from "@lib/auth";
 
 export interface APIRequest {
   username: string;
@@ -25,40 +24,14 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== "POST") {
-    res.status(401).json({});
+  if (req.method !== "GET") {
+    return res.status(405).json({ loggedIn: false, user: undefined });
   }
-  let accessToken = req.cookies["accessToken"];
-  if (accessToken) {
-    verify(accessToken, "secret", { complete: false }, (err, decoded) => {
-      if (err) {
-        const response: NotLoggedIn = {
-          loggedIn: false,
-          user: undefined,
-        };
-        res.status(200).json(response);
-      } else {
-        const response: LoggedIn = {
-          loggedIn: true,
-          user: decoded as auth.accessTokenPayload,
-        };
-
-        res.setHeader("Set-Cookie", [
-          cookie.serialize("loggedIn", "true", {
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            path: "/",
-          }),
-        ]);
-
-        res.status(200).json(response);
-      }
-    });
-  } else {
-    const response: NotLoggedIn = {
-      loggedIn: false,
-      user: undefined,
-    };
-    res.status(200).json(response);
+  const user = await getActiveAuthenticatedUser(req, res);
+  if (!user) {
+    const response: NotLoggedIn = { loggedIn: false, user: undefined };
+    return res.status(200).json(response);
   }
+  const response: LoggedIn = { loggedIn: true, user };
+  return res.status(200).json(response);
 }

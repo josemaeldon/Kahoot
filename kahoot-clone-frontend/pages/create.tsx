@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import styles from "../styles/create.module.css";
 import Questions from "../Components/Questions";
 import Image from "next/image";
@@ -9,110 +9,37 @@ import useUser from "@lib/useSSRUser";
 import { useRouter } from "next/router";
 import { postData } from "@lib/postData";
 import { APIResponse, APIRequest } from "./api/create";
+import NoticeModal from "../Components/NoticeModal";
 import {
   APIResponse as GetGameRes,
   APIRequest as GetGameReq,
 } from "./api/getOneGame";
-function Header({
-  game,
-  setGame,
-  setFormErrors,
-  formErrors,
-}: {
-  game: db.KahootGame;
-  setGame: React.Dispatch<React.SetStateAction<db.KahootGame>>;
-  setFormErrors: React.Dispatch<React.SetStateAction<FormErrorReport>>;
-  formErrors: FormErrorReport;
-}) {
-  const router = useRouter();
-  return (
-    <div className={`${styles.container}`}>
-      <div className={`${styles.flex1}`}>
-        <Image
-          src={"/kahootLogo.svg"}
-          width={"96px"}
-          height={"32.72px"}
-          alt="Kahoot Logo"
-          style={{ cursor: "pointer" }}
-          onClick={() => {
-            router.push("/");
-          }}
-        ></Image>
-        <input
-          className={`${styles.titleInput} ${
-            formErrors !== null && formErrors.titleBlankError
-              ? styles.lightRed
-              : ""
-          }`}
-          type={"text"}
-          placeholder="Digite o título do Kahoot..."
-          value={game.title}
-          onChange={(e) => {
-            setGame((game) => {
-              const gameCopy = { ...game }; //Cópia superficial
-              gameCopy.title = e.target.value;
-              return gameCopy;
-            });
-          }}
-        ></input>
-      </div>
-      <div>
-        <button
-          type="button"
-          className={`${styles.exitButton}`}
-          onClick={() => {
-            router.push("/profile");
-          }}
-        >
-          Sair
-        </button>
-        <button
-          type="button"
-          className={`${styles.saveButton}`}
-          onClick={() => {
-            const formErrors = getFormErrors(game);
-            setFormErrors(formErrors);
-            const noQuestionErrors = formErrors.questionErrors.every((object) =>
-              Object.values(object).every((val) => val !== true)
-            );
+import { FiArrowLeft, FiSave } from "react-icons/fi";
 
-            if (formErrors.titleBlankError === false && noQuestionErrors) {
-              const editingId = router.query.editingId as string | undefined;
-              if (typeof editingId === "string") {
-                postData<APIRequest, APIResponse>("/api/create", {
-                  game,
-                  game_id: editingId,
-                }).then((res) => {
-                  console.log(res);
-                  router.push("/profile");
-                });
-              } else {
-                postData<APIRequest, APIResponse>("/api/create", { game }).then(
-                  (res) => {
-                    console.log(res);
-                    router.push("/profile");
-                  }
-                );
-              }
-            } else {
-              //GUI for there still being form errors
-              //idea: button shake
-            }
-          }}
-        >
-          Salvar
-        </button>
-      </div>
-    </div>
-  );
+interface Notice {
+  title: string;
+  messages: string[];
+  tone: "warning" | "error";
 }
 
-interface GameContext {
+export interface QuestionError {
+  correctChoiceError: boolean;
+  questionBlankError: boolean;
+  choicesRequiredError: boolean;
+  ignoreErrors: boolean;
+}
+
+interface FormErrorReport {
+  titleBlankError: boolean;
+  questionErrors: QuestionError[];
+}
+
+interface GameContextValue {
   game: db.KahootGame;
   setGame: React.Dispatch<React.SetStateAction<db.KahootGame>>;
   questionNumber: number;
   setQuestionNumber: React.Dispatch<React.SetStateAction<number>>;
-  formErrors: FormErrorReport;
+  formErrors: FormErrorReport | null;
   validateForm: (game: db.KahootGame) => void;
   validateFormAndIgnoreError: (
     game: db.KahootGame,
@@ -120,139 +47,239 @@ interface GameContext {
   ) => void;
 }
 
-export interface QuestionError {
-  /** The correctAnswer has to be on an answer choice that's not blank */
-  correctChoiceError: boolean;
-  /** Question cannot be left blank */
-  questionBlankError: boolean;
-  /** Answer choices with indices 0 and 1, must be filled */
-  choicesRequiredError: boolean;
+const defaultGame: db.KahootGame = {
+  _id: "",
+  author_id: "",
+  author_username: "",
+  title: "",
+  date: 0,
+  questions: [
+    {
+      correctAnswer: 0,
+      choices: ["", "", "", ""],
+      question: "",
+      image: null,
+      time: 30,
+    },
+  ],
+};
 
-  /** Should the question's errors be ignored?
-   * This is useful for the situation where the question has not been edited yet,
-   * because you don't want to complain that there's an error before the user has
-   * made any edits to the question  */
-  ignoreErrors: boolean;
-}
-interface FormErrorReport {
-  titleBlankError: boolean; //Title cannot be blank
-  questionErrors: QuestionError[];
-}
+export const GameContext = React.createContext<GameContextValue>(null);
 
-export const GameContext = React.createContext<GameContext>(null);
-
-function getFormErrors(game: db.KahootGame) {
-  //Question with indexes 0 and 1, must be filled. (cannot be an empty string)
-  //The correctAnswer has to be on a filled question
-  const formErrorReport: FormErrorReport = {
-    titleBlankError: false,
-    questionErrors: [],
-  };
-
-  //titleBlankError check
-  if (game.title === "") formErrorReport.titleBlankError = true;
-
-  //questionErrors check
-  game.questions.forEach((question) => {
-    const questionError: QuestionError = {
-      choicesRequiredError: false,
-      correctChoiceError: false,
-      questionBlankError: false,
+function getFormErrors(game: db.KahootGame): FormErrorReport {
+  return {
+    titleBlankError: game.title.trim() === "",
+    questionErrors: game.questions.map((question) => ({
+      choicesRequiredError:
+        question.choices[0].trim() === "" ||
+        question.choices[1].trim() === "",
+      correctChoiceError:
+        question.choices[question.correctAnswer].trim() === "",
+      questionBlankError: question.question.trim() === "",
       ignoreErrors: false,
-    };
-    if (question.choices[0] === "" || question.choices[1] === "")
-      questionError.choicesRequiredError = true;
-    if (question.choices[question.correctAnswer] === "")
-      questionError.correctChoiceError = true;
-    if (question.question === "") questionError.questionBlankError = true;
-    formErrorReport.questionErrors.push(questionError);
+    })),
+  };
+}
+
+function getValidationMessages(formErrors: FormErrorReport) {
+  const messages: string[] = [];
+
+  if (formErrors.titleBlankError) {
+    messages.push("Informe um título para o quiz.");
+  }
+
+  formErrors.questionErrors.forEach((questionError, index) => {
+    const questionLabel = `Pergunta ${index + 1}`;
+    if (questionError.questionBlankError) {
+      messages.push(`${questionLabel}: escreva o enunciado.`);
+    }
+    if (questionError.choicesRequiredError) {
+      messages.push(`${questionLabel}: preencha ao menos duas respostas.`);
+    }
+    if (questionError.correctChoiceError) {
+      messages.push(
+        `${questionLabel}: escolha uma resposta correta preenchida.`
+      );
+    }
   });
-  return formErrorReport;
+
+  return messages;
 }
 
 function Create() {
-  const defaultGame: db.KahootGame = {
-    _id: "",
-    author_id: "",
-    author_username: "",
-    title: "",
-    date: 0,
-    questions: [
-      { correctAnswer: 0, choices: ["", "", "", ""], question: "", time: 30 },
-    ],
-  };
-
   const [game, setGame] = useState<db.KahootGame>(defaultGame);
-
-  //null is used as the default value. All components take "null" to mean
-  //that they should not display any form errors. This is to prevent errors from
-  //being shown on first render (bad user experience)
   const [formErrors, setFormErrors] = useState<FormErrorReport | null>(null);
-
   const [questionNumber, setQuestionNumber] = useState(0);
-
-  const { loggedIn, user } = useUser();
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const { loggedIn } = useUser();
   const router = useRouter();
+
   useEffect(() => {
-    console.log(router.query);
-    if (loggedIn && router.query.editingId) {
-      postData<GetGameReq, GetGameRes>("/api/getOneGame", {
-        gameId: router.query.editingId as string,
-      }).then((res) => {
-        if (res.error === false) {
-          console.log(res);
-          setGame(res.game);
-        } else {
-          console.log("Error fetching game to edit");
+    if (!loggedIn || !router.isReady || !router.query.editingId) return;
+
+    postData<GetGameReq, GetGameRes>("/api/getOneGame", {
+      gameId: router.query.editingId as string,
+    })
+      .then((response) => {
+        if (!("game" in response)) {
+          setNotice({
+            title: "Não foi possível carregar o quiz",
+            messages: [response.errorDescription],
+            tone: "error",
+          });
+          return;
         }
-      });
-    }
-  }, [loggedIn, router.isReady]);
+        setGame(response.game);
+      })
+      .catch(() =>
+        setNotice({
+          title: "Não foi possível carregar o quiz",
+          messages: ["Verifique sua conexão e tente novamente em instantes."],
+          tone: "error",
+        })
+      );
+  }, [loggedIn, router.isReady, router.query.editingId]);
 
-  if (!loggedIn) return <></>;
+  if (!loggedIn) return null;
 
-  function validateForm(game: db.KahootGame) {
-    const formErrors = getFormErrors(game);
-    setFormErrors(formErrors);
+  function validateForm(gameToValidate: db.KahootGame) {
+    setFormErrors(getFormErrors(gameToValidate));
   }
 
   function validateFormAndIgnoreError(
-    game: db.KahootGame,
+    gameToValidate: db.KahootGame,
     questionIndex: number
   ) {
-    const formErrors = getFormErrors(game);
-    formErrors.questionErrors[questionIndex].ignoreErrors = true;
-    setFormErrors(formErrors);
+    const nextErrors = getFormErrors(gameToValidate);
+    nextErrors.questionErrors[questionIndex].ignoreErrors = true;
+    setFormErrors(nextErrors);
+  }
+
+  async function saveGame() {
+    const nextErrors = getFormErrors(game);
+    setFormErrors(nextErrors);
+    const validationMessages = getValidationMessages(nextErrors);
+
+    if (validationMessages.length > 0) {
+      setNotice({
+        title: "Revise o quiz",
+        messages: validationMessages,
+        tone: "warning",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    const editingId = router.query.editingId as string | undefined;
+    try {
+      const response =
+        typeof editingId === "string"
+          ? await postData<APIRequest, APIResponse>("/api/create", {
+              game,
+              game_id: editingId,
+            })
+          : await postData<APIRequest, APIResponse>("/api/create", { game });
+
+      if (response.error) {
+        setNotice({
+          title: "Não foi possível salvar",
+          messages: [response.errorDescription],
+          tone: "error",
+        });
+        return;
+      }
+      await router.push("/profile");
+    } catch {
+      setNotice({
+        title: "Não foi possível salvar",
+        messages: ["Verifique sua conexão e tente novamente em instantes."],
+        tone: "error",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
-    <div className={`vh100 ${styles.containerLayout}`}>
-      <Header
-        game={game}
-        setGame={setGame}
-        setFormErrors={setFormErrors}
-        formErrors={formErrors}
-      ></Header>
-      <div
-        className={`${styles.layout} ${styles.lightGrey} ${styles.flexChild}`}
-      >
-        <GameContext.Provider
-          value={{
-            game,
-            setGame,
-            questionNumber,
-            setQuestionNumber,
-            formErrors,
-            validateForm,
-            validateFormAndIgnoreError,
-          }}
+    <main className={styles.page}>
+      <header className={styles.topbar}>
+        <button
+          type="button"
+          className={styles.brandButton}
+          aria-label="Voltar para o início"
+          onClick={() => void router.push("/")}
         >
-          <Questions></Questions>
-          <Editor></Editor>
-          <Options></Options>
-        </GameContext.Provider>
-      </div>
-    </div>
+          <Image
+            src="/kahootLogo.svg"
+            width={124}
+            height={43}
+            alt="Kahoot!"
+            priority
+          />
+        </button>
+        <input
+          className={`${styles.titleInput} ${
+            formErrors?.titleBlankError ? styles.invalid : ""
+          }`}
+          type="text"
+          placeholder="Digite o título do Kahoot..."
+          value={game.title}
+          maxLength={120}
+          onChange={(event) =>
+            setGame((current) => ({
+              ...current,
+              title: event.target.value,
+            }))
+          }
+        />
+        <div className={styles.topbarActions}>
+          <button
+            type="button"
+            className={styles.exitButton}
+            onClick={() => void router.push("/profile")}
+          >
+            <FiArrowLeft aria-hidden="true" />
+            Sair
+          </button>
+          <button
+            type="button"
+            className={styles.saveButton}
+            disabled={isSaving}
+            onClick={() => void saveGame()}
+          >
+            <FiSave aria-hidden="true" />
+            {isSaving ? "Salvando..." : "Salvar"}
+          </button>
+        </div>
+      </header>
+
+      <GameContext.Provider
+        value={{
+          game,
+          setGame,
+          questionNumber,
+          setQuestionNumber,
+          formErrors,
+          validateForm,
+          validateFormAndIgnoreError,
+        }}
+      >
+        <div className={styles.layout}>
+          <Questions />
+          <Editor />
+          <Options />
+        </div>
+      </GameContext.Provider>
+
+      <NoticeModal
+        open={notice !== null}
+        title={notice?.title ?? ""}
+        messages={notice?.messages ?? []}
+        tone={notice?.tone}
+        onClose={() => setNotice(null)}
+      />
+    </main>
   );
 }
 

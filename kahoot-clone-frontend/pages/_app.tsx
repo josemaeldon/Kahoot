@@ -1,22 +1,59 @@
 import "bootstrap/dist/css/bootstrap.min.css";
+import "@fontsource-variable/plus-jakarta-sans";
 import "../styles/globals.css";
-import * as cookie from "cookie";
 import { useRouter } from "next/router";
+import { ReactNode, useEffect } from "react";
+import useUser, { UserProvider } from "@lib/useUser";
+import Head from "next/head";
 
-function MyApp({ Component, pageProps }) {
+const publicRoutes = new Set([
+  "/auth/login",
+  "/auth/signup",
+  "/auth/forgotpassword",
+  "/",
+  "/play",
+]);
+
+function AuthGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
-  let noAuthRequired = new Set(["/auth/login", "/auth/signup", "/", "/play"]);
-  if (typeof window !== "undefined") {
-    const cookies = cookie.parse(document.cookie);
+  const { loggedIn, loading } = useUser();
+  const isPublic = publicRoutes.has(router.pathname);
 
-    if (!cookies.loggedIn && !noAuthRequired.has(router.pathname)) {
-      router.push({
+  useEffect(() => {
+    if (!loading && !loggedIn && !isPublic) {
+      void router.replace({
         pathname: "/auth/login",
         query: { redirectOnLogin: router.pathname },
       });
     }
+  }, [isPublic, loading, loggedIn, router]);
+
+  if (!isPublic && (loading || !loggedIn)) {
+    return (
+      <main className="appLoading" aria-live="polite">
+        <span className="appSpinner" />
+        <p>Carregando...</p>
+      </main>
+    );
   }
-  return <Component {...pageProps} />;
+  return <>{children}</>;
+}
+
+function MyApp({ Component, pageProps }) {
+  return (
+    <UserProvider>
+      <Head>
+        <title>Kahoot Clone</title>
+        <meta
+          name="description"
+          content="Jogo multiplayer de perguntas e respostas"
+        />
+      </Head>
+      <AuthGuard>
+        <Component {...pageProps} />
+      </AuthGuard>
+    </UserProvider>
+  );
 }
 
 export default MyApp;

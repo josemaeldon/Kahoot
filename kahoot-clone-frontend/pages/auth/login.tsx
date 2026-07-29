@@ -1,123 +1,134 @@
-import React, { useState } from "react";
-import styles from "@styles/signup.module.css";
+import React, { useEffect, useState } from "react";
+import styles from "@styles/Auth.module.css";
 import Link from "next/link";
 import { postData } from "@lib/postData";
 import { APIRequest, APIResponse } from "pages/api/login";
 import useUser from "@lib/useSSRUser";
 import { useRouter } from "next/router";
 import Header from "@components/Header";
+import NoticeModal from "@components/NoticeModal";
+import { FiLock, FiUser } from "react-icons/fi";
 
 function Login() {
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { loggedIn, user } = useUser();
+  const { loggedIn, loading } = useUser();
 
-  if (loggedIn) {
-    if (typeof window !== "undefined") {
-      window.location.href = "/";
-    }
-    return null;
-  }
+  useEffect(() => {
+    if (!loading && loggedIn) void router.replace("/");
+  }, [loading, loggedIn, router]);
 
   const loginHandler = async () => {
+    setError(null);
+    setIsLoading(true);
     const request: APIRequest = { username, password };
     try {
       const response = await postData<APIRequest, APIResponse>(
         "/api/login",
         request
       );
-      if (response.error === true) {
+      if (response.error) {
         setError(response.errorDescription || "Ocorreu um erro inesperado.");
       } else {
-        localStorage.setItem(
-          "accessTokenPayload",
-          JSON.stringify(response.user)
-        );
         const redirect =
           typeof router.query.redirectOnLogin === "string"
             ? router.query.redirectOnLogin
             : "/";
-        router.push(redirect);
+        window.location.assign(redirect);
       }
     } catch (err) {
-      setError("Falha ao conectar-se ao servidor. Por favor, tente novamente.");
+      setError("Falha ao conectar-se ao servidor. Tente novamente.");
       console.error(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  if (loading || loggedIn) return null;
+
   return (
-    <div className={styles.vh100}>
-      <Header />
-      <div className={styles.container}>
-        <div className={styles.card}>
+    <main className={styles.page}>
+      <Header authMode />
+      <div className={styles.layout}>
+        <aside className={styles.art} aria-hidden="true">
+          <span className={`${styles.artBlock} ${styles.artRed}`} />
+          <span className={`${styles.artBlock} ${styles.artBlue}`} />
+          <span className={`${styles.artBlock} ${styles.artYellow}`} />
+          <span className={`${styles.artBlock} ${styles.artGreen}`} />
+          <span className={styles.questionMark}>?</span>
+        </aside>
+
+        <section className={styles.formRegion}>
           <form
             className={styles.form}
-            onSubmit={(e) => {
-              e.preventDefault();
-              loginHandler();
+            noValidate
+            onSubmit={(event) => {
+              event.preventDefault();
+              void loginHandler();
             }}
           >
-            <h2 className={styles.title}>Login</h2>
-
-            {error && <p className={styles.error}>{error}</p>}
-
-            <div className={styles.inputGroup}>
-              <label htmlFor="username" className={styles.label}>
-                Usuário
-              </label>
-              <input
-                type="text"
-                id="username"
-                className={styles.input}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Digite seu usuário"
-                required
-              />
+            <div className={styles.heading}>
+              <h1>Bem-vindo de volta</h1>
+              <p>Entre para criar, editar e iniciar seus quizzes.</p>
             </div>
 
-            <div className={styles.inputGroup}>
-              <label htmlFor="password" className={styles.label}>
-                Senha
-              </label>
-              <input
-                type="password"
-                id="password"
-                className={styles.input}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Digite sua senha"
-                required
-              />
-            </div>
+            <label className={styles.field}>
+              <span>Usuário</span>
+              <div className={styles.inputShell}>
+                <FiUser aria-hidden="true" />
+                <input
+                  type="text"
+                  id="username"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  placeholder="Digite seu usuário"
+                  autoComplete="username"
+                />
+              </div>
+            </label>
 
-            <button type="submit" className={styles.button}>
-  Login
-</button><br />
+            <label className={styles.field}>
+              <span>Senha</span>
+              <div className={styles.inputShell}>
+                <FiLock aria-hidden="true" />
+                <input
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Digite sua senha"
+                  autoComplete="current-password"
+                />
+              </div>
+            </label>
 
-<button
-  type="button"
-  className={styles.button}
-  onClick={() => {
-    window.location.href = "https://kahoot.cloudbr.app";
-  }}
->
-  Voltar
-</button>
+            <button
+              type="submit"
+              className={styles.primaryButton}
+              disabled={isLoading}
+            >
+              {isLoading ? "Entrando..." : "Entrar"}
+            </button>
 
-            
-            <p className={styles.signupPrompt}>
-              {"Não tem uma conta? "}
-              <Link href="/auth/signup">
-                <a className={styles.signupLink}>Inscrever-se</a>
-              </Link>
+            <p className={styles.switchText}>
+              Não tem uma conta?{" "}
+              <Link href="/auth/signup">Criar conta</Link>
             </p>
           </form>
-        </div>
+        </section>
       </div>
-    </div>
+
+      <NoticeModal
+        open={error !== null}
+        title="Não foi possível entrar"
+        messages={error ? [error] : []}
+        tone="error"
+        onClose={() => setError(null)}
+      />
+    </main>
   );
 }
 

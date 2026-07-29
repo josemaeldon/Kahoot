@@ -1,64 +1,76 @@
 .container {
-  transition: all 0.25s 0s ease-in-out;
-
-  position: relative;
-  background-color: white;
-  box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
-  background-color: white;
+  grid-area: options;
+  padding: 24px 20px;
+  border-left: 1px solid var(--color-border);
+  background: white;
 }
 
-.containerOpen {
-  width: 272px;
+.container h2 {
+  margin: 0 0 26px;
+  font-size: 18px;
+  font-weight: 820;
+  letter-spacing: -0.02em;
 }
 
-.containerClosed {
-  width: 0;
-  padding: 0px;
-}
-
-.toggleSwitch {
-  width: 25px;
-  height: 40px;
-
-  position: absolute;
-  left: -25px;
-  top: calc(0%);
-  background-color: white;
-  box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
-
-  display: grid;
-  place-items: center;
-  border-top-left-radius: 4px;
-  border-bottom-left-radius: 4px;
-}
-
-.innerContainer {
-  height: 100%;
-  padding: 20px;
-}
-
-.outerContainer {
-  overflow: hidden;
-  height: 100%;
-}
-
-.alignmentContainer {
+.setting > span {
   display: flex;
   align-items: center;
-  font-size: 22px;
-  gap: 10px;
-  margin-bottom: 10px;
-  line-height: 22px;
+  gap: 8px;
+  margin-bottom: 9px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 760;
 }
 
-.alignmentContainer svg {
-  height: 24px;
-  width: 24px;
-  padding-top: 0px;
+.setting select {
+  width: 100%;
+  height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  outline: 0;
+  color: var(--color-text);
+  background: white;
+  font-size: 14px;
 }
 
-.getRidOfOutline button:focus {
-  outline: none !important;
-  outline-offset: none !important;
-  box-shadow: none !important;
+.setting select:focus {
+  border-color: var(--color-brand-600);
+  box-shadow: 0 0 0 3px rgba(109, 58, 242, 0.12);
+}
+
+.helper {
+  margin-top: 24px;
+  padding-top: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+}
+
+.helper svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.helper p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+@media (max-width: 1050px) {
+  .container {
+    margin: 0 18px 24px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+}
+
+@media (max-width: 760px) {
+  .container {
+    margin: 0 12px 20px;
+    padding: 18px;
+  }
 }

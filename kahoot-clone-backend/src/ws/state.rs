@@ -60,11 +60,13 @@ pub enum PlayerEvent {
 impl State {
     pub fn insert_room(&self, room: Arc<Room>) -> RoomId {
         let mut rooms = self.rooms.lock().unwrap();
-        let id: RoomId = rand::random();
-
-        rooms.insert(id, room);
-
-        id
+        loop {
+            let id: RoomId = rand::random::<u32>() % 900_000 + 100_000;
+            if let std::collections::hash_map::Entry::Vacant(entry) = rooms.entry(id) {
+                entry.insert(Arc::clone(&room));
+                return id;
+            }
+        }
     }
 
     pub async fn remove_room(&self, room_id: &RoomId) {

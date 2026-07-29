@@ -1,86 +1,159 @@
-.container {
-  height: 56px;
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px;
-  padding-left: 16px;
-  padding-right: 16px;
+.page {
+  min-height: 100vh;
+  background: var(--color-canvas);
 }
 
-.containerLayout {
-  display: flex;
-  flex-direction: column;
-}
-
-.flexChild {
-  flex: 1 0 auto;
-}
-
-.layout {
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  min-height: 68px;
   display: grid;
-  grid-template-columns: min-content auto min-content;
-}
-
-.lightGrey {
-  background-color: rgb(242, 242, 241);
-}
-
-.flex1 {
-  display: flex;
+  grid-template-columns: auto minmax(260px, 520px) 1fr;
   align-items: center;
+  gap: 28px;
+  padding: 10px 22px;
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.97);
+}
+
+.brandButton {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .titleInput {
-  outline: none;
-  border: 1px grey solid;
-  font-size: 16px;
-  padding: 8px 16px 8px 16px;
-  border-radius: 4px;
-  margin-left: 16px;
+  width: 100%;
+  height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  outline: 0;
+  color: var(--color-text);
+  background: white;
+  font-size: 15px;
+  font-weight: 650;
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.titleInput:focus {
+  border-color: var(--color-brand-600);
+  box-shadow: 0 0 0 3px rgba(109, 58, 242, 0.12);
+}
+
+.titleInput::placeholder {
+  color: #989baa;
+  font-weight: 550;
+}
+
+.topbarActions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.exitButton,
+.saveButton {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 760;
+  transition: background var(--transition-fast),
+    transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .exitButton {
-  font-size: 16px;
-  padding: 8px 16px 8px 16px;
-  border-radius: 4px;
-  margin-left: 16px;
-  background-color: whitesmoke;
-  color: black;
-  outline: none;
-  border: 0px;
-  box-shadow: rgb(0 0 0 / 15%) 0px 2px 4px 0px;
+  color: var(--color-text);
+  border: 1px solid var(--color-border-strong);
+  background: white;
 }
 
 .exitButton:hover {
-  background-color: rgb(231, 230, 230);
-}
-
-.exitButton:active {
-  background-color: rgb(205, 205, 205);
+  color: var(--color-brand-700);
+  border-color: var(--color-brand-500);
+  background: var(--color-brand-50);
 }
 
 .saveButton {
-  font-size: 16px;
-  padding: 8px 16px 8px 16px;
-  border-radius: 4px;
-  margin-left: 16px;
-  background-color: dodgerblue;
   color: white;
-  outline: none;
-  border: 0px;
-  box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
+  border: 1px solid var(--color-brand-600);
+  background: var(--color-brand-700);
+  box-shadow: 0 3px 0 var(--color-brand-900);
 }
 
-.saveButton:hover {
-  background-color: rgb(26, 127, 227);
+.saveButton:hover:not(:disabled) {
+  background: var(--color-brand-600);
+  transform: translateY(-1px);
 }
 
-.saveButton:active {
-  background-color: rgb(24, 116, 207);
+.saveButton:disabled {
+  cursor: wait;
+  opacity: 0.68;
 }
 
-.lightRed {
-  background-color: rgb(245, 223, 223);
+.invalid {
+  border-color: var(--color-danger) !important;
+  background: #fff8f7 !important;
+}
+
+.layout {
+  min-height: calc(100vh - 68px);
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 260px;
+  grid-template-areas: "questions editor options";
+}
+
+@media (max-width: 1050px) {
+  .layout {
+    grid-template-columns: 190px minmax(0, 1fr);
+    grid-template-areas:
+      "questions editor"
+      "questions options";
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 9px 12px;
+  }
+
+  .brandButton {
+    display: none;
+  }
+
+  .topbarActions {
+    gap: 6px;
+  }
+
+  .exitButton,
+  .saveButton {
+    min-height: 42px;
+    padding: 0 11px;
+    font-size: 13px;
+  }
+
+  .exitButton svg,
+  .saveButton svg {
+    display: none;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "questions"
+      "editor"
+      "options";
+  }
 }

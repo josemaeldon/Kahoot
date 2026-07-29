@@ -1,8 +1,7 @@
-import { connectToDatabase } from "@serverless/mongoCache";
-import { verify } from "jsonwebtoken";
-import { FindCursor, FindOptions } from "mongodb";
 import type { NextApiRequest, NextApiResponse } from "next";
-import { db, auth } from "../../kahoot";
+import { db } from "../../kahoot";
+import { requireAuthenticatedUser } from "@lib/auth";
+import { listGamesByAuthor } from "@lib/gameRepository";
 
 export type APIRequest = UsernameRequest | UserIdRequest;
 
@@ -33,30 +32,19 @@ export default async function handler(
   res: NextApiResponse<APIResponse>
 ) {
   if (req.method !== "POST")
-    res
-      .status(200)
-      .json({ error: true, errorDescription: "Not a POST request" });
-  const request = req.body as APIRequest;
-  const payload = verify(req.cookies["accessToken"], "secret", {
-    complete: false,
-  }) as auth.accessTokenPayload;
-
-  const client = await connectToDatabase();
-  const games = client.db("kahoot-clone").collection<db.KahootGame>("game");
-
-  if (request.type === "userId") {
-    const cursor: FindCursor<db.KahootGame> = games
-      .find({ author_id: request.userId })
-      .sort({ date: "descending" });
-    const allGames: db.KahootGame[] = await cursor.toArray();
-    res.status(200).json({ error: false, games: allGames });
-  } else if (request.type === "username") {
-    const cursor: FindCursor<db.KahootGame> = games
-      .find({ author_username: request.username })
-      .sort({ date: "descending" });
-    const allGames: db.KahootGame[] = await cursor.toArray();
-    res.status(200).json({ error: false, games: allGames });
-  } else {
-    res.status(200).json({ error: true, errorDescription: "Bad data format" });
+    return res
+      .status(405)
+      .json({ error: true, errorDescription: "Método não permitido" });
+  const user = await requireAuthenticatedUser(req, res);
+  if (!user) return;
+  try {
+    const games = await listGamesByAuthor(user._id);
+    return res.status(200).json({ error: false, games });
+  } catch (error) {
+    console.error("Falha ao listar quizzes", error);
+    return res.status(500).json({
+      error: true,
+      errorDescription: "Não foi possível carregar seus quizzes.",
+    });
   }
 }

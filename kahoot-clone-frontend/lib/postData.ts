@@ -18,5 +18,6 @@ export async function postData<APIRequest, APIResponse>(
     body: JSON.stringify(data), // body data type must match "Content-Type" header
     signal: abortSignal,
   });
-  return response.json(); // parses JSON response into native JavaScript objects
+  const payload = await response.json();
+  return payload as APIResponse;
 }

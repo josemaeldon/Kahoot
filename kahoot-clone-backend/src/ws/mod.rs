@@ -89,6 +89,17 @@ async fn handle_ws(mut socket: WebSocket, state: SharedState) {
 async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Question>) {
     tracing::debug!("Creating room...");
 
+    if questions.is_empty()
+        || questions.len() > 100
+        || questions.iter().any(|question| !question.is_valid())
+    {
+        let event = HostEvent::RoomCreationFailed {
+            reason: String::from("Invalid question data"),
+        };
+        let _ = host.send(event.to_message()).await;
+        return;
+    }
+
     let (action_tx, mut action_rx) = mpsc::channel(20);
     let (result_tx, result_rx) = watch::channel(GameEvent::InLobby);
     let (users, mut player_event_rx) = Users::new();
@@ -342,6 +353,24 @@ async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, u
         return;
     };
 
+    let username = username.trim().to_owned();
+    if !(2..=24).contains(&username.chars().count()) {
+        let event = UserEvent::JoinFailed {
+            reason: String::from("Invalid username"),
+        };
+        let _ = socket.send(event.to_message()).await;
+        return;
+    }
+
+    let is_in_lobby = matches!(*room.result_stream.borrow(), GameEvent::InLobby);
+    if !is_in_lobby {
+        let event = UserEvent::JoinFailed {
+            reason: String::from("Game already started"),
+        };
+        let _ = socket.send(event.to_message()).await;
+        return;
+    }
+
     tracing::debug!("Joining room...");
 
     let (mut user_tx, mut user_rx) = socket.split();
@@ -583,6 +612,7 @@ mod tests {
 
                 Question {
                     question: String::from($ques),
+                    image: None,
                     time: $time,
                     choices,
                     answer,

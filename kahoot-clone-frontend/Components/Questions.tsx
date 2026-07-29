@@ -1,29 +1,8 @@
 import React, { useContext } from "react";
-import { OverlayTrigger, Popover, Tooltip } from "react-bootstrap";
-import { BsTrash } from "react-icons/bs";
-import { MdContentCopy } from "react-icons/md";
-import { TiWarning } from "react-icons/ti";
-import { db } from "../kahoot";
-import { GameContext, QuestionError } from "../pages/create";
+import { FiCopy, FiPlus, FiTrash2, FiAlertCircle } from "react-icons/fi";
+import type { db } from "../kahoot";
+import { GameContext } from "../pages/create";
 import styles from "../styles/Questions.module.css";
-import GameButton from "./GameButton";
-
-function renderOverlay(e: QuestionError) {
-  const overlay = ({ show: _, ...props }) => (
-    <div style={{ backgroundColor: "lightcoral" }}>
-      <Popover {...props}>
-        <p className={`${styles.overlayError}`}>
-          <ul>
-            {e.questionBlankError && <li>Sua pergunta não pode estar em branco</li>}
-            {e.choicesRequiredError && <li>Preencha as opções de resposta </li>}
-            {e.correctChoiceError && <li>Por favor, selecione uma resposta correta</li>}
-          </ul>
-        </p>
-      </Popover>
-    </div>
-  );
-  return overlay;
-}
 
 function Questions() {
   const {
@@ -36,160 +15,148 @@ function Questions() {
     validateFormAndIgnoreError,
   } = useContext(GameContext);
 
-  function duplicateHandler(questionIndex) {
-    const gameCopy = JSON.parse(JSON.stringify(game));
-    const questionCopy = JSON.parse(
-      JSON.stringify(gameCopy.questions[questionIndex])
-    );
-    gameCopy.questions.splice(questionIndex + 1, 0, questionCopy);
-    console.log(game, gameCopy);
-
-    setGame(gameCopy);
-    validateForm(gameCopy);
+  function duplicateQuestion(questionIndex: number) {
+    const questionCopy = structuredClone(game.questions[questionIndex]);
+    const nextGame = {
+      ...game,
+      questions: [
+        ...game.questions.slice(0, questionIndex + 1),
+        questionCopy,
+        ...game.questions.slice(questionIndex + 1),
+      ],
+    };
+    setGame(nextGame);
+    validateForm(nextGame);
     setQuestionNumber(questionIndex + 1);
   }
-  function deleteHandler(questionIndex) {
-    //User shouldn't delete the only question in the kahoot
-    //Todo: Modal popup
 
+  function deleteQuestion(questionIndex: number) {
     if (game.questions.length === 1) return;
-
-    const gameCopy = JSON.parse(JSON.stringify(game));
-    gameCopy.questions.splice(questionIndex, 1);
-
-    //Makes sure that the question the user is on isn't out of bounds after an element is deleted
-    if (gameCopy.questions.length - 1 < questionNumber)
-      setQuestionNumber(gameCopy.questions.length - 1);
-
-    setGame(gameCopy);
-    validateForm(gameCopy);
+    const nextQuestions = game.questions.filter(
+      (_, index) => index !== questionIndex
+    );
+    const nextGame = { ...game, questions: nextQuestions };
+    setGame(nextGame);
+    validateForm(nextGame);
+    setQuestionNumber((current) =>
+      Math.min(current, nextQuestions.length - 1)
+    );
   }
-  function addQuestionHandler() {
-    const gameCopy = JSON.parse(JSON.stringify(game)) as db.KahootGame;
-    gameCopy.questions.push({
+
+  function addQuestion() {
+    const newQuestion: db.Question = {
       choices: ["", "", "", ""],
       correctAnswer: 0,
       question: "",
+      image: null,
       time: 30,
-    });
-
-    const lastQuestion = gameCopy.questions.length - 1;
+    };
+    const nextGame = {
+      ...game,
+      questions: [...game.questions, newQuestion],
+    };
+    const lastQuestion = nextGame.questions.length - 1;
+    setGame(nextGame);
     setQuestionNumber(lastQuestion);
-    setGame(gameCopy);
-    validateFormAndIgnoreError(gameCopy, lastQuestion);
+    validateFormAndIgnoreError(nextGame, lastQuestion);
   }
-  console.log(formErrors);
+
   return (
-    <div className={`${styles.container}`}>
-      <div className={`${styles.innerContainer}`}>
+    <aside className={styles.container} aria-label="Perguntas do quiz">
+      <div className={styles.railHeading}>
+        <strong>
+          {game.questions.length}{" "}
+          {game.questions.length === 1 ? "pergunta" : "perguntas"}
+        </strong>
+      </div>
+      <div className={styles.questionList}>
         {game.questions.map((question, index) => {
-          const selectedQuestion = index === questionNumber;
-          const e = formErrors?.questionErrors[index];
-          const questionHasError =
-            (e?.choicesRequiredError ||
-              e?.correctChoiceError ||
-              e?.questionBlankError) &&
-            e.ignoreErrors !== true;
+          const selected = index === questionNumber;
+          const errors = formErrors?.questionErrors[index];
+          const hasError =
+            errors &&
+            !errors.ignoreErrors &&
+            (errors.choicesRequiredError ||
+              errors.correctChoiceError ||
+              errors.questionBlankError);
+
           return (
-            <div key={Math.random()}>
-              <OverlayTrigger
-                placement="right"
-                delay={{ show: 0, hide: 0 }}
-                overlay={questionHasError ? renderOverlay(e) : <></>}
+            <article
+              key={index}
+              className={`${styles.questionBox} ${
+                selected ? styles.selected : ""
+              }`}
+            >
+              <button
+                type="button"
+                className={styles.questionSelect}
+                onClick={() => {
+                  setQuestionNumber(index);
+                  validateForm(game);
+                }}
+                aria-current={selected ? "true" : undefined}
               >
-                <div
-                  className={`${styles.questionBox} ${
-                    selectedQuestion ? `${styles.questionHighlighted}` : ""
-                  }`}
-                  onClick={() => {
-                    if (selectedQuestion) return;
-                    setQuestionNumber(index);
-                    validateForm(game);
-                  }}
-                  data-selectedquestion={selectedQuestion}
-                >
-                  <TiWarning
-                    className={`${
-                      questionHasError ? styles.warning : styles.hidden
-                    }`}
-                  ></TiWarning>
-                  <section className={`${styles.questionHeader}`}>
-                    <div>
-                      <span>{`${index + 1}`}</span>
-                    </div>
-                    <div>
-                      <span>Quiz</span>
-                    </div>
-                  </section>
-                  <div className={`${styles.questionContainer}`}>
-                    <section className={`${styles.questionActions}`}>
-                      <MdContentCopy
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          duplicateHandler(index);
-                        }}
-                      ></MdContentCopy>
-                      <BsTrash
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteHandler(index);
-                        }}
-                      ></BsTrash>
-                    </section>
-                    <section className={`${styles.questionPreviewContainer}`}>
-                      <div
-                        className={`${styles.questionPreview} ${
-                          selectedQuestion ? styles.white : styles.whitesmoke
-                        }`}
-                      >
-                        <p className={`${styles.previewParagraph}`}>
-                          {game.questions[index].question}
-                        </p>
-                        <div className={`${styles.previewGrid}`}>
-                          {game.questions[index].choices.map(
-                            (choice, choiceIndex) => {
-                              return (
-                                <div
-                                  key={choiceIndex}
-                                  className={`${styles.previewGridChild}`}
-                                  data-correct={
-                                    game.questions[index].correctAnswer ===
-                                      choiceIndex &&
-                                    game.questions[index].choices[
-                                      choiceIndex
-                                    ] !== ""
-                                  }
-                                ></div>
-                              );
-                            }
-                          )}
-                        </div>
-                      </div>
-                    </section>
-                  </div>
+                <span className={styles.questionNumber}>{index + 1}</span>
+                <span className={styles.questionLabel}>Quiz</span>
+                {hasError && (
+                  <FiAlertCircle
+                    className={styles.warning}
+                    aria-label={`A pergunta ${index + 1} precisa ser revisada`}
+                  />
+                )}
+              </button>
+              <div className={styles.preview}>
+                <p>{question.question || "Nova pergunta"}</p>
+                {question.image && (
+                  <img
+                    className={styles.previewImage}
+                    src={question.image}
+                    alt=""
+                  />
+                )}
+                <div className={styles.previewGrid} aria-hidden="true">
+                  {question.choices.map((choice, choiceIndex) => (
+                    <span
+                      key={choiceIndex}
+                      data-filled={choice.trim() !== ""}
+                      data-correct={
+                        question.correctAnswer === choiceIndex &&
+                        choice.trim() !== ""
+                      }
+                    />
+                  ))}
                 </div>
-              </OverlayTrigger>
-            </div>
+              </div>
+              <div className={styles.questionActions}>
+                <button
+                  type="button"
+                  aria-label={`Duplicar pergunta ${index + 1}`}
+                  onClick={() => duplicateQuestion(index)}
+                >
+                  <FiCopy aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Excluir pergunta ${index + 1}`}
+                  disabled={game.questions.length === 1}
+                  onClick={() => deleteQuestion(index)}
+                >
+                  <FiTrash2 aria-hidden="true" />
+                </button>
+              </div>
+            </article>
           );
         })}
-        <GameButton
-          onClick={() => {
-            addQuestionHandler();
-          }}
-          backgroundStyle={{
-            backgroundColor: "rgb(14,78,154)",
-            margin: "20px auto 20px auto ",
-            display: "block",
-          }}
-          foregroundStyle={{
-            backgroundColor: "rgb(19,104,206)",
-            padding: "10px 14px 10px 14px",
-          }}
-        >
-          Add Pergunta
-        </GameButton>
       </div>
-    </div>
+      <button
+        type="button"
+        className={styles.addButton}
+        onClick={addQuestion}
+      >
+        <FiPlus aria-hidden="true" />
+        Adicionar pergunta
+      </button>
+    </aside>
   );
 }
 

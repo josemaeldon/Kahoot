@@ -11,6 +11,7 @@
 # next.js
 /kahoot-clone-frontend/.next/
 /kahoot-clone-frontend/out/
+/kahoot-clone-frontend/tsconfig.tsbuildinfo
 
 # production
 /kahoot-clone-frontend/build
@@ -26,6 +27,7 @@
 /kahoot-clone-frontend/.pnpm-debug.log*
 
 # local env files
+/.env
 /kahoot-clone-frontend/.env*.local
 
 # vercel
@@ -34,9 +36,6 @@
 # rust compiled binary files
 /kahoot-clone-backend/target/
 /kahoot-clone-backend/debug/
-
-# rust cargo lock
-/kahoot-clone-backend/Cargo.lock
 
 # rustfmt backup files
 **/*.rs.bk
