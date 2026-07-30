@@ -27,6 +27,17 @@ type SuccessResponse = {
   error: false;
   registrationEnabled: boolean;
   users: ManagedUser[];
+  totals: {
+    total: number;
+    active: number;
+    attention: number;
+  };
+  pagination: {
+    page: number;
+    pageSize: 10 | 20 | 100;
+    total: number;
+    totalPages: number;
+  };
 };
 
 type FailResponse = { error: true; errorDescription: string };
@@ -117,14 +128,78 @@ async function applyAccess(
   );
 }
 
-async function loadAdminData(): Promise<SuccessResponse> {
-  const [settings, users] = await Promise.all([
+interface AdminListOptions {
+  page: number;
+  pageSize: 10 | 20 | 100;
+  search: string;
+}
+
+function parseListOptions(req: NextApiRequest): AdminListOptions {
+  const source = req.method === "GET" ? req.query : req.body;
+  const requestedPage = Number(source?.page);
+  const requestedPageSize = Number(source?.pageSize);
+  const search =
+    typeof source?.search === "string" ? source.search.trim().slice(0, 80) : "";
+  return {
+    page:
+      Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1,
+    pageSize: [10, 20, 100].includes(requestedPageSize)
+      ? (requestedPageSize as 10 | 20 | 100)
+      : 10,
+    search,
+  };
+}
+
+async function loadAdminData({
+  page,
+  pageSize,
+  search,
+}: AdminListOptions): Promise<SuccessResponse> {
+  const searchPattern = `%${search}%`;
+  const [settings, totalsResult, filteredCountResult] = await Promise.all([
     query<{ registration_enabled: boolean }>(
       `select registration_enabled
        from system_settings
        where id = 1`
     ),
     query<{
+      total: string;
+      active: string;
+      attention: string;
+    }>(
+      `select
+         count(*)::text as total,
+         count(*) filter (
+           where role = 'user'
+             and is_enabled = true
+             and (access_expires_at is null or access_expires_at > now())
+         )::text as active,
+         count(*) filter (
+           where role = 'user'
+             and (
+               is_enabled = false
+               or (access_expires_at is not null and access_expires_at <= now())
+             )
+         )::text as attention
+       from users`
+    ),
+    query<{ total: string }>(
+      `select count(*)::text as total
+       from users
+       where (
+         $1 = ''
+         or username ilike $2
+         or coalesce(whatsapp, '') ilike $2
+       )`,
+      [search, searchPattern]
+    ),
+  ]);
+
+  const filteredTotal = Number(filteredCountResult.rows[0]?.total || 0);
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const offset = (currentPage - 1) * pageSize;
+  const users = await query<{
       id: string;
       username: string;
       whatsapp: string | null;
@@ -142,6 +217,11 @@ async function loadAdminData(): Promise<SuccessResponse> {
          access_expires_at,
          created_at
        from users
+       where (
+         $1 = ''
+         or username ilike $2
+         or coalesce(whatsapp, '') ilike $2
+       )
        order by
          case when role = 'superadmin' then 0 else 1 end,
          case
@@ -150,9 +230,12 @@ async function loadAdminData(): Promise<SuccessResponse> {
              then 0
            else 1
          end,
-         created_at desc`
-    ),
-  ]);
+         created_at desc,
+         id
+       limit $3
+       offset $4`,
+    [search, searchPattern, pageSize, offset]
+  );
 
   return {
     error: false,
@@ -166,6 +249,17 @@ async function loadAdminData(): Promise<SuccessResponse> {
       accessExpiresAt: user.access_expires_at?.toISOString() || null,
       createdAt: user.created_at.toISOString(),
     })),
+    totals: {
+      total: Number(totalsResult.rows[0]?.total || 0),
+      active: Number(totalsResult.rows[0]?.active || 0),
+      attention: Number(totalsResult.rows[0]?.attention || 0),
+    },
+    pagination: {
+      page: currentPage,
+      pageSize,
+      total: filteredTotal,
+      totalPages,
+    },
   };
 }
 
@@ -177,8 +271,9 @@ export default async function handler(
   if (!superadmin) return;
 
   try {
+    const listOptions = parseListOptions(req);
     if (req.method === "GET") {
-      return res.status(200).json(await loadAdminData());
+      return res.status(200).json(await loadAdminData(listOptions));
     }
 
     if (req.method !== "POST") {
@@ -199,7 +294,7 @@ export default async function handler(
          where id = 1`,
         [req.body.enabled, superadmin._id]
       );
-      return res.status(200).json(await loadAdminData());
+      return res.status(200).json(await loadAdminData(listOptions));
     }
 
     if (req.body?.type === "createUser") {
@@ -227,7 +322,7 @@ export default async function handler(
         );
         await applyAccess(client, inserted.rows[0].id, role, access);
       });
-      return res.status(201).json(await loadAdminData());
+      return res.status(201).json(await loadAdminData(listOptions));
     }
 
     if (req.body?.type === "updateUser") {
@@ -311,7 +406,7 @@ export default async function handler(
             "Promova outro usuário antes de alterar o último superadmin.",
         });
       }
-      return res.status(200).json(await loadAdminData());
+      return res.status(200).json(await loadAdminData(listOptions));
     }
 
     if (req.body?.type === "updateAccess") {
@@ -343,7 +438,7 @@ export default async function handler(
           errorDescription: "O acesso do superadministrador é permanente.",
         });
       }
-      return res.status(200).json(await loadAdminData());
+      return res.status(200).json(await loadAdminData(listOptions));
     }
 
     if (req.body?.type === "deleteUser") {
@@ -392,7 +487,7 @@ export default async function handler(
           errorDescription: "O último superadmin não pode ser excluído.",
         });
       }
-      return res.status(200).json(await loadAdminData());
+      return res.status(200).json(await loadAdminData(listOptions));
     }
 
     return res.status(400).json({

@@ -110,6 +110,7 @@ export interface ListGameSummariesOptions {
   scope: "mine" | "public";
   folderId?: string | "unfiled" | null;
   categoryId?: string | null;
+  authorId?: string | null;
   sort?: "newest" | "oldest";
   page: number;
   pageSize: 10 | 20 | 50;
@@ -120,6 +121,7 @@ export async function listGameSummaries({
   scope,
   folderId,
   categoryId,
+  authorId,
   sort = "newest",
   page,
   pageSize,
@@ -142,6 +144,10 @@ export async function listGameSummaries({
     if (categoryId) {
       values.push(categoryId);
       filters.push(`g.category_id = $${values.length}::uuid`);
+    }
+    if (authorId) {
+      values.push(authorId);
+      filters.push(`g.author_id = $${values.length}::uuid`);
     }
   }
 
@@ -206,6 +212,28 @@ export async function listGameSummaries({
       totalPages: Math.max(1, Math.ceil(total / pageSize)),
     },
   };
+}
+
+export async function listPublicAuthors(): Promise<db.KahootAuthor[]> {
+  const result = await query<{
+    id: string;
+    username: string;
+    gameCount: string | number;
+  }>(
+    `select
+       u.id::text,
+       u.username,
+       count(g.id)::int as "gameCount"
+     from users u
+     join games g on g.author_id = u.id
+     where g.is_public = true
+     group by u.id
+     order by lower(u.username), u.id`
+  );
+  return result.rows.map((author) => ({
+    ...author,
+    gameCount: Number(author.gameCount),
+  }));
 }
 
 async function insertQuestions(

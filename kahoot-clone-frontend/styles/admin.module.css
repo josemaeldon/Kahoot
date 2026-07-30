@@ -93,6 +93,48 @@
   transform: translateY(-1px);
 }
 
+.adminTabs {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.adminTabs button {
+  position: relative;
+  min-height: 50px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 17px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  color: var(--color-text-muted);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 780;
+}
+
+.adminTabs button:hover {
+  color: var(--color-brand-700);
+  background: rgba(70, 23, 143, 0.04);
+}
+
+.adminTabs .adminTabActive {
+  color: var(--color-brand-800);
+  border-bottom-color: var(--color-brand-700);
+}
+
+.adminTabs button > span {
+  min-width: 23px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: var(--color-brand-50);
+  font-size: 10px;
+  text-align: center;
+}
+
 .registrationCard {
   display: flex;
   align-items: center;
@@ -380,7 +422,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
-  margin: 20px 0;
+  margin: 0 0 20px;
 }
 
 .stats article {
@@ -466,6 +508,63 @@
 
 .userList {
   display: grid;
+}
+
+.userPagination {
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 28px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.userPagination > label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.userPagination > label > span:last-child {
+  min-width: 82px;
+}
+
+.userPagination > span {
+  justify-self: center;
+}
+
+.userPagination > div {
+  display: flex;
+  gap: 8px;
+}
+
+.userPagination button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  color: var(--color-text);
+  background: white;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.userPagination button:hover:not(:disabled) {
+  color: var(--color-brand-700);
+  border-color: var(--color-brand-500);
+  background: var(--color-brand-50);
+}
+
+.userPagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .userRow {
@@ -947,6 +1046,17 @@
     flex-direction: column;
   }
 
+  .userPagination {
+    grid-template-columns: 1fr auto;
+    padding: 14px 18px;
+  }
+
+  .userPagination > span {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-self: center;
+  }
+
   .hero {
     flex-wrap: wrap;
   }
@@ -997,6 +1107,16 @@
 }
 
 @media (max-width: 480px) {
+  .adminTabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .adminTabs button {
+    justify-content: center;
+    padding: 0 10px;
+  }
+
   .hero {
     align-items: flex-start;
   }
@@ -1012,6 +1132,20 @@
   .sectionHeader,
   .userModal {
     padding: 22px;
+  }
+
+  .userPagination {
+    grid-template-columns: 1fr;
+  }
+
+  .userPagination > label,
+  .userPagination > div {
+    width: 100%;
+  }
+
+  .userPagination > label > span:last-child,
+  .userPagination button {
+    flex: 1;
   }
 
   .formGrid,

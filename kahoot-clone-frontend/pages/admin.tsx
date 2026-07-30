@@ -15,6 +15,8 @@ import type {
 } from "./api/admin/ai-settings";
 import {
   FiCalendar,
+  FiChevronLeft,
+  FiChevronRight,
   FiCheckCircle,
   FiClock,
   FiCpu,
@@ -24,16 +26,36 @@ import {
   FiPlus,
   FiSave,
   FiSearch,
+  FiSettings,
   FiShield,
   FiTrash2,
   FiUsers,
 } from "react-icons/fi";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useState,
+} from "react";
+
+type AdminPageSize = 10 | 20 | 100;
+type AdminTab = "settings" | "users";
 
 interface AdminData {
   error: false;
   registrationEnabled: boolean;
   users: ManagedUser[];
+  totals: {
+    total: number;
+    active: number;
+    attention: number;
+  };
+  pagination: {
+    page: number;
+    pageSize: AdminPageSize;
+    total: number;
+    totalPages: number;
+  };
 }
 
 interface ApiError {
@@ -93,7 +115,11 @@ function formatDate(value: string) {
 export default function Admin() {
   const { user } = useUser();
   const [data, setData] = useState<AdminData | null>(null);
+  const [adminTab, setAdminTab] = useState<AdminTab>("settings");
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
+  const [userPage, setUserPage] = useState(1);
+  const [userPageSize, setUserPageSize] = useState<AdminPageSize>(10);
   const [modalUser, setModalUser] = useState<
     ManagedUser | null | undefined
   >(undefined);
@@ -112,7 +138,12 @@ export default function Admin() {
 
   const loadData = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/users", {
+      const query = new URLSearchParams({
+        page: String(userPage),
+        pageSize: String(userPageSize),
+        search: deferredSearch,
+      });
+      const response = await fetch(`/api/admin/users?${query}`, {
         cache: "no-store",
         credentials: "same-origin",
       });
@@ -126,6 +157,7 @@ export default function Admin() {
         return;
       }
       setData(payload);
+      setUserPage(payload.pagination.page);
     } catch {
       setNotice({
         title: "Não foi possível carregar",
@@ -133,7 +165,7 @@ export default function Admin() {
         tone: "error",
       });
     }
-  }, []);
+  }, [deferredSearch, userPage, userPageSize]);
 
   const loadAiSettings = useCallback(async () => {
     try {
@@ -160,30 +192,20 @@ export default function Admin() {
   useEffect(() => {
     if (user?.role === "superadmin") {
       void loadData();
-      void loadAiSettings();
     }
-  }, [loadAiSettings, loadData, user?.role]);
+  }, [loadData, user?.role]);
 
-  const filteredUsers = useMemo(() => {
-    const normalized = search.trim().toLocaleLowerCase("pt-BR");
-    if (!normalized) return data?.users || [];
-    return (data?.users || []).filter(
-      (managedUser) =>
-        managedUser.username.toLocaleLowerCase("pt-BR").includes(normalized) ||
-        managedUser.whatsapp.includes(normalized)
-    );
-  }, [data?.users, search]);
+  useEffect(() => {
+    if (user?.role === "superadmin") void loadAiSettings();
+  }, [loadAiSettings, user?.role]);
 
-  const totals = useMemo(() => {
-    const users = data?.users || [];
+  function listContext(page = userPage) {
     return {
-      total: users.length,
-      active: users.filter((item) => userStatus(item).kind === "active").length,
-      attention: users.filter((item) =>
-        ["disabled", "expired"].includes(userStatus(item).kind)
-      ).length,
+      page,
+      pageSize: userPageSize,
+      search: deferredSearch,
     };
-  }, [data?.users]);
+  }
 
   function openCreateUser() {
     setFormError("");
@@ -200,11 +222,12 @@ export default function Admin() {
     setSaving(true);
     try {
       const response = await postData<
-        { type: "setRegistration"; enabled: boolean },
+        Record<string, unknown>,
         AdminResponse
       >("/api/admin/users", {
         type: "setRegistration",
         enabled: !data.registrationEnabled,
+        ...listContext(),
       });
       if ("errorDescription" in response) {
         throw new Error(response.errorDescription);
@@ -245,10 +268,12 @@ export default function Admin() {
           ? {
               type: "updateUser",
               userId: modalUser.id,
+              ...listContext(),
               ...values,
             }
           : {
               type: "createUser",
+              ...listContext(1),
               ...values,
             }
       );
@@ -257,6 +282,7 @@ export default function Admin() {
         return;
       }
       setData(response);
+      setUserPage(response.pagination.page);
       setModalUser(undefined);
       setNotice({
         title: editing ? "Usuário atualizado" : "Usuário criado",
@@ -279,16 +305,18 @@ export default function Admin() {
     setSaving(true);
     try {
       const response = await postData<
-        { type: "deleteUser"; userId: string },
+        Record<string, unknown>,
         AdminResponse
       >("/api/admin/users", {
         type: "deleteUser",
         userId: target.id,
+        ...listContext(),
       });
       if ("errorDescription" in response) {
         throw new Error(response.errorDescription);
       }
       setData(response);
+      setUserPage(response.pagination.page);
       setNotice({
         title: "Usuário excluído",
         message: `${target.username} e seus quizzes foram removidos do sistema.`,
@@ -348,18 +376,50 @@ export default function Admin() {
           <div className={styles.heroCopy}>
             <span className={styles.eyebrow}>Controle do sistema</span>
             <h1>Administração</h1>
-            <p>Cadastros, permissões e períodos de acesso em um só lugar.</p>
+            <p>Configure o sistema e gerencie as contas em áreas separadas.</p>
           </div>
+          {adminTab === "users" && (
+            <button
+              type="button"
+              className={styles.addUserButton}
+              onClick={openCreateUser}
+            >
+              <FiPlus aria-hidden="true" />
+              Adicionar usuário
+            </button>
+          )}
+        </div>
+
+        <div
+          className={styles.adminTabs}
+          role="tablist"
+          aria-label="Áreas da administração"
+        >
           <button
             type="button"
-            className={styles.addUserButton}
-            onClick={openCreateUser}
+            role="tab"
+            aria-selected={adminTab === "settings"}
+            className={adminTab === "settings" ? styles.adminTabActive : ""}
+            onClick={() => setAdminTab("settings")}
           >
-            <FiPlus aria-hidden="true" />
-            Adicionar usuário
+            <FiSettings aria-hidden="true" />
+            Configurações
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={adminTab === "users"}
+            className={adminTab === "users" ? styles.adminTabActive : ""}
+            onClick={() => setAdminTab("users")}
+          >
+            <FiUsers aria-hidden="true" />
+            Usuários
+            {data && <span>{data.totals.total}</span>}
           </button>
         </div>
 
+        {adminTab === "settings" && (
+          <>
         <section className={styles.registrationCard}>
           <div>
             <span className={styles.cardLabel}>Novos usuários</span>
@@ -564,26 +624,30 @@ export default function Admin() {
             </form>
           )}
         </section>
+          </>
+        )}
 
+        {adminTab === "users" && (
+          <>
         <div className={styles.stats}>
           <article>
             <FiUsers aria-hidden="true" />
             <div>
-              <strong>{totals.total}</strong>
+              <strong>{data?.totals.total || 0}</strong>
               <span>contas cadastradas</span>
             </div>
           </article>
           <article>
             <FiCheckCircle aria-hidden="true" />
             <div>
-              <strong>{totals.active}</strong>
+              <strong>{data?.totals.active || 0}</strong>
               <span>usuários com acesso</span>
             </div>
           </article>
           <article>
             <FiClock aria-hidden="true" />
             <div>
-              <strong>{totals.attention}</strong>
+              <strong>{data?.totals.attention || 0}</strong>
               <span>requerem atenção</span>
             </div>
           </article>
@@ -601,7 +665,10 @@ export default function Admin() {
               <input
                 type="search"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setUserPage(1);
+                }}
                 placeholder="Buscar por nome ou WhatsApp"
               />
             </label>
@@ -614,13 +681,13 @@ export default function Admin() {
             </div>
           )}
 
-          {data && filteredUsers.length === 0 && (
+          {data && data.users.length === 0 && (
             <div className={styles.empty}>Nenhum usuário encontrado.</div>
           )}
 
-          {data && filteredUsers.length > 0 && (
+          {data && data.users.length > 0 && (
             <div className={styles.userList}>
-              {filteredUsers.map((managedUser) => {
+              {data.users.map((managedUser) => {
                 const status = userStatus(managedUser);
                 const accessPeriod = getAccessPeriodSummary(managedUser);
                 const isCurrentUser = managedUser.id === user?._id;
@@ -694,7 +761,60 @@ export default function Admin() {
               })}
             </div>
           )}
+          {data && data.totals.total > 10 && (
+            <div className={styles.userPagination}>
+              <label>
+                <span>Exibir</span>
+                <SelectField
+                  density="compact"
+                  aria-label="Usuários por página"
+                  value={userPageSize}
+                  onChange={(event) => {
+                    setUserPageSize(
+                      Number(event.target.value) as AdminPageSize
+                    );
+                    setUserPage(1);
+                  }}
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={100}>100</option>
+                </SelectField>
+              </label>
+              <span>
+                Página <strong>{data.pagination.page}</strong> de{" "}
+                <strong>{data.pagination.totalPages}</strong>
+                {deferredSearch
+                  ? ` · ${data.pagination.total} encontrados`
+                  : ""}
+              </span>
+              <div>
+                <button
+                  type="button"
+                  disabled={data.pagination.page <= 1}
+                  onClick={() =>
+                    setUserPage((current) => Math.max(1, current - 1))
+                  }
+                >
+                  <FiChevronLeft aria-hidden="true" />
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    data.pagination.page >= data.pagination.totalPages
+                  }
+                  onClick={() => setUserPage((current) => current + 1)}
+                >
+                  Próxima
+                  <FiChevronRight aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          )}
         </section>
+          </>
+        )}
       </section>
 
       {modalUser !== undefined && (

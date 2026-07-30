@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import type { db } from "kahoot";
 import { requireAuthenticatedUser } from "@lib/auth";
-import { listGameSummaries } from "@lib/gameRepository";
+import { listGameSummaries, listPublicAuthors } from "@lib/gameRepository";
 import { listFolderOrganization } from "@lib/folderRepository";
 
 export interface APIRequest {
@@ -10,6 +10,7 @@ export interface APIRequest {
   pageSize?: 10 | 20 | 50;
   folderId?: string | "unfiled" | null;
   categoryId?: string | null;
+  authorId?: string | null;
   sort?: "newest" | "oldest";
 }
 
@@ -29,6 +30,7 @@ interface Success {
     unfiledCount: number;
   };
   pagination: Pagination;
+  publicAuthors: db.KahootAuthor[];
 }
 
 interface Error {
@@ -75,20 +77,28 @@ export default async function handler(
     UUID_PATTERN.test(request.categoryId)
       ? request.categoryId
       : null;
+  const authorId =
+    scope === "public" &&
+    typeof request.authorId === "string" &&
+    UUID_PATTERN.test(request.authorId)
+      ? request.authorId
+      : null;
   const sort = request.sort === "oldest" ? "oldest" : "newest";
 
   try {
-    const [library, organization] = await Promise.all([
+    const [library, organization, publicAuthors] = await Promise.all([
       listGameSummaries({
         userId: user._id,
         scope,
         folderId,
         categoryId,
+        authorId,
         sort,
         page,
         pageSize,
       }),
       listFolderOrganization(user._id),
+      scope === "public" ? listPublicAuthors() : Promise.resolve([]),
     ]);
 
     return res.status(200).json({
@@ -100,6 +110,7 @@ export default async function handler(
         unfiledCount: organization.unfiledCount,
       },
       pagination: library.pagination,
+      publicAuthors,
     });
   } catch (error) {
     console.error("Falha ao listar Kahoots", error);

@@ -38,6 +38,12 @@ export namespace db {
     gameCount: number;
   }
 
+  declare interface KahootAuthor {
+    id: string;
+    username: string;
+    gameCount: number;
+  }
+
   declare interface KahootFolder {
     id: string;
     name: string;

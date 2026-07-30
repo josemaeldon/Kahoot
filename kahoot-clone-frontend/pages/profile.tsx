@@ -77,7 +77,9 @@ function Profile() {
   const [games, setGames] = useState<db.KahootSummary[] | null>(null);
   const [folders, setFolders] = useState<db.KahootFolder[]>([]);
   const [categories, setCategories] = useState<db.KahootCategory[]>([]);
+  const [publicAuthors, setPublicAuthors] = useState<db.KahootAuthor[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedAuthor, setSelectedAuthor] = useState("all");
   const [publicSort, setPublicSort] = useState<PublicSort>("newest");
   const [ownedTotal, setOwnedTotal] = useState(0);
   const [unfiledCount, setUnfiledCount] = useState(0);
@@ -126,6 +128,10 @@ function Profile() {
           scope === "public" && selectedCategory !== "all"
             ? selectedCategory
             : null,
+        authorId:
+          scope === "public" && selectedAuthor !== "all"
+            ? selectedAuthor
+            : null,
         sort: publicSort,
       },
       aborter.signal
@@ -141,6 +147,7 @@ function Profile() {
         setOwnedTotal(response.organization.totalCount);
         setUnfiledCount(response.organization.unfiledCount);
         setPagination(response.pagination);
+        setPublicAuthors(response.publicAuthors);
       })
       .catch((cause) => {
         if ((cause as Error).name !== "AbortError") {
@@ -157,6 +164,7 @@ function Profile() {
     publicSort,
     refreshKey,
     scope,
+    selectedAuthor,
     selectedCategory,
     selectedFolder,
   ]);
@@ -205,6 +213,11 @@ function Profile() {
 
   function changeCategory(categoryId: string) {
     setSelectedCategory(categoryId);
+    setPage(1);
+  }
+
+  function changeAuthor(authorId: string) {
+    setSelectedAuthor(authorId);
     setPage(1);
   }
 
@@ -651,6 +664,23 @@ function Profile() {
               <div className={styles.filterControls}>
                 {scope === "public" && (
                   <>
+                    <label>
+                      <span>Usuário</span>
+                      <SelectField
+                        density="compact"
+                        containerClassName={styles.authorFilter}
+                        aria-label="Filtrar Kahoots por usuário"
+                        value={selectedAuthor}
+                        onChange={(event) => changeAuthor(event.target.value)}
+                      >
+                        <option value="all">Todos os usuários</option>
+                        {publicAuthors.map((author) => (
+                          <option value={author.id} key={author.id}>
+                            {author.username} ({author.gameCount})
+                          </option>
+                        ))}
+                      </SelectField>
+                    </label>
                     <label>
                       <span>Categoria</span>
                       <SelectField

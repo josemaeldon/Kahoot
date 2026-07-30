@@ -533,6 +533,10 @@
   min-width: 205px;
 }
 
+.filterControls .authorFilter {
+  min-width: 205px;
+}
+
 .quizGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -975,7 +979,8 @@
   }
 
   .filterControls label > span:last-child,
-  .filterControls .categoryFilter {
+  .filterControls .categoryFilter,
+  .filterControls .authorFilter {
     width: 100%;
   }
 
