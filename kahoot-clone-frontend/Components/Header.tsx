@@ -38,15 +38,12 @@ function Header({ authMode = false }: { authMode?: boolean }) {
 
           {!authMode && (
             <nav className={styles.navigation} aria-label="Navegação principal">
-              <Link
-                href="/"
-                className={`${styles.navLink} ${
-                  router.pathname === "/" ? styles.navLinkActive : ""
-                }`}
-              >
-                <FiHome aria-hidden="true" />
-                Início
-              </Link>
+              {router.pathname !== "/" && (
+                <Link href="/" className={styles.navLink}>
+                  <FiHome aria-hidden="true" />
+                  Início
+                </Link>
+              )}
               {loggedIn && (
                 <Link
                   href="/profile"

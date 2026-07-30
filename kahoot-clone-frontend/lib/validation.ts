@@ -141,6 +141,7 @@ export function validateGame(input: unknown): db.KahootGame {
     author_id: "",
     author_username: "",
     title,
+    isPublic: candidate.isPublic === true,
     categoryId,
     date: 0,
     questions,

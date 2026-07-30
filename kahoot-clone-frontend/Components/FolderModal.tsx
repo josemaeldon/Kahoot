@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useId, useRef, useState } from "react";
-import { FiFolderPlus } from "react-icons/fi";
+import { FiFolderPlus, FiTag } from "react-icons/fi";
 import styles from "@styles/FolderModal.module.css";
 
 interface FolderModalProps {
@@ -7,6 +7,7 @@ interface FolderModalProps {
   title: string;
   initialName?: string;
   pending?: boolean;
+  kind?: "folder" | "category";
   onClose: () => void;
   onSubmit: (name: string) => void;
 }
@@ -16,6 +17,7 @@ export default function FolderModal({
   title,
   initialName = "",
   pending = false,
+  kind = "folder",
   onClose,
   onSubmit,
 }: FolderModalProps) {
@@ -69,21 +71,29 @@ export default function FolderModal({
         aria-describedby={descriptionId}
       >
         <div className={styles.icon} aria-hidden="true">
-          <FiFolderPlus />
+          {kind === "category" ? <FiTag /> : <FiFolderPlus />}
         </div>
         <div className={styles.content}>
           <h2 id={titleId}>{title}</h2>
           <p id={descriptionId}>
-            Use um tema fácil de reconhecer para encontrar seus Kahoots.
+            {kind === "category"
+              ? "Use um nome claro para agrupar Kahoots do mesmo assunto."
+              : "Use um tema fácil de reconhecer para encontrar seus Kahoots."}
           </p>
           <form onSubmit={submit}>
-            <label htmlFor={`${titleId}-name`}>Nome da pasta</label>
+            <label htmlFor={`${titleId}-name`}>
+              Nome da {kind === "category" ? "categoria" : "pasta"}
+            </label>
             <input
               ref={inputRef}
               id={`${titleId}-name`}
               value={name}
               maxLength={80}
-              placeholder="Ex.: História, Ciências, Catequese"
+              placeholder={
+                kind === "category"
+                  ? "Ex.: História, Ciências, Catequese"
+                  : "Ex.: Turma 7º ano"
+              }
               onChange={(event) => setName(event.target.value)}
               required
             />
@@ -101,7 +111,9 @@ export default function FolderModal({
                 className={styles.saveButton}
                 disabled={pending || name.trim() === ""}
               >
-                {pending ? "Salvando..." : "Salvar pasta"}
+                {pending
+                  ? "Salvando..."
+                  : `Salvar ${kind === "category" ? "categoria" : "pasta"}`}
               </button>
             </div>
           </form>

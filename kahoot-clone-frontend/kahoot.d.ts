@@ -5,7 +5,7 @@ export namespace db {
     author_username: string;
     title: string;
     date: number; //Time since unix epoch
-    isPublic?: boolean;
+    isPublic: boolean;
     isDefault?: boolean;
     folderId?: string | null;
     folderName?: string | null;

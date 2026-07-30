@@ -1,5 +1,8 @@
 // Create WebSocket connection.
-const socket = new WebSocket("ws://servidor-kahoot.cloudbr.app/ws");
+const socketProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+const socket = new WebSocket(
+	`${socketProtocol}//${window.location.host}/ws`
+);
 // buttons
 const joinBtn = document.getElementById("joinBtn");
 // code box

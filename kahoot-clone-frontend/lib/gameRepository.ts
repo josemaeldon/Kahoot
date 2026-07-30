@@ -246,12 +246,19 @@ export async function createGame(
 ) {
   return withTransaction(async (client) => {
     const inserted = await client.query<{ id: string }>(
-      `insert into games (author_id, category_id, title)
-       select $1::uuid, c.id, $2
+      `insert into games (
+         author_id, category_id, title, is_public, published_at
+       )
+       select
+         $1::uuid,
+         c.id,
+         $2,
+         $4::boolean,
+         case when $4::boolean then now() else null end
        from categories c
        where c.id = $3::uuid
        returning id::text`,
-      [author._id, game.title, game.categoryId]
+      [author._id, game.title, game.categoryId, game.isPublic]
     );
     if (!inserted.rows[0]) {
       throw new Error("Categoria não encontrada.");
@@ -271,7 +278,15 @@ export async function updateGame(
   return withTransaction(async (client) => {
     const updated = await client.query<{ id: string }>(
       `update games g
-       set title = $1, category_id = c.id, updated_at = now()
+       set title = $1,
+           category_id = c.id,
+           is_public = $6::boolean,
+           published_at = case
+             when $6::boolean and g.is_public = false then now()
+             when $6::boolean then g.published_at
+             else null
+           end,
+           updated_at = now()
        from categories c
        where g.id = $2::uuid
          and (
@@ -280,7 +295,14 @@ export async function updateGame(
          )
          and c.id = $5::uuid
        returning g.id::text`,
-      [game.title, gameId, userId, isSuperadmin, game.categoryId]
+      [
+        game.title,
+        gameId,
+        userId,
+        isSuperadmin,
+        game.categoryId,
+        game.isPublic,
+      ]
     );
     if (!updated.rowCount) return false;
 

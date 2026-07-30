@@ -95,7 +95,6 @@ quando quiser apagar definitivamente o banco local.
 | `COOKIE_SECURE` | Use `true` quando a aplicação estiver publicada com HTTPS |
 | `APP_PORT` | Porta publicada pelo Compose; padrão `3000` |
 | `NEXT_PUBLIC_APP_URL` | URL pública opcional usada no QR Code |
-| `NEXT_PUBLIC_WS_URL` | URL WebSocket opcional; por padrão usa `/ws` na mesma origem |
 | `KAHOOT_IMAGE` | Imagem usada pelo Compose |
 
 Em produção, mantenha `COOKIE_SECURE=true` e publique a porta da aplicação
@@ -163,9 +162,9 @@ npm ci
 npm run dev
 ```
 
-Para o frontend local acessar os demais serviços, configure `DATABASE_URL`,
-`JWT_SECRET`, `COOKIE_SECURE=false` e, se o Rust estiver separado,
-`NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws`.
+Configure `DATABASE_URL`, `JWT_SECRET` e `COOKIE_SECURE=false`. O cliente usa
+exclusivamente `/ws` na mesma origem; na stack, o `server.cjs` encaminha esse
+upgrade para o backend Rust interno.
 
 ### Backend Rust
 

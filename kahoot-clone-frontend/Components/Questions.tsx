@@ -49,7 +49,7 @@ function Questions() {
       correctAnswer: 0,
       question: "",
       image: null,
-      time: 30,
+      time: 15,
     };
     const nextGame = {
       ...game,

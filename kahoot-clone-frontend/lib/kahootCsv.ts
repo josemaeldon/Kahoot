@@ -135,7 +135,7 @@ export function parseKahootCsv(rawSource: string): db.KahootGame {
       read(row, "resposta_4"),
     ];
     const correctAnswerValue = read(row, "resposta_correta");
-    const timeValue = read(row, "tempo_segundos") || "30";
+    const timeValue = read(row, "tempo_segundos") || "15";
 
     if (!question) {
       throw new KahootCsvError(
@@ -203,6 +203,7 @@ export function parseKahootCsv(rawSource: string): db.KahootGame {
     author_id: "",
     author_username: "",
     title,
+    isPublic: false,
     categoryId: "",
     date: 0,
     questions,

@@ -5,6 +5,7 @@ import {
   createCategory,
   deleteCategory,
   listCategories,
+  updateCategory,
 } from "@lib/categoryRepository";
 
 export type APIResponse =
@@ -33,6 +34,38 @@ export default async function handler(
       return res.status(201).json({
         error: false,
         category,
+        categories: await listCategories(user._id),
+      });
+    }
+    if (req.method === "PUT") {
+      const categoryId = req.body?.categoryId;
+      if (typeof categoryId !== "string" || !UUID_PATTERN.test(categoryId)) {
+        return res.status(400).json({
+          error: true,
+          errorDescription: "Categoria inválida.",
+        });
+      }
+      const result = await updateCategory(
+        categoryId,
+        req.body?.name,
+        user._id,
+        user.role === "superadmin"
+      );
+      if (result === "forbidden") {
+        return res.status(403).json({
+          error: true,
+          errorDescription: "Você não pode editar esta categoria.",
+        });
+      }
+      if (result === "not_found") {
+        return res.status(404).json({
+          error: true,
+          errorDescription: "Categoria não encontrada.",
+        });
+      }
+      return res.status(200).json({
+        error: false,
+        category: result,
         categories: await listCategories(user._id),
       });
     }
@@ -72,7 +105,7 @@ export default async function handler(
         categories: await listCategories(user._id),
       });
     }
-    res.setHeader("Allow", "GET, POST, DELETE");
+    res.setHeader("Allow", "GET, POST, PUT, DELETE");
     return res.status(405).json({
       error: true,
       errorDescription: "Método não permitido.",

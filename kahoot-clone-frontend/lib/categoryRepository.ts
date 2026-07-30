@@ -72,6 +72,71 @@ export async function createCategory(nameValue: unknown, userId: string) {
   return mapCategory(result.rows[0]);
 }
 
+export async function updateCategory(
+  categoryId: string,
+  nameValue: unknown,
+  userId: string,
+  isSuperadmin: boolean
+) {
+  const name = typeof nameValue === "string" ? nameValue.trim() : "";
+  if (name.length < 2 || name.length > 80) {
+    throw new Error("CATEGORY_NAME");
+  }
+  const slugBase = slugify(name);
+  if (!slugBase) throw new Error("CATEGORY_NAME");
+
+  const result = await query<CategoryRow>(
+    `update categories
+     set name = $1,
+         slug = case
+           when is_default then slug
+           else $2 || '-' || substr(md5(id::text), 1, 8)
+         end
+     where id = $3::uuid
+       and (
+         ($4::boolean = true)
+         or (is_default = false and created_by = $5::uuid)
+       )
+       and not exists (
+         select 1
+         from categories duplicate
+         where duplicate.id <> categories.id
+           and lower(duplicate.name) = lower($1)
+       )
+     returning
+       id::text,
+       name,
+       slug,
+       is_default as "isDefault",
+       (created_by = $5::uuid) as "createdByMe",
+       (select count(*)::int from games where category_id = categories.id)
+         as "gameCount"`,
+    [name, slugBase, categoryId, isSuperadmin, userId]
+  );
+  if (result.rows[0]) return mapCategory(result.rows[0]);
+
+  const existing = await query<{
+    isDefault: boolean;
+    createdByMe: boolean;
+    duplicateName: boolean;
+  }>(
+    `select
+       c.is_default as "isDefault",
+       (c.created_by = $2::uuid) as "createdByMe",
+       exists (
+         select 1 from categories duplicate
+         where duplicate.id <> c.id
+           and lower(duplicate.name) = lower($3)
+       ) as "duplicateName"
+     from categories c
+     where c.id = $1::uuid`,
+    [categoryId, userId, name]
+  );
+  if (!existing.rows[0]) return "not_found" as const;
+  if (existing.rows[0].duplicateName) throw new Error("CATEGORY_EXISTS");
+  return "forbidden" as const;
+}
+
 export async function deleteCategory(
   categoryId: string,
   userId: string,

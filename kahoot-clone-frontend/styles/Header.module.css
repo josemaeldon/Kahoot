@@ -260,10 +260,6 @@
     font-size: 13px;
   }
 
-  .secondaryAction {
-    display: none;
-  }
-
   .logoutButton {
     min-height: 40px;
   }
@@ -293,6 +289,16 @@
 }
 
 @media (max-width: 480px) {
+  .actions {
+    gap: 6px;
+  }
+
+  .primaryAction,
+  .secondaryAction {
+    padding: 0 9px;
+    font-size: 12px;
+  }
+
   .logoutButton span {
     display: none;
   }

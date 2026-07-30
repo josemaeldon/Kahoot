@@ -41,7 +41,7 @@ import {
   FiTrash2,
 } from "react-icons/fi";
 
-type LibraryScope = "mine" | "public";
+type LibraryScope = "mine" | "public" | "categories";
 type FolderFilter = "all" | "unfiled" | string;
 type PageSize = 10 | 20 | 50;
 type PublicSort = "newest" | "oldest";
@@ -56,6 +56,11 @@ interface Pagination {
 interface FolderDialogState {
   mode: "create" | "rename";
   folder?: db.KahootFolder;
+}
+
+interface CategoryDialogState {
+  mode: "create" | "rename";
+  category?: db.KahootCategory;
 }
 
 const initialPagination: Pagination = {
@@ -94,9 +99,15 @@ function Profile() {
   const [folderSaving, setFolderSaving] = useState(false);
   const [pendingFolderDelete, setPendingFolderDelete] =
     useState<db.KahootFolder | null>(null);
+  const [categoryDialog, setCategoryDialog] =
+    useState<CategoryDialogState | null>(null);
+  const [categorySaving, setCategorySaving] = useState(false);
+  const [pendingCategoryDelete, setPendingCategoryDelete] =
+    useState<db.KahootCategory | null>(null);
 
   useEffect(() => {
     if (!loggedIn) return;
+    if (scope === "categories") return;
 
     const aborter = new AbortController();
     setGames(null);
@@ -327,6 +338,62 @@ function Profile() {
     }
   }
 
+  async function submitCategory(name: string) {
+    if (!categoryDialog) return;
+    setCategorySaving(true);
+    try {
+      const response = await fetch("/api/categories", {
+        method: categoryDialog.mode === "create" ? "POST" : "PUT",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          categoryDialog.mode === "create"
+            ? { name }
+            : { categoryId: categoryDialog.category!.id, name }
+        ),
+      });
+      const payload = (await response.json()) as CategoriesResponse;
+      if (!("categories" in payload)) {
+        setError(payload.errorDescription);
+        return;
+      }
+      setCategories(payload.categories);
+      setCategoryDialog(null);
+      refreshLibrary();
+    } catch {
+      setError("Não foi possível salvar a categoria.");
+    } finally {
+      setCategorySaving(false);
+    }
+  }
+
+  async function deletePendingCategory() {
+    if (!pendingCategoryDelete) return;
+    const categoryId = pendingCategoryDelete.id;
+    setPendingCategoryDelete(null);
+    setCategorySaving(true);
+    try {
+      const response = await fetch("/api/categories", {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryId }),
+      });
+      const payload = (await response.json()) as CategoriesResponse;
+      if (!("categories" in payload)) {
+        setError(payload.errorDescription);
+        return;
+      }
+      setCategories(payload.categories);
+      if (selectedCategory === categoryId) setSelectedCategory("all");
+      refreshLibrary();
+    } catch {
+      setError("Não foi possível excluir a categoria.");
+    } finally {
+      setCategorySaving(false);
+    }
+  }
+
   const selectedFolderData = folders.find(
     (folder) => folder.id === selectedFolder
   );
@@ -385,13 +452,103 @@ function Profile() {
             <FiGlobe aria-hidden="true" />
             Kahoots públicos
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={scope === "categories"}
+            className={scope === "categories" ? styles.activeTab : ""}
+            onClick={() => changeScope("categories")}
+          >
+            <FiTag aria-hidden="true" />
+            Categorias
+            <span>{categories.length}</span>
+          </button>
         </div>
 
-        <div
-          className={`${styles.libraryShell} ${
-            scope === "public" ? styles.publicLibrary : ""
-          }`}
-        >
+        {scope === "categories" ? (
+          <section className={styles.categoryManager}>
+            <div className={styles.categoryManagerHeading}>
+              <div>
+                <span>Organização por assunto</span>
+                <h2>Gerenciar categorias</h2>
+                <p>
+                  Crie e gerencie suas categorias personalizadas.
+                  Categorias padrão são protegidas para usuários comuns.
+                </p>
+              </div>
+              <button
+                type="button"
+                className={styles.createButton}
+                onClick={() => setCategoryDialog({ mode: "create" })}
+              >
+                <FiPlus aria-hidden="true" />
+                Nova categoria
+              </button>
+            </div>
+            <div className={styles.categoryGrid}>
+              {categories.map((category) => {
+                const canManage =
+                  user?.role === "superadmin" ||
+                  (!category.isDefault && category.createdByMe);
+                return (
+                  <article className={styles.categoryCard} key={category.id}>
+                    <div className={styles.categoryCardIcon}>
+                      <FiTag aria-hidden="true" />
+                    </div>
+                    <div className={styles.categoryCardContent}>
+                      <div>
+                        <h3>{category.name}</h3>
+                        <span>
+                          {category.isDefault ? "Padrão" : "Personalizada"}
+                        </span>
+                      </div>
+                      <p>
+                        {category.gameCount}{" "}
+                        {category.gameCount === 1 ? "Kahoot" : "Kahoots"}
+                      </p>
+                    </div>
+                    <div className={styles.categoryCardActions}>
+                      {canManage ? (
+                        <>
+                          <button
+                            type="button"
+                            aria-label={`Editar categoria ${category.name}`}
+                            title="Editar categoria"
+                            disabled={categorySaving}
+                            onClick={() =>
+                              setCategoryDialog({
+                                mode: "rename",
+                                category,
+                              })
+                            }
+                          >
+                            <FiEdit2 aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Excluir categoria ${category.name}`}
+                            title="Excluir categoria"
+                            disabled={categorySaving}
+                            onClick={() => setPendingCategoryDelete(category)}
+                          >
+                            <FiTrash2 aria-hidden="true" />
+                          </button>
+                        </>
+                      ) : (
+                        <span>Somente leitura</span>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        ) : (
+          <div
+            className={`${styles.libraryShell} ${
+              scope === "public" ? styles.publicLibrary : ""
+            }`}
+          >
           {scope === "mine" && (
             <aside className={styles.folderPanel} aria-label="Pastas">
               <div className={styles.folderPanelHeading}>
@@ -788,7 +945,8 @@ function Profile() {
               </>
             )}
           </section>
-        </div>
+          </div>
+        )}
       </section>
 
       <FolderModal
@@ -800,6 +958,19 @@ function Profile() {
         pending={folderSaving}
         onClose={() => setFolderDialog(null)}
         onSubmit={(name) => void submitFolder(name)}
+      />
+      <FolderModal
+        open={categoryDialog !== null}
+        kind="category"
+        title={
+          categoryDialog?.mode === "rename"
+            ? "Editar categoria"
+            : "Criar categoria"
+        }
+        initialName={categoryDialog?.category?.name || ""}
+        pending={categorySaving}
+        onClose={() => setCategoryDialog(null)}
+        onSubmit={(name) => void submitCategory(name)}
       />
       <NoticeModal
         open={error !== ""}
@@ -855,6 +1026,21 @@ function Profile() {
         actionTone="danger"
         onClose={() => setPendingFolderDelete(null)}
         onAction={() => void deletePendingFolder()}
+      />
+      <NoticeModal
+        open={pendingCategoryDelete !== null}
+        title="Excluir categoria?"
+        messages={[
+          pendingCategoryDelete?.isDefault
+            ? "Os Kahoots padrão desta categoria serão excluídos. Os demais serão movidos para outra categoria."
+            : "Os Kahoots desta categoria serão movidos para outra categoria disponível.",
+        ]}
+        tone="warning"
+        closeLabel="Cancelar"
+        actionLabel="Excluir categoria"
+        actionTone="danger"
+        onClose={() => setPendingCategoryDelete(null)}
+        onAction={() => void deletePendingCategory()}
       />
     </main>
   );

@@ -48,7 +48,7 @@ const kahootSchema = {
             items: { type: "string" },
           },
           correctAnswer: { type: "integer", enum: [0, 1, 2, 3] },
-          time: { type: "integer", enum: [15, 30, 45, 60, 90] },
+          time: { type: "integer", enum: [15] },
         },
       },
     },
@@ -147,7 +147,7 @@ function parseGeneratedKahoot(
       !Number.isInteger(question.correctAnswer) ||
       question.correctAnswer < 0 ||
       question.correctAnswer > 3 ||
-      ![15, 30, 45, 60, 90].includes(question.time)
+      question.time !== 15
     ) {
       throw new Error(`A pergunta ${index + 1} retornada pela IA é inválida.`);
     }
@@ -269,6 +269,7 @@ export default async function handler(
             settings.systemInstructions,
             "Gere exatamente 10 perguntas. Cada pergunta deve ter exatamente 4 respostas distintas e apenas uma correta.",
             "O índice correctAnswer deve identificar a única resposta correta, usando valores de 0 a 3.",
+            "Use exatamente 15 segundos em todas as perguntas.",
             `A categoria obrigatória é "${category.name}". O conteúdo inteiro deve pertencer a essa categoria.`,
             `Crie o título no padrão dos Kahoots públicos: "${category.name} — [tema curto e específico]".`,
             "Crie perguntas originais. Não repita nem apenas reformule perguntas já existentes.",

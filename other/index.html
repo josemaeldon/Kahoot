@@ -10,7 +10,11 @@
   </body>
   <script type="text/javascript">
     // Create WebSocket connection.
-    const socket = new WebSocket("wss://ws.postman-echo.com/raw");
+    const socketProtocol =
+      window.location.protocol === "https:" ? "wss:" : "ws:";
+    const socket = new WebSocket(
+      `${socketProtocol}//${window.location.host}/ws`
+    );
 
     //  Listen for messages
     var receiveMessage = (e) => {

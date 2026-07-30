@@ -20,6 +20,8 @@ import {
   FiCpu,
   FiDownload,
   FiFileText,
+  FiGlobe,
+  FiLock,
   FiPlus,
   FiSave,
   FiTag,
@@ -69,6 +71,7 @@ const defaultGame: db.KahootGame = {
   author_id: "",
   author_username: "",
   title: "",
+  isPublic: false,
   categoryId: "",
   date: 0,
   questions: [
@@ -77,7 +80,7 @@ const defaultGame: db.KahootGame = {
       choices: ["", "", "", ""],
       question: "",
       image: null,
-      time: 30,
+      time: 15,
     },
   ],
 };
@@ -361,6 +364,7 @@ function Create() {
         _id: current._id,
         author_id: current.author_id,
         author_username: current.author_username,
+        isPublic: current.isPublic,
         categoryId: current.categoryId,
         date: current.date,
       }));
@@ -573,6 +577,33 @@ function Create() {
             </button>
           </form>
         )}
+        <fieldset className={styles.visibilitySelector}>
+          <legend>Visibilidade</legend>
+          <label>
+            <input
+              type="radio"
+              name="kahoot-visibility"
+              checked={!game.isPublic}
+              onChange={() =>
+                setGame((current) => ({ ...current, isPublic: false }))
+              }
+            />
+            <FiLock aria-hidden="true" />
+            Privado
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="kahoot-visibility"
+              checked={game.isPublic}
+              onChange={() =>
+                setGame((current) => ({ ...current, isPublic: true }))
+              }
+            />
+            <FiGlobe aria-hidden="true" />
+            Público
+          </label>
+        </fieldset>
       </section>
 
       <section className={styles.importBar} aria-label="Importação de Kahoot">
