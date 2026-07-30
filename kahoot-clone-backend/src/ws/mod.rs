@@ -32,8 +32,28 @@ use axum::{Extension, Router};
 use tokio::sync::{mpsc, watch};
 
 use futures::{SinkExt, StreamExt};
+use rand::{seq::SliceRandom, Rng};
 
 use self::state::State;
+
+fn randomize_answer_positions<R: Rng + ?Sized>(questions: &mut [Question], rng: &mut R) {
+    for question in questions {
+        let original_answer = question.answer;
+        let mut indexed_choices: Vec<(usize, String)> = std::mem::take(&mut question.choices)
+            .into_iter()
+            .enumerate()
+            .collect();
+        indexed_choices.shuffle(rng);
+        question.answer = indexed_choices
+            .iter()
+            .position(|(original_index, _)| *original_index == original_answer)
+            .expect("validated answer index must exist");
+        question.choices = indexed_choices
+            .into_iter()
+            .map(|(_, choice)| choice)
+            .collect();
+    }
+}
 
 /// Websocket api router.
 pub fn router() -> Router {
@@ -93,7 +113,7 @@ async fn handle_ws(mut socket: WebSocket, state: SharedState) {
 /// Handles room creation.
 ///
 /// The websocket will be treated as the "host" from now on.
-async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Question>) {
+async fn create_room(mut host: WebSocket, state: SharedState, mut questions: Vec<Question>) {
     tracing::debug!("Creating room...");
 
     if questions.is_empty()
@@ -105,6 +125,11 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
         };
         let _ = host.send(event.to_message()).await;
         return;
+    }
+
+    {
+        let mut rng = rand::thread_rng();
+        randomize_answer_positions(&mut questions, &mut rng);
     }
 
     let (action_tx, mut action_rx) = mpsc::channel(2048);
@@ -567,18 +592,18 @@ fn player_event(
 /// Websocket api testing
 #[cfg(test)]
 mod tests {
+    use super::randomize_answer_positions;
+    use crate::ws::api::{Action, HostEvent, Question, RankingEntry, UserEvent};
     use crate::ws::router;
-    use crate::ws::api::{
-        Action, HostEvent, Question, RankingEntry, UserEvent,
-    };
 
+    use futures::{SinkExt, StreamExt};
+    use rand::{rngs::StdRng, SeedableRng};
+    use serde::Serialize;
     use std::collections::HashSet;
     use std::sync::atomic::{AtomicU16, Ordering};
     use std::{net::SocketAddr, time::Duration};
     use tokio::net::TcpStream;
     use tokio_tungstenite::{connect_async, tungstenite::Message, WebSocketStream, MaybeTlsStream};
-    use futures::{StreamExt, SinkExt};
-    use serde::Serialize;
 
     // `let_assert` is a useful testing macro asserting a specific enum variant
     // and destructuring the variant to get its inner value.
@@ -738,6 +763,37 @@ mod tests {
         };
     }
 
+    #[test]
+    fn randomizes_choices_without_losing_the_correct_answer() {
+        let original = question! {
+            "Capital?", time: 30 => [
+                false => "Recife",
+                false => "Salvador",
+                true => "Brasilia",
+                false => "Manaus",
+            ]
+        };
+        let correct_choice = original.choices[original.answer].clone();
+        let mut observed_positions = HashSet::new();
+
+        for seed in 0..32 {
+            let mut questions = vec![original.clone()];
+            let mut rng = StdRng::seed_from_u64(seed);
+            randomize_answer_positions(&mut questions, &mut rng);
+            let randomized = &questions[0];
+            let mut original_choices = original.choices.clone();
+            let mut randomized_choices = randomized.choices.clone();
+            original_choices.sort();
+            randomized_choices.sort();
+
+            assert_eq!(original_choices, randomized_choices);
+            assert_eq!(randomized.choices[randomized.answer], correct_choice);
+            observed_positions.insert(randomized.answer);
+        }
+
+        assert_eq!(observed_positions.len(), original.choices.len());
+    }
+
     /// Tests a simple situation where there is one player and only one question.
     #[tokio::test]
     async fn one_player_and_question() {
@@ -770,8 +826,19 @@ mod tests {
             // Round begin event
             let_assert!(HostEvent::RoundBegin { question } = host_ws.recv().await.unwrap());
 
-            // Check if the question is the same
-            assert_eq!(question_clone, question);
+            // The content is preserved while the answer position may change.
+            assert_eq!(question_clone.question, question.question);
+            assert_eq!(question_clone.image, question.image);
+            assert_eq!(question_clone.time, question.time);
+            let mut original_choices = question_clone.choices.clone();
+            let mut randomized_choices = question.choices.clone();
+            original_choices.sort();
+            randomized_choices.sort();
+            assert_eq!(original_choices, randomized_choices);
+            assert_eq!(
+                question.choices[question.answer],
+                question_clone.choices[question_clone.answer]
+            );
 
             // User answered event
             let_assert!(HostEvent::UserAnswered { username } = host_ws.recv().await.unwrap());
@@ -811,11 +878,14 @@ mod tests {
                 } = user_ws.recv().await.unwrap()
             );
 
-            // Has correct choice count
-            assert_eq!(question.choices, choices);
+            let correct_choice = &question.choices[question.answer];
+            let answer = choices
+                .iter()
+                .position(|choice| choice == correct_choice)
+                .unwrap();
 
             // Send correct answer
-            user_ws.send(&Action::Answer { choice: question.answer }).await;
+            user_ws.send(&Action::Answer { choice: answer }).await;
 
             // Round end event
             let_assert!(

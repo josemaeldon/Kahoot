@@ -246,7 +246,16 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   await host.screenshot({ path: "/tmp/kahoot-host-question.png" });
   await expect(player.locator('[class*="answerGrid"] > button')).toHaveCount(2);
   await player.screenshot({ path: "/tmp/kahoot-player-answer-mobile.png" });
-  await player.locator('[class*="answerGrid"] > button').first().click();
+  const hostAnswers = host.locator('[class*="grid"] > article');
+  const correctAnswerPosition = await hostAnswers
+    .evaluateAll((answers) =>
+      answers.findIndex((answer) => answer.textContent?.trim() === "4")
+    );
+  expect(correctAnswerPosition).toBeGreaterThanOrEqual(0);
+  await player
+    .locator('[class*="answerGrid"] > button')
+    .nth(correctAnswerPosition)
+    .click();
   await expect(player.getByText(/Você acertou!/)).toBeVisible();
   await expect(player.getByText("Total: 1000 pontos")).toBeVisible();
   await player.screenshot({ path: "/tmp/kahoot-player-result-mobile.png" });
