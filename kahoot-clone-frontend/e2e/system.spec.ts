@@ -243,6 +243,13 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   await expect(
     host.getByAltText("Imagem da pergunta: Quanto é 2 + 2?")
   ).toBeVisible();
+  await host.getByRole("button", { name: "Sair", exact: true }).click();
+  const exitConfirmation = host.getByRole("alertdialog", {
+    name: "Sair da partida?",
+  });
+  await expect(exitConfirmation).toBeVisible();
+  await exitConfirmation.getByRole("button", { name: "Cancelar" }).click();
+  await expect(exitConfirmation).toBeHidden();
   await host.screenshot({ path: "/tmp/kahoot-host-question.png" });
   await expect(player.locator('[class*="answerGrid"] > button')).toHaveCount(2);
   await player.screenshot({ path: "/tmp/kahoot-player-answer-mobile.png" });
@@ -282,6 +289,20 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   await expect(player.getByPlaceholder("Game PIN")).toHaveValue("");
   await host.waitForTimeout(250);
   await host.screenshot({ path: "/tmp/kahoot-final-ranking.png" });
+
+  await host.goto(`/host?gameId=${gameId}`);
+  await expect(host.getByText("Game Pin:")).toBeVisible();
+  await host.setViewportSize({ width: 390, height: 844 });
+  await host.screenshot({ path: "/tmp/kahoot-host-exit-mobile.png" });
+  await host.getByRole("button", { name: "Sair", exact: true }).click();
+  const lobbyExitConfirmation = host.getByRole("alertdialog", {
+    name: "Sair da partida?",
+  });
+  await expect(lobbyExitConfirmation).toBeVisible();
+  await lobbyExitConfirmation
+    .getByRole("button", { name: "Sair e encerrar" })
+    .click();
+  await expect(host).toHaveURL("/profile");
 
   const mobileOverflow = await player.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth

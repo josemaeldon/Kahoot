@@ -23,7 +23,7 @@ import Image from "next/image";
 import { QRCodeSVG } from "qrcode.react";
 import { getWebSocketUrl } from "@lib/websocket";
 import NoticeModal from "@components/NoticeModal";
-import { FiMaximize2, FiMinimize2 } from "react-icons/fi";
+import { FiLogOut, FiMaximize2, FiMinimize2 } from "react-icons/fi";
 
 const HostContext = React.createContext<Context>(null);
 type Players = { username: string; points: number }[];
@@ -38,6 +38,7 @@ interface Context {
     React.SetStateAction<"lobby" | "questions" | "finished">
   >;
   gameFinishedRef: React.MutableRefObject<boolean>;
+  requestExit: () => void;
 }
 
 function formatPin(roomId: number) {
@@ -48,10 +49,13 @@ function formatPin(roomId: number) {
 function HostTopbar({
   action,
   onAction,
+  showExit = true,
 }: {
-  action: string;
-  onAction: () => void;
+  action?: string;
+  onAction?: () => void;
+  showExit?: boolean;
 }) {
+  const { requestExit } = useContext(HostContext);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -100,9 +104,21 @@ function HostTopbar({
           )}
           <span>{isFullscreen ? "Sair da tela cheia" : "Tela cheia"}</span>
         </button>
-        <button type="button" onClick={onAction}>
-          {action}
-        </button>
+        {showExit && (
+          <button
+            type="button"
+            className={styles.exitButton}
+            onClick={requestExit}
+          >
+            <FiLogOut aria-hidden="true" />
+            <span>Sair</span>
+          </button>
+        )}
+        {action && onAction && (
+          <button type="button" onClick={onAction}>
+            {action}
+          </button>
+        )}
       </div>
     </header>
   );
@@ -136,10 +152,7 @@ function JoinHeader() {
 
   return (
     <>
-      <HostTopbar
-        action="Recomeçar"
-        onAction={() => window.location.assign("/profile")}
-      />
+      <HostTopbar />
       <section className={styles.pinStage} aria-label="Dados da sala">
         <div className={styles.pinCopy}>
           <span>Game Pin:</span>
@@ -314,7 +327,7 @@ function QuestionDisplay({
   answered,
   timeLeft,
 }: QuestionDisplayProps) {
-  const { players, roomId } = useContext(HostContext);
+  const { players, requestExit, roomId } = useContext(HostContext);
   const colors = [qStyles.red, qStyles.blue, qStyles.yellow, qStyles.green];
 
   return (
@@ -327,9 +340,19 @@ function QuestionDisplay({
             <IoMdPerson aria-hidden="true" /> {players.length}
           </span>
         </div>
-        <button type="button" onClick={nextScreenHandler}>
-          Próximo
-        </button>
+        <div className={qStyles.topbarActions}>
+          <button
+            type="button"
+            className={qStyles.exitButton}
+            onClick={requestExit}
+          >
+            <FiLogOut aria-hidden="true" />
+            <span>Sair</span>
+          </button>
+          <button type="button" onClick={nextScreenHandler}>
+            Próximo
+          </button>
+        </div>
       </header>
 
       <section className={qStyles.container}>
@@ -606,6 +629,7 @@ function FinishedScreen() {
       <HostTopbar
         action="Meus quizzes"
         onAction={() => window.location.assign("/profile")}
+        showExit={false}
       />
       <section className={styles.rankingContent}>
         <span className={styles.eyebrow}>Partida concluída</span>
@@ -640,6 +664,7 @@ function Host() {
   const [game, setGame] = useState<db.KahootGame | null>(null);
   const [roomId, setRoomId] = useState<number | null>(null);
   const [connectionClosed, setConnectionClosed] = useState(false);
+  const [exitConfirmationOpen, setExitConfirmationOpen] = useState(false);
   const gameFinishedRef = useRef(false);
   const [error, setError] = useState("");
   const [phase, setPhase] = useState<"lobby" | "questions" | "finished">(
@@ -719,6 +744,15 @@ function Host() {
     }
   }, [connectionClosed]);
 
+  const exitGame = useCallback(() => {
+    gameFinishedRef.current = true;
+    setExitConfirmationOpen(false);
+    if (socket && socket.readyState < WebSocket.CLOSING) {
+      socket.close(1000, "Host encerrou a partida");
+    }
+    void router.push("/profile");
+  }, [router, socket]);
+
   if (error) {
     return (
       <>
@@ -757,11 +791,25 @@ function Host() {
         setPlayers,
         setPhase,
         gameFinishedRef,
+        requestExit: () => setExitConfirmationOpen(true),
       }}
     >
       {phase === "lobby" && <StartScreen />}
       {phase === "questions" && <QuestionsPhase />}
       {phase === "finished" && <FinishedScreen />}
+      <NoticeModal
+        open={exitConfirmationOpen}
+        title="Sair da partida?"
+        messages={[
+          "A sala será encerrada e todos os jogadores serão desconectados.",
+        ]}
+        tone="warning"
+        closeLabel="Cancelar"
+        actionLabel="Sair e encerrar"
+        actionTone="danger"
+        onClose={() => setExitConfirmationOpen(false)}
+        onAction={exitGame}
+      />
     </HostContext.Provider>
   );
 }

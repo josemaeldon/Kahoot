@@ -61,9 +61,23 @@
   background: var(--color-surface-muted);
 }
 
-.fullscreenButton svg {
+.fullscreenButton svg,
+.exitButton svg {
   width: 18px;
   height: 18px;
+}
+
+.hostTopbar .exitButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-danger);
+}
+
+.hostTopbar .exitButton:hover {
+  color: white;
+  border-color: var(--color-danger);
+  background: var(--color-danger);
 }
 
 .hostTopbar button:hover {
@@ -462,6 +476,10 @@
     width: 42px;
     padding: 0;
     justify-content: center;
+  }
+
+  .hostTopbar .exitButton {
+    padding-inline: 13px;
   }
 
   .pinStage {

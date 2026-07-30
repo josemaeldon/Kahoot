@@ -39,8 +39,14 @@
   gap: 5px;
 }
 
-.topbar button {
+.topbarActions {
   justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbarActions button {
   min-height: 40px;
   padding: 0 18px;
   border: 0;
@@ -52,8 +58,22 @@
   transition: transform var(--transition-fast);
 }
 
-.topbar button:hover {
+.topbarActions button:hover {
   transform: translateY(-1px);
+}
+
+.topbarActions .exitButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.exitButton svg {
+  width: 17px;
+  height: 17px;
 }
 
 .container {
@@ -228,6 +248,10 @@
 
   .sessionData {
     display: none;
+  }
+
+  .topbarActions button {
+    padding-inline: 13px;
   }
 
   .container {
