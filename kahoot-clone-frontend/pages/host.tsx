@@ -1,6 +1,12 @@
 import useUser from "@lib/useSSRUser";
 import { useRouter } from "next/router";
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import styles from "@styles/host.module.css";
 import { IoMdPerson } from "react-icons/io";
 import type { action, db, HostEvent, rustServerQuestion } from "kahoot";
@@ -415,6 +421,7 @@ function QuestionsPhase() {
   const [subscreen, setSubscreen] = useState<
     "question" | "results" | "leaderboard"
   >("question");
+  const advanceLockedRef = useRef(false);
 
   useEffect(() => {
     const aborter = new AbortController();
@@ -492,19 +499,17 @@ function QuestionsPhase() {
     return () => window.clearInterval(timerId);
   }, [question, socket]);
 
-  if (!question) {
-    return (
-      <main className={styles.loadingScreen}>
-        <span className="appSpinner" />
-        <p>Preparando a primeira pergunta...</p>
-      </main>
-    );
-  }
+  useEffect(() => {
+    advanceLockedRef.current = false;
+  }, [question, subscreen]);
 
-  function nextScreenHandler() {
+  const nextScreenHandler = useCallback(() => {
+    if (advanceLockedRef.current) return;
+    advanceLockedRef.current = true;
+
     switch (subscreen) {
       case "question": {
-        clearInterval(timer.timer);
+        window.clearInterval(timer.timer);
         const endRoundRequest: action.EndRound = { type: "endRound" };
         socket.send(JSON.stringify(endRoundRequest));
         break;
@@ -518,6 +523,42 @@ function QuestionsPhase() {
         break;
       }
     }
+  }, [socket, subscreen, timer.timer]);
+
+  useEffect(() => {
+    if (!question) return;
+
+    const advanceWithArrowKey = (event: KeyboardEvent) => {
+      if (
+        event.repeat ||
+        (event.key !== "ArrowRight" && event.key !== "ArrowLeft")
+      ) {
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.isContentEditable ||
+        target?.matches("input, textarea, select")
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      nextScreenHandler();
+    };
+
+    document.addEventListener("keydown", advanceWithArrowKey);
+    return () => document.removeEventListener("keydown", advanceWithArrowKey);
+  }, [nextScreenHandler, question]);
+
+  if (!question) {
+    return (
+      <main className={styles.loadingScreen}>
+        <span className="appSpinner" />
+        <p>Preparando a primeira pergunta...</p>
+      </main>
+    );
   }
 
   return (
