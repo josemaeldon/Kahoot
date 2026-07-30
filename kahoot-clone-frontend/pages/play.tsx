@@ -375,6 +375,7 @@ function FinalRanking({
 }
 
 function Play() {
+  const router = useRouter();
   const [points, setPoints] = useState(0);
   const [username, setUsername] = useState("");
   const [subpage, setSubpage] = useState<PlayerSubpage>("StartScreen");
@@ -672,14 +673,17 @@ function Play() {
     socketRef.current = null;
     sessionRef.current = null;
     window.sessionStorage.removeItem(PLAYER_SESSION_KEY);
-    setPoints(0);
-    setSubpageData(null);
-    setUsername("");
-    setConnectionStatus("idle");
-    setSubpage("StartScreen");
-    window.setTimeout(() => {
-      stoppedRef.current = false;
-    }, 0);
+    void router
+      .replace("/play", undefined, { shallow: true })
+      .then(() => {
+        setPoints(0);
+        setSubpageData(null);
+        setUsername("");
+        setConnectionStatus("idle");
+        setSubpage("StartScreen");
+        stoppedRef.current = false;
+      })
+      .catch(() => window.location.assign("/play"));
   }
 
   return (
