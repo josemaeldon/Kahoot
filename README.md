@@ -1,236 +1,97 @@
 # Kahoot
 
-Jogo multiplayer de perguntas e respostas com criação de quizzes, salas ao
-vivo, respostas em tempo real e classificação.
+Plataforma web de quizzes multiplayer em tempo real. Usuários podem criar,
+importar, organizar e publicar Kahoots; anfitriões abrem salas com PIN; e
+jogadores participam pelo navegador sem precisar de conta.
+
+## Recursos
+
+- cadastro, login e sessão em cookie HTTP-only;
+- editor de quizzes com categorias, pastas, CSV e imagens;
+- biblioteca pública e catálogo inicial de Kahoots;
+- partidas ao vivo com PIN, pontuação, ranking e reconexão de jogadores;
+- administração de usuários, períodos de acesso e novos cadastros;
+- geração opcional de quizzes com a API da OpenAI;
+- execução em Docker Swarm com PostgreSQL e publicação automática no GHCR.
 
 ## Arquitetura
 
-O sistema usa:
-
-- **Next.js 16 e React 19** para frontend e API HTTP.
-- **PostgreSQL 17** para usuários, quizzes, perguntas e alternativas.
-- **Rust, Tokio e Axum** para as partidas via WebSocket.
-- **Uma única imagem Docker** para frontend + backend.
-
 ```mermaid
 flowchart LR
-    H[Anfitrião] -->|HTTPS| N[Next.js + API]
-    P[Jogador] -->|WebSocket /ws| R[Backend Rust]
-    N <--> DB[(PostgreSQL)]
-    H -->|WebSocket /ws| R
+    U[Navegador] -->|HTTP / API| N[Next.js]
+    U -->|WebSocket /ws| P[Proxy Node]
+    P --> R[Servidor Rust]
+    N --> D[(PostgreSQL)]
+    P --> N
 ```
 
-A imagem inicia os dois processos e expõe somente a porta `3000`. O servidor
-Node encaminha conexões em `/ws` internamente para o backend Rust.
+O container da aplicação reúne o servidor Next.js, o proxy Node e o binário
+Rust. O proxy publica a porta `3000`, entrega o tráfego HTTP ao Next.js e
+encaminha `/ws` ao Rust na porta interna `8000`. O PostgreSQL roda em um serviço
+separado e persiste os dados em volume.
 
-O PostgreSQL é um serviço separado porque seus dados precisam sobreviver à
-substituição ou atualização da imagem da aplicação.
+## Início rápido para desenvolvimento
 
-## Imagem no GHCR
+Requisitos:
 
-O pacote está privado no GHCR. Faça login com uma conta que tenha acesso:
+- Node.js 22 ou superior;
+- Rust 1.88 ou compatível;
+- PostgreSQL 17;
+- Google Chrome apenas para os testes E2E.
 
-```bash
-docker login ghcr.io
-```
-
-Depois:
-
-```bash
-docker pull ghcr.io/josemaeldon/kahoot:latest
-```
-
-Tags publicadas:
-
-- `ghcr.io/josemaeldon/kahoot:latest`
-- `ghcr.io/josemaeldon/kahoot:1.0.0`
-
-As duas tags usam somente a plataforma `linux/amd64`.
-
-## Executar com Docker Compose
-
-1. Copie o arquivo de exemplo:
-
-```bash
-cp .env.example .env
-```
-
-2. Troque `POSTGRES_PASSWORD` e `JWT_SECRET` por valores fortes.
-
-3. Inicie o sistema:
-
-```bash
-docker compose up -d
-```
-
-4. Abra:
-
-```text
-http://localhost:3000
-```
-
-Para acompanhar o estado:
-
-```bash
-docker compose ps
-docker compose logs -f app
-```
-
-Para encerrar sem apagar o banco:
-
-```bash
-docker compose down
-```
-
-O volume `postgres_data` mantém os dados. Use `docker compose down -v` somente
-quando quiser apagar definitivamente o banco local.
-
-## Variáveis de ambiente
-
-| Variável | Finalidade |
-| --- | --- |
-| `DATABASE_URL` | URL completa de conexão com o PostgreSQL |
-| `DATABASE_POOL_SIZE` | Tamanho do pool usado pela API; padrão `10` |
-| `JWT_SECRET` | Segredo de assinatura da sessão, mínimo de 32 caracteres |
-| `COOKIE_SECURE` | Use `true` quando a aplicação estiver publicada com HTTPS |
-| `APP_PORT` | Porta publicada pelo Compose; padrão `3000` |
-| `NEXT_PUBLIC_APP_URL` | URL pública opcional usada no QR Code |
-| `KAHOOT_IMAGE` | Imagem usada pelo Compose |
-
-Em produção, mantenha `COOKIE_SECURE=true` e publique a porta da aplicação
-atrás de HTTPS.
-
-## Banco de dados
-
-O esquema está em [`db/migrations`](./db/migrations).
-
-Tabelas:
-
-- `users`: contas e hashes de senha.
-- `games`: título, autor e datas do quiz.
-- `questions`: texto, imagem opcional, posição, tempo e índice da resposta
-  correta.
-- `choices`: alternativas de cada pergunta.
-- `schema_migrations`: histórico das migrações aplicadas.
-
-As relações usam `ON DELETE CASCADE`. Há índices no nome normalizado do
-usuário, no autor/data dos quizzes e nas chaves/posições de perguntas e
-alternativas.
-
-As migrações são executadas automaticamente antes da aplicação iniciar. Uma
-migração já aplicada não pode ser alterada; crie um novo arquivo SQL para cada
-mudança futura.
-
-## Autenticação e autorização
-
-- Senhas recebem hash com `bcrypt`, fator 12.
-- A sessão é um JWT com duração de sete dias.
-- O token fica somente em cookie HTTP-only.
-- Consulta, atualização e exclusão de quiz sempre filtram também pelo
-  `author_id` da sessão.
-- Requisições HTTP e dados enviados ao WebSocket passam por validação.
-- As consultas PostgreSQL usam parâmetros, sem interpolação de entrada do
-  usuário.
-
-## Fluxo da partida
-
-1. O anfitrião entra na conta, cria um quiz e escolhe **Jogar**.
-2. O frontend carrega o quiz e envia `createRoom` pelo WebSocket.
-3. O backend valida as perguntas e gera um PIN exclusivo de seis dígitos.
-4. Jogadores entram em `/play` com PIN e nome.
-5. Nomes duplicados, PIN inexistente e entrada depois do início são recusados.
-6. O anfitrião inicia a rodada.
-7. Cada jogador envia apenas uma resposta.
-8. A rodada termina quando todos respondem, o tempo acaba ou o anfitrião
-   avança.
-9. O primeiro acerto vale 1.000 pontos; os próximos acertos da rodada recebem
-   pontuação progressivamente menor.
-10. Depois da última rodada, anfitrião e jogadores recebem `gameEnd`.
-
-As salas são efêmeras e ficam na memória do backend Rust. Reiniciar o container
-encerra partidas ativas, mas não apaga usuários nem quizzes do PostgreSQL.
-
-## Desenvolvimento
-
-### Frontend
-
-Requer Node.js 22 ou superior:
+Instale e valide os módulos isoladamente:
 
 ```bash
 cd kahoot-clone-frontend
 npm ci
-npm run dev
-```
-
-Configure `DATABASE_URL`, `JWT_SECRET` e `COOKIE_SECURE=false`. O cliente usa
-exclusivamente `/ws` na mesma origem; na stack, o `server.cjs` encaminha esse
-upgrade para o backend Rust interno.
-
-### Backend Rust
-
-```bash
-cd kahoot-clone-backend
-cargo run
-```
-
-O backend escuta na porta `8000` por padrão:
-
-- `GET /health`
-- `GET /ws` com upgrade para WebSocket
-
-## Testes
-
-### Frontend e TypeScript
-
-```bash
-cd kahoot-clone-frontend
 npm run typecheck
 npm run build
-```
 
-### Teste de ponta a ponta
-
-Com o Compose em execução e Google Chrome instalado:
-
-```bash
-cd kahoot-clone-frontend
-npm run test:e2e
-```
-
-O teste automatizado cobre:
-
-- cadastro e sessão;
-- criação e persistência de quiz no PostgreSQL;
-- criação de sala e PIN;
-- entrada de jogador em viewport móvel;
-- rodada, resposta, pontuação e resultado final;
-- console do navegador e overflow horizontal.
-
-### Backend
-
-```bash
-cd kahoot-clone-backend
+cd ../kahoot-clone-backend
 cargo test --locked
 ```
 
-Os testes do Rust cobrem criação e entrada em sala, sala inexistente, nome
-duplicado e entrada/saída.
+Para executar o sistema completo localmente, incluindo banco, migrações,
+frontend e WebSocket, consulte o
+[guia de desenvolvimento](docs/DEVELOPMENT.md).
 
-### Auditoria
+## Implantação
+
+O arquivo `docker-compose.yml` é uma stack de produção para Docker Swarm,
+Traefik e a rede externa `cloudbrnet`. Ele não é um Compose local genérico.
 
 ```bash
-cd kahoot-clone-frontend
-npm audit
+cp .env.example .env
+# edite os segredos antes de continuar
+set -a
+. ./.env
+set +a
+docker stack deploy --with-registry-auth -c docker-compose.yml kahoot
 ```
 
-## Estrutura principal
+A imagem padrão é `ghcr.io/josemaeldon/kahoot:latest`. O workflow
+`.github/workflows/docker-publish.yml` publica `latest` e
+`sha-<commit>` para `linux/amd64` após alterações na branch `main`.
 
-| Caminho | Conteúdo |
+## Documentação
+
+- [Arquitetura e modelo de dados](docs/ARCHITECTURE.md)
+- [Configuração e implantação](docs/CONFIGURATION.md)
+- [Desenvolvimento e testes](docs/DEVELOPMENT.md)
+- [API HTTP e protocolo WebSocket](docs/API.md)
+
+## Estrutura
+
+| Caminho | Responsabilidade |
 | --- | --- |
-| `db/migrations` | Esquema PostgreSQL versionado |
-| `kahoot-clone-frontend/pages` | Telas e API HTTP |
-| `kahoot-clone-frontend/lib` | Banco, sessão, validação e repositórios |
-| `kahoot-clone-frontend/e2e` | Teste Playwright do sistema completo |
-| `kahoot-clone-backend/src/ws` | Salas, protocolo e pontuação |
-| `Dockerfile` | Build multi-stage de frontend + backend |
-| `docker-compose.yml` | Aplicação e PostgreSQL |
+| `kahoot-clone-frontend/` | Interface Next.js, API HTTP e proxy de produção |
+| `kahoot-clone-backend/` | servidor de partidas WebSocket em Rust |
+| `db/migrations/` | esquema, índices e dados iniciais do PostgreSQL |
+| `.github/workflows/` | build e publicação da imagem Docker |
+| `Dockerfile` | build multi-stage e imagem única da aplicação |
+| `docker-compose.yml` | stack de produção para Docker Swarm |
+
+## Licença e marca
+
+Este repositório não declara uma licença de código aberto. “Kahoot!” é marca de
+seus respectivos proprietários; este projeto é uma implementação independente.

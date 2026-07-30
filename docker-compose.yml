@@ -27,7 +27,7 @@ services:
         condition: on-failure
 
   kahoot_app:
-    image: ghcr.io/josemaeldon/kahoot:latest
+    image: "${KAHOOT_IMAGE:-ghcr.io/josemaeldon/kahoot:latest}"
     environment:
       DATABASE_URL: "postgresql://postgres:${KAHOOT_DB_PASSWORD:?Defina KAHOOT_DB_PASSWORD}@kahoot_postgres:5432/kahoot_db"
       DATABASE_POOL_SIZE: "10"

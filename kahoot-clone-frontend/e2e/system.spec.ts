@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 import jwt from "jsonwebtoken";
-import path from "node:path";
 
 const baseUrl = process.env.E2E_BASE_URL || "http://127.0.0.1:3000";
 const testAiGeneration = process.env.E2E_AI_ENABLED === "true";
@@ -209,9 +208,14 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   await host.locator('[data-placeholder="Resposta 2"]').fill("3");
   await host
     .locator('input[accept="image/jpeg,image/png,image/webp"]')
-    .setInputFiles(
-      path.resolve(process.cwd(), "../design/concepts/home-desktop.png")
-    );
+    .setInputFiles({
+      name: "question.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+        "base64"
+      ),
+    });
   await expect(
     host.getByAltText("Prévia da imagem da questão")
   ).toBeVisible();
