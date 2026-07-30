@@ -1,9 +1,11 @@
 use super::api::{RankingEntry, RoomId};
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
-use tokio::sync::{mpsc, watch, oneshot};
+use tokio::sync::{mpsc, watch};
 
 // `Arc` is an "atomic reference counter" which allows multiple ownership
 // of values across threads.
@@ -24,16 +26,31 @@ pub struct Room {
     pub users: Users,
     pub action_stream: mpsc::Sender<PlayerAnswer>,
     pub result_stream: watch::Receiver<GameEvent>,
+    pub scores: Arc<Mutex<HashMap<String, u32>>>,
 }
 
 pub struct Users {
-    pub users: Arc<Mutex<UserMap>>,
+    users: Arc<Mutex<UserMap>>,
     event_stream: mpsc::Sender<PlayerEvent>,
+    next_connection_id: AtomicU64,
+    reconnect_grace: Duration,
 }
 
-type UserMap = HashSet<String>;
+struct UserSession {
+    token: String,
+    connection_id: u64,
+    connected: bool,
+}
 
-pub struct UserPresence(String, Arc<Mutex<UserMap>>, Option<oneshot::Sender<()>>);
+type UserMap = HashMap<String, UserSession>;
+
+pub struct UserPresence {
+    username: String,
+    connection_id: u64,
+    users: Arc<Mutex<UserMap>>,
+    event_stream: mpsc::Sender<PlayerEvent>,
+    reconnect_grace: Duration,
+}
 
 pub struct PlayerAnswer {
     pub username: String,
@@ -86,37 +103,68 @@ impl State {
 
 impl Users {
     pub fn new() -> (Self, mpsc::Receiver<PlayerEvent>) {
-        let (tx, rx) = mpsc::channel(30);
+        // Accommodates bursts of joins without making 500+ clients wait for
+        // the host UI to render each name before accepting the next socket.
+        let (tx, rx) = mpsc::channel(2048);
 
-        let users = Arc::new(Mutex::new(HashSet::new()));
+        let users = Arc::new(Mutex::new(HashMap::new()));
 
         let users = Self {
             users,
             event_stream: tx,
+            next_connection_id: AtomicU64::new(1),
+            reconnect_grace: reconnect_grace(),
         };
 
         (users, rx)
     }
 
-    pub fn player_count(&self) -> usize {
-        self.users.lock().unwrap().len()
+    pub fn connected_player_count(&self) -> usize {
+        self.users
+            .lock()
+            .unwrap()
+            .values()
+            .filter(|session| session.connected)
+            .count()
+    }
+
+    pub fn usernames(&self) -> Vec<String> {
+        self.users.lock().unwrap().keys().cloned().collect()
+    }
+
+    pub fn is_current_connection(&self, name: &str, connection_id: u64) -> bool {
+        self.users
+            .lock()
+            .unwrap()
+            .get(name)
+            .is_some_and(|session| {
+                session.connected && session.connection_id == connection_id
+            })
     }
 
     /// Tries to add a user to the user map.
-    /// Returns a `Some(UserPresence)` on success and `None` on failure.
-    pub async fn join_user(&self, name: String) -> Option<UserPresence> {
+    /// Returns the connection presence and a private resume token on success.
+    pub async fn join_user(&self, name: String) -> Option<(UserPresence, String)> {
+        let connection_id = self.next_connection_id.fetch_add(1, Ordering::Relaxed);
+        let token = format!("{:016x}{:016x}", rand::random::<u64>(), rand::random::<u64>());
         {
             tracing::debug!("Accquiring users lock to add new user...");
             let mut users = self.users.lock().unwrap();
             tracing::debug!("Lock accquired.");
 
-            if users.contains(&name) {
+            if users.contains_key(&name) {
                 return None;
             }
 
             tracing::debug!("Adding `{name}`...");
-            let name = name.clone();
-            users.insert(name);
+            users.insert(
+                name.clone(),
+                UserSession {
+                    token: token.clone(),
+                    connection_id,
+                    connected: true,
+                },
+            );
 
             tracing::debug!("User added.");
         }
@@ -127,36 +175,100 @@ impl Users {
             .send(PlayerEvent::Joined(name.clone()))
             .await;
 
-        // Copy the necessary values
-        let user_map = Arc::clone(&self.users);
-        let event_stream = self.event_stream.clone();
-        let username = name.clone();
-        
-        // Set up oneshot channel for leave message
-        let (leave_tx, leave_rx) = oneshot::channel();
-        tokio::spawn(async move {
-            // Wait for oneshot leave message
-            let _ = leave_rx.await;
-            // Emit player event to host
-            let _ = event_stream.send(PlayerEvent::Left(username)).await;
-        });
+        Some((
+            self.presence(name, connection_id),
+            token,
+        ))
+    }
 
-        Some(UserPresence(name, user_map, Some(leave_tx)))
+    /// Reconnects an existing player without losing their identity or score.
+    /// The newest connection supersedes any older socket using the same token.
+    pub fn resume_user(&self, name: &str, token: &str) -> Option<UserPresence> {
+        let connection_id = self.next_connection_id.fetch_add(1, Ordering::Relaxed);
+        {
+            let mut users = self.users.lock().unwrap();
+            let session = users.get_mut(name)?;
+            if session.token != token {
+                return None;
+            }
+            session.connection_id = connection_id;
+            session.connected = true;
+        }
+
+        Some(self.presence(name.to_owned(), connection_id))
+    }
+
+    fn presence(&self, username: String, connection_id: u64) -> UserPresence {
+        UserPresence {
+            username,
+            connection_id,
+            users: Arc::clone(&self.users),
+            event_stream: self.event_stream.clone(),
+            reconnect_grace: self.reconnect_grace,
+        }
     }
 }
 
 impl Drop for UserPresence {
-    /// Removes user from user map and emits a signal.
+    /// Marks the player offline, but keeps the session long enough for mobile
+    /// network changes, proxy resets and suspended browser tabs to reconnect.
     fn drop(&mut self) {
-        let UserPresence(name, user_map, leave_tx) = self;
-
-        // Emit event and ignore any errors
-        if let Some(tx) = leave_tx.take() {
-            let _ = tx.send(());
+        {
+            let mut users = self.users.lock().unwrap();
+            let Some(session) = users.get_mut(&self.username) else {
+                return;
+            };
+            if session.connection_id != self.connection_id {
+                return;
+            }
+            session.connected = false;
         }
 
-        // Remove from user map
-        let mut user_map = user_map.lock().unwrap();
-        user_map.remove(name);
+        let username = self.username.clone();
+        let connection_id = self.connection_id;
+        let users = Arc::clone(&self.users);
+        let event_stream = self.event_stream.clone();
+        let reconnect_grace = self.reconnect_grace;
+
+        tokio::spawn(async move {
+            tokio::time::sleep(reconnect_grace).await;
+            let removed = {
+                let mut users = users.lock().unwrap();
+                let should_remove = users.get(&username).is_some_and(|session| {
+                    !session.connected && session.connection_id == connection_id
+                });
+                if should_remove {
+                    users.remove(&username);
+                }
+                should_remove
+            };
+
+            if removed {
+                let _ = event_stream.send(PlayerEvent::Left(username)).await;
+            }
+        });
+    }
+}
+
+impl UserPresence {
+    pub fn connection_id(&self) -> u64 {
+        self.connection_id
+    }
+}
+
+fn reconnect_grace() -> Duration {
+    #[cfg(test)]
+    {
+        return Duration::from_millis(50);
+    }
+
+    #[cfg(not(test))]
+    {
+        let seconds = std::env::var("PLAYER_RECONNECT_GRACE_SECONDS")
+            .ok()
+            .and_then(|value| value.parse::<u64>().ok())
+            .unwrap_or(120)
+            .clamp(30, 3600);
+        Duration::from_secs(seconds)
     }
 }

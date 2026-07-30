@@ -17,6 +17,7 @@ import Image from "next/image";
 import { QRCodeSVG } from "qrcode.react";
 import { getWebSocketUrl } from "@lib/websocket";
 import NoticeModal from "@components/NoticeModal";
+import { FiMaximize2, FiMinimize2 } from "react-icons/fi";
 
 const HostContext = React.createContext<Context>(null);
 type Players = { username: string; points: number }[];
@@ -45,6 +46,29 @@ function HostTopbar({
   action: string;
   onAction: () => void;
 }) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const updateFullscreenState = () =>
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    updateFullscreenState();
+    document.addEventListener("fullscreenchange", updateFullscreenState);
+    return () =>
+      document.removeEventListener("fullscreenchange", updateFullscreenState);
+  }, []);
+
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch (cause) {
+      console.error("Não foi possível alterar o modo de tela cheia", cause);
+    }
+  }
+
   return (
     <header className={styles.hostTopbar}>
       <Image
@@ -55,9 +79,25 @@ function HostTopbar({
         priority
       />
       <p>Abra no celular e participe da partida.</p>
-      <button type="button" onClick={onAction}>
-        {action}
-      </button>
+      <div className={styles.hostTopbarActions}>
+        <button
+          type="button"
+          className={styles.fullscreenButton}
+          onClick={() => void toggleFullscreen()}
+          aria-label={isFullscreen ? "Sair da tela cheia" : "Entrar em tela cheia"}
+          title={isFullscreen ? "Sair da tela cheia" : "Entrar em tela cheia"}
+        >
+          {isFullscreen ? (
+            <FiMinimize2 aria-hidden="true" />
+          ) : (
+            <FiMaximize2 aria-hidden="true" />
+          )}
+          <span>{isFullscreen ? "Sair da tela cheia" : "Tela cheia"}</span>
+        </button>
+        <button type="button" onClick={onAction}>
+          {action}
+        </button>
+      </div>
     </header>
   );
 }
@@ -89,10 +129,13 @@ function JoinHeader() {
         >
           <QRCodeSVG
             value={`${playUrl}/play`}
-            size={150}
+            size={640}
+            className={styles.qrCode}
             bgColor="#ffffff"
             fgColor="#25144f"
-            marginSize={1}
+            level="M"
+            marginSize={2}
+            title="QR Code para entrar na sala"
           />
           <span>Escaneie para entrar</span>
         </div>

@@ -33,7 +33,6 @@
 }
 
 .hostTopbar button {
-  justify-self: end;
   min-height: 42px;
   padding: 0 18px;
   border: 1px solid var(--color-border);
@@ -48,6 +47,25 @@
     box-shadow var(--transition-fast);
 }
 
+.hostTopbarActions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hostTopbar .fullscreenButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface-muted);
+}
+
+.fullscreenButton svg {
+  width: 18px;
+  height: 18px;
+}
+
 .hostTopbar button:hover {
   transform: translateY(-1px);
   border-color: var(--color-brand-500);
@@ -55,16 +73,17 @@
 }
 
 .pinStage {
-  width: min(920px, calc(100% - 40px));
+  width: min(1500px, calc(100% - 48px));
   margin: 0 auto;
-  padding: clamp(42px, 7vh, 76px) 0 clamp(28px, 4vh, 48px);
+  padding: clamp(24px, 4vh, 42px) 0 clamp(22px, 3vh, 36px);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(44px, 8vw, 104px);
+  gap: clamp(40px, 7vw, 112px);
 }
 
 .pinCopy {
+  flex: 0 1 520px;
   display: grid;
   text-align: left;
 }
@@ -97,19 +116,28 @@
 }
 
 .qrCard {
-  padding: 14px 14px 10px;
+  flex: 0 0 auto;
+  padding: clamp(14px, 2vmin, 22px) clamp(14px, 2vmin, 22px)
+    clamp(12px, 1.6vmin, 18px);
   display: grid;
-  gap: 8px;
+  gap: 10px;
   justify-items: center;
-  border-radius: var(--radius-lg);
+  border-radius: clamp(18px, 2.4vmin, 28px);
   background: white;
   color: var(--color-brand-900);
-  box-shadow: 0 26px 64px rgba(0, 0, 0, 0.26);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.32);
+}
+
+.qrCode {
+  display: block;
+  width: clamp(320px, 60vmin, 640px);
+  height: auto;
+  aspect-ratio: 1;
 }
 
 .qrCard span {
-  font-size: 0.75rem;
-  font-weight: 800;
+  font-size: clamp(0.78rem, 1.5vmin, 1rem);
+  font-weight: 850;
 }
 
 .lobby {
@@ -343,6 +371,16 @@
     display: none;
   }
 
+  .fullscreenButton span {
+    display: none;
+  }
+
+  .hostTopbar .fullscreenButton {
+    width: 42px;
+    padding: 0;
+    justify-content: center;
+  }
+
   .pinStage {
     padding-top: 34px;
     flex-direction: column;
@@ -351,11 +389,17 @@
   }
 
   .pinCopy {
+    flex-basis: auto;
     text-align: center;
   }
 
   .pinCopy strong {
     font-size: clamp(3.6rem, 18vw, 5.2rem);
+  }
+
+  .qrCode {
+    width: min(82vw, 52vh);
+    min-width: 280px;
   }
 
   .leaderboardUser {

@@ -88,8 +88,9 @@ export async function getActiveAuthenticatedUser(
   );
   const activeUser = result.rows[0];
   const accessExpired =
-    activeUser?.role !== "superadmin" &&
-    activeUser?.access_expires_at !== null &&
+    Boolean(activeUser) &&
+    activeUser.role !== "superadmin" &&
+    activeUser.access_expires_at !== null &&
     activeUser.access_expires_at.getTime() <= Date.now();
   if (!activeUser || !activeUser.is_enabled || accessExpired) {
     if (res) clearSessionCookie(res);

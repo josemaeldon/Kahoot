@@ -30,6 +30,15 @@ async function main() {
   const proxy = httpProxy.createProxyServer({
     target: backendTarget,
     ws: true,
+    xfwd: true,
+    timeout: 0,
+    proxyTimeout: 0,
+  });
+
+  proxy.on("open", (proxySocket) => {
+    proxySocket.setKeepAlive(true, 20_000);
+    proxySocket.setNoDelay(true);
+    proxySocket.setTimeout(0);
   });
 
   proxy.on("error", (error, _request, response) => {
@@ -50,11 +59,16 @@ async function main() {
   });
   server.on("upgrade", (request, socket, head) => {
     if (request.url?.startsWith("/ws")) {
+      socket.setKeepAlive(true, 20_000);
+      socket.setNoDelay(true);
+      socket.setTimeout(0);
       proxy.ws(request, socket, head);
     } else {
       socket.destroy();
     }
   });
+  server.keepAliveTimeout = 75_000;
+  server.headersTimeout = 76_000;
 
   server.listen(publicPort, "0.0.0.0", () => {
     console.log(`Kahoot disponível na porta ${publicPort}`);

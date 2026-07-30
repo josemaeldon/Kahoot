@@ -78,7 +78,14 @@ async fn handle_ws(mut socket: WebSocket, state: SharedState) {
 
     match action {
         Action::CreateRoom { questions } => create_room(socket, state, questions).await,
-        Action::JoinRoom { room_id, username } => join_room(socket, state, room_id, username).await,
+        Action::JoinRoom { room_id, username } => {
+            join_room(socket, state, room_id, username, None).await
+        }
+        Action::ResumeRoom {
+            room_id,
+            username,
+            session_token,
+        } => join_room(socket, state, room_id, username, Some(session_token)).await,
         action => tracing::error!("Invalid first action {action:?}"),
     };
 }
@@ -100,15 +107,17 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
         return;
     }
 
-    let (action_tx, mut action_rx) = mpsc::channel(20);
+    let (action_tx, mut action_rx) = mpsc::channel(2048);
     let (result_tx, result_rx) = watch::channel(GameEvent::InLobby);
     let (users, mut player_event_rx) = Users::new();
+    let scores = Arc::new(Mutex::new(HashMap::new()));
 
     // Create an empty room
     let room = Room {
         users,
         result_stream: result_rx,
         action_stream: action_tx,
+        scores,
     };
 
     // Put the room into an `Arc`
@@ -127,7 +136,7 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
 
     // Wrap the host transmitter with an `mpsc`
     let host_tx = {
-        let (host_tx_mpsc, mut rx) = mpsc::channel::<Message>(30);
+        let (host_tx_mpsc, mut rx) = mpsc::channel::<Message>(2048);
 
         tokio::spawn(async move {
             while let Some(msg) = rx.recv().await {
@@ -162,13 +171,13 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
         });
     }
 
-    // Ping the host every 25 seconds to keep the socket alive
+    // Ping often enough to keep reverse proxies and mobile NAT mappings alive.
     let heartbeat = {
         let host_tx = host_tx.clone();
         tokio::spawn(async move {
             while host_tx.send(Message::Ping(vec![])).await.is_ok() {
                 tracing::debug!("Pinging host");
-                tokio::time::sleep(Duration::from_secs(25)).await;
+                tokio::time::sleep(Duration::from_secs(20)).await;
             }
         })
     };
@@ -177,7 +186,7 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
     loop {
         match host_rx.next_action().await {
             // If action is begin round and there is at least one player
-            Some(Action::BeginRound) if room.users.player_count() > 0 => break,
+            Some(Action::BeginRound) if room.users.connected_player_count() > 0 => break,
             // If received action but does not match above, ignore
             Some(_) => (),
 
@@ -191,15 +200,6 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
     }
 
     tracing::debug!("Starting game...");
-
-    let mut total_points: HashMap<String, u32> = room
-        .users
-        .users
-        .lock()
-        .unwrap()
-        .iter()
-        .map(|username| (username.clone(), 0))
-        .collect();
 
     for question in questions.into_iter() {
         let mut point_gains = HashMap::new();
@@ -283,9 +283,7 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
                     // Has every player answered
                     let all_answered = room
                         .users
-                        .users
-                        .lock()
-                        .unwrap()
+                        .usernames()
                         .iter()
                         .all(|name| answered.contains(name));
 
@@ -300,8 +298,11 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
 
         tracing::debug!("End of round...");
 
-        for (username, point_gain) in &point_gains {
-            *total_points.entry(username.clone()).or_insert(0) += point_gain;
+        {
+            let mut scores = room.scores.lock().unwrap();
+            for (username, point_gain) in &point_gains {
+                *scores.entry(username.clone()).or_insert(0) += point_gain;
+            }
         }
 
         // Tell host that the round ended
@@ -347,8 +348,12 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
     heartbeat.abort();
 
     // Alert players game ended
-    let mut ranking: Vec<RankingEntry> = total_points
-        .into_iter()
+    let mut ranking: Vec<RankingEntry> = room
+        .scores
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|(username, points)| (username.clone(), *points))
         .map(|(username, points)| RankingEntry { username, points })
         .collect();
     ranking.sort_by(|first, second| {
@@ -367,7 +372,13 @@ async fn create_room(mut host: WebSocket, state: SharedState, questions: Vec<Que
 /// Handles room joining.
 ///
 /// The websocket will be treated as a "player" from now on.
-async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, username: String) {
+async fn join_room(
+    mut socket: WebSocket,
+    state: SharedState,
+    room_id: RoomId,
+    username: String,
+    session_token: Option<String>,
+) {
     tracing::debug!("Finding room `{room_id}`...");
     let room = if let Some(room) = state.find_room(&room_id) {
         room
@@ -387,8 +398,9 @@ async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, u
         return;
     }
 
+    let is_resume = session_token.is_some();
     let is_in_lobby = matches!(*room.result_stream.borrow(), GameEvent::InLobby);
-    if !is_in_lobby {
+    if !is_resume && !is_in_lobby {
         let event = UserEvent::JoinFailed {
             reason: String::from("Game already started"),
         };
@@ -399,28 +411,65 @@ async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, u
     tracing::debug!("Joining room...");
 
     let (mut user_tx, mut user_rx) = socket.split();
-    // Whenever the presence gets dropped (when the function returns),
-    // a leave message is automatically sent to the host.
-    let _presence = if let Some(presence) = room.users.join_user(username.clone()).await {
-        presence
+    // Whenever the presence gets dropped, the session enters a grace period
+    // instead of disappearing immediately.
+    let (_presence, session_token) = if let Some(token) = session_token {
+        if let Some(presence) = room.users.resume_user(&username, &token) {
+            (presence, token)
+        } else {
+            let event = UserEvent::JoinFailed {
+                reason: String::from("Invalid session"),
+            };
+            let _ = user_tx.send(event.to_message()).await;
+            return;
+        }
     } else {
-        tracing::error!("User `{username}` already exists, disconnecting...");
-        let event = UserEvent::JoinFailed { reason: String::from("Duplicate user") };
-        let _ = user_tx.send(event.to_message()).await;
-        return;
+        match room.users.join_user(username.clone()).await {
+            Some((presence, token)) => {
+                room.scores
+                    .lock()
+                    .unwrap()
+                    .entry(username.clone())
+                    .or_insert(0);
+                (presence, token)
+            }
+            None => {
+                tracing::error!("User `{username}` already exists, disconnecting...");
+                let event = UserEvent::JoinFailed {
+                    reason: String::from("Duplicate user"),
+                };
+                let _ = user_tx.send(event.to_message()).await;
+                return;
+            }
+        }
     };
 
     // Emit joined event to user
-    let event = UserEvent::Joined;
+    let event = UserEvent::Joined {
+        session_token,
+        resumed: is_resume,
+    };
     let _ = user_tx.send(event.to_message()).await;
 
     // Watch for game status updates
     let mut game_event_task = {
         let mut event_watch = room.result_stream.clone();
         let username = username.clone();
+        let scores = Arc::clone(&room.scores);
         tokio::spawn(async move {
+            // A resumed socket immediately receives the current game state,
+            // even if it missed the original watch notification.
+            if is_resume {
+                let current = event_watch.borrow_and_update().clone();
+                if let Some(event) = player_event(&current, &username, &scores) {
+                    if user_tx.send(event.to_message()).await.is_err() {
+                        return;
+                    }
+                }
+            }
+
             loop {
-                let heartbeat = tokio::time::sleep(Duration::from_secs(25));
+                let heartbeat = tokio::time::sleep(Duration::from_secs(20));
                 tokio::pin!(heartbeat);
                 // Depending on which happens first
                 tokio::select! {
@@ -434,34 +483,25 @@ async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, u
                         }
 
                         // Get event
-                        let event = { event_watch.borrow().clone() };
-                        match event {
-                            GameEvent::GameEnd { ranking } => {
+                        let game_event = { event_watch.borrow().clone() };
+                        if let Some(event) = player_event(&game_event, &username, &scores) {
+                            let game_ended = matches!(game_event, GameEvent::GameEnd { .. });
+                            if user_tx.send(event.to_message()).await.is_err() {
+                                return;
+                            }
+                            if game_ended {
                                 tracing::debug!("Game ended, closing user connection...");
-                                let event = UserEvent::GameEnd {
-                                    ranking: ranking.as_ref().clone(),
-                                };
-                                let _ = user_tx.send(event.to_message()).await;
-                                
-                                // Close connection
                                 let _ = user_tx.close().await;
                                 return;
                             }
-                            GameEvent::RoundBegin { choices } => {
-                                let event = UserEvent::RoundBegin { choices };
-                                let _ = user_tx.send(event.to_message()).await;
-                            }
-                            GameEvent::RoundEnd { point_gains } => {
-                                let point_gain = point_gains.get(&username).copied();
-                                let event = UserEvent::RoundEnd { point_gain };
-                                let _ = user_tx.send(event.to_message()).await;
-                            }
-                            GameEvent::InLobby => (),
                         }
                     }
                     // Heartbeat timer went off
                     _ = (&mut heartbeat) => {
                         tracing::debug!("Pinging player");
+                        if user_tx.send(UserEvent::KeepAlive.to_message()).await.is_err() {
+                            return;
+                        }
                         let _ = user_tx.send(Message::Ping(vec![])).await;
                     }
                 }
@@ -472,12 +512,21 @@ async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, u
     // Feed user answers into action stream for the host to deal with
     let mut user_action_task = {
         let action_stream = room.action_stream.clone();
+        let users = Arc::clone(&room);
+        let action_username = username.clone();
+        let connection_id = _presence.connection_id();
         tokio::spawn(async move {
             while let Some(action) = user_rx.next_action().await {
                 if let Action::Answer { choice } = action {
+                    if !users
+                        .users
+                        .is_current_connection(&action_username, connection_id)
+                    {
+                        return;
+                    }
                     let _ = action_stream
                         .send(PlayerAnswer {
-                            username: username.clone(),
+                            username: action_username.clone(),
                             choice,
                         })
                         .await;
@@ -491,6 +540,28 @@ async fn join_room(mut socket: WebSocket, state: SharedState, room_id: RoomId, u
         _ = (&mut game_event_task) => user_action_task.abort(),
         _ = (&mut user_action_task) => game_event_task.abort(),
     };
+}
+
+fn player_event(
+    game_event: &GameEvent,
+    username: &str,
+    scores: &Arc<Mutex<HashMap<String, u32>>>,
+) -> Option<UserEvent> {
+    let total_points = || scores.lock().unwrap().get(username).copied().unwrap_or(0);
+    match game_event {
+        GameEvent::InLobby => None,
+        GameEvent::RoundBegin { choices } => Some(UserEvent::RoundBegin {
+            choices: choices.clone(),
+            total_points: total_points(),
+        }),
+        GameEvent::RoundEnd { point_gains } => Some(UserEvent::RoundEnd {
+            point_gain: point_gains.get(username).copied(),
+            total_points: total_points(),
+        }),
+        GameEvent::GameEnd { ranking } => Some(UserEvent::GameEnd {
+            ranking: ranking.as_ref().clone(),
+        }),
+    }
 }
 
 /// Websocket api testing
@@ -580,6 +651,23 @@ mod tests {
                 username,
             })).await.unwrap();
 
+            UserSocket(ws)
+        }
+
+        async fn resume_room(
+            &self,
+            room_id: RoomId,
+            username: String,
+            session_token: String,
+        ) -> UserSocket {
+            let mut ws = self.connect().await;
+            ws.send(serial(&Action::ResumeRoom {
+                room_id,
+                username,
+                session_token,
+            }))
+            .await
+            .unwrap();
             UserSocket(ws)
         }
     }
@@ -708,10 +796,20 @@ mod tests {
         let mut user_ws = server.join_room(room_id, String::from("Johnny")).await;
         let user_task = tokio::spawn(async move {
             // Joined event
-            assert_eq!(user_ws.recv().await.unwrap(), UserEvent::Joined);
+            let_assert!(
+                UserEvent::Joined {
+                    session_token: _,
+                    resumed: false
+                } = user_ws.recv().await.unwrap()
+            );
 
             // Round begin event
-            let_assert!(UserEvent::RoundBegin { choices } = user_ws.recv().await.unwrap());
+            let_assert!(
+                UserEvent::RoundBegin {
+                    choices,
+                    total_points: 0
+                } = user_ws.recv().await.unwrap()
+            );
 
             // Has correct choice count
             assert_eq!(question.choices, choices);
@@ -720,10 +818,16 @@ mod tests {
             user_ws.send(&Action::Answer { choice: question.answer }).await;
 
             // Round end event
-            let_assert!(UserEvent::RoundEnd { point_gain: Some(point_gain) } = user_ws.recv().await.unwrap());
+            let_assert!(
+                UserEvent::RoundEnd {
+                    point_gain: Some(point_gain),
+                    total_points
+                } = user_ws.recv().await.unwrap()
+            );
 
             // Gained 1000 points
             assert_eq!(point_gain, 1000);
+            assert_eq!(total_points, 1000);
 
             // Game end event
             let_assert!(UserEvent::GameEnd { ranking } = user_ws.recv().await.unwrap());
@@ -845,6 +949,94 @@ mod tests {
         let_assert!(UserEvent::JoinFailed { reason } = user.recv().await.unwrap());
 
         assert_eq!(reason, "Duplicate user");
+    }
+
+    #[tokio::test]
+    async fn resumes_player_session_during_game() {
+        let server = TestServer::new().await;
+        let (mut host, room_id) = server
+            .create_room(vec![question! {
+                "Fish?", time: 30 => [
+                    true => "foo",
+                    false => "bar",
+                ]
+            }])
+            .await;
+
+        let mut first_socket = server.join_room(room_id, String::from("Alice")).await;
+        let_assert!(
+            UserEvent::Joined {
+                session_token,
+                resumed: false
+            } = first_socket.recv().await.unwrap()
+        );
+        let_assert!(
+            HostEvent::UserJoined { username } = host.recv().await.unwrap()
+        );
+        assert_eq!(username, "Alice");
+
+        host.send(&Action::BeginRound).await;
+        let_assert!(HostEvent::RoundBegin { .. } = host.recv().await.unwrap());
+        let_assert!(UserEvent::RoundBegin { .. } = first_socket.recv().await.unwrap());
+        first_socket.leave().await;
+
+        let mut resumed = server
+            .resume_room(room_id, String::from("Alice"), session_token.clone())
+            .await;
+        let_assert!(
+            UserEvent::Joined {
+                session_token: resumed_token,
+                resumed: true
+            } = resumed.recv().await.unwrap()
+        );
+        assert_eq!(resumed_token, session_token);
+        let_assert!(
+            UserEvent::RoundBegin {
+                total_points: 0,
+                ..
+            } = resumed.recv().await.unwrap()
+        );
+
+        resumed.send(&Action::Answer { choice: 0 }).await;
+        let_assert!(HostEvent::UserAnswered { username } = host.recv().await.unwrap());
+        assert_eq!(username, "Alice");
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn supports_six_hundred_concurrent_players() {
+        let server = TestServer::new().await;
+        let (mut host, room_id) = server
+            .create_room(vec![question! {
+                "Scale?", time: 30 => [
+                    true => "yes",
+                    false => "no",
+                ]
+            }])
+            .await;
+
+        let mut players = Vec::with_capacity(600);
+        for index in 0..600 {
+            let username = format!("Player-{index:03}");
+            let mut player = server.join_room(room_id, username).await;
+            let_assert!(
+                UserEvent::Joined {
+                    resumed: false,
+                    ..
+                } = player.recv().await.unwrap()
+            );
+            players.push(player);
+        }
+
+        let mut joined = HashSet::with_capacity(600);
+        while joined.len() < 600 {
+            let_assert!(
+                HostEvent::UserJoined { username } = host.recv().await.unwrap()
+            );
+            joined.insert(username);
+        }
+
+        assert_eq!(players.len(), 600);
+        assert_eq!(joined.len(), 600);
     }
 
     /// Convert a `Serialize`able into a JSON message.

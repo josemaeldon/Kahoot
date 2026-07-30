@@ -1,5 +1,4 @@
 import { action, UserEvent } from "kahoot";
-import { useRouter } from "next/router";
 import React, { useContext, useEffect, useRef, useState } from "react";
 import styles from "../styles/Play.module.css";
 import { getWebSocketUrl } from "@lib/websocket";
@@ -22,14 +21,30 @@ type PlayerSubpage =
   | "Finished";
 
 interface Context {
-  socket: WebSocket;
   points: number;
-  setSocket: React.Dispatch<React.SetStateAction<WebSocket | null>>;
-  setPoints: React.Dispatch<React.SetStateAction<number>>;
   username: string;
   setUsername: React.Dispatch<React.SetStateAction<string>>;
   setSubpage: React.Dispatch<React.SetStateAction<PlayerSubpage>>;
+  connectionStatus: ConnectionStatus;
+  joinRoom: (roomId: number, username: string) => Promise<void>;
+  sendAction: (request: action.Answer) => boolean;
 }
+
+type ConnectionStatus =
+  | "idle"
+  | "connecting"
+  | "connected"
+  | "reconnecting";
+
+interface PlayerSession {
+  roomId: number;
+  username: string;
+  sessionToken: string;
+}
+
+const PLAYER_SESSION_KEY = "kahoot-player-session-v1";
+const SOCKET_OPEN_TIMEOUT_MS = 10_000;
+const SOCKET_STALE_AFTER_MS = 55_000;
 
 function PlayerFrame({
   children,
@@ -38,12 +53,22 @@ function PlayerFrame({
   children: React.ReactNode;
   stage?: string;
 }) {
+  const { connectionStatus } = useContext(PlayerContext);
+
   return (
     <main className={styles.backdrop}>
       <div className={styles.ambientOrb} aria-hidden="true" />
       <header className={styles.topbar}>
         <strong>Kahoot!</strong>
-        {stage && <span>{stage}</span>}
+        <div className={styles.stageStatus}>
+          {connectionStatus === "reconnecting" && (
+            <span className={styles.reconnectingBadge}>
+              <span className={styles.inlineSpinner} aria-hidden="true" />
+              Reconectando
+            </span>
+          )}
+          {stage && <span>{stage}</span>}
+        </div>
       </header>
       <div className={styles.gameBox}>{children}</div>
     </main>
@@ -72,70 +97,12 @@ function LobbyWaiting() {
 
 function StartScreen() {
   const [pin, setPin] = useState("");
-  const [connectionClosed, setConnectionClosed] = useState(false);
   const [error, setError] = useState("");
-  const { setUsername, username, setSocket, setSubpage } =
+  const { setUsername, username, joinRoom: connectToRoom } =
     useContext(PlayerContext);
   const [inputLocked, setInputLocked] = useState(false);
 
-  useEffect(() => {
-    if (!inputLocked) return;
-
-    setError("");
-    const socket = new WebSocket(getWebSocketUrl());
-    const aborter = new AbortController();
-    socket.addEventListener(
-      "message",
-      function handler(event) {
-        const userEvent = JSON.parse(event.data) as UserEvent.event;
-        switch (userEvent.type) {
-          case "joined":
-            setSocket(socket);
-            socket.removeEventListener("message", handler);
-            setSubpage("LobbyWaiting");
-            break;
-          case "joinFailed":
-            setInputLocked(false);
-            setError(
-              userEvent.reason === "Duplicate user"
-                ? "Esse nome já está sendo usado na sala."
-                : "Sala não encontrada ou partida já iniciada."
-            );
-            socket.close();
-            break;
-        }
-      },
-      { signal: aborter.signal }
-    );
-    socket.addEventListener(
-      "open",
-      () => {
-        const request: action.JoinRoom = {
-          type: "joinRoom",
-          roomId: parseInt(pin.replace(/\s/g, ""), 10),
-          username,
-        };
-        socket.send(JSON.stringify(request));
-      },
-      { signal: aborter.signal }
-    );
-    socket.onclose = () => setConnectionClosed(true);
-    socket.onerror = () => {
-      setError("Não foi possível conectar ao servidor da partida.");
-      setInputLocked(false);
-    };
-
-    return () => aborter.abort();
-  }, [inputLocked, pin, setSocket, setSubpage, username]);
-
-  useEffect(() => {
-    if (connectionClosed && inputLocked) {
-      setError("A conexão com a sala foi encerrada.");
-      setInputLocked(false);
-    }
-  }, [connectionClosed, inputLocked]);
-
-  function joinRoom() {
+  async function joinRoom() {
     const normalizedPin = pin.replace(/\s/g, "");
     const normalizedUsername = username.trim();
     if (!/^\d{6}$/.test(normalizedPin)) {
@@ -148,6 +115,20 @@ function StartScreen() {
     }
     setUsername(normalizedUsername);
     setInputLocked(true);
+    setError("");
+    try {
+      await connectToRoom(Number(normalizedPin), normalizedUsername);
+    } catch (cause) {
+      const reason = cause instanceof Error ? cause.message : "";
+      setError(
+        reason === "Duplicate user"
+          ? "Esse nome já está sendo usado na sala."
+          : reason === "Room does not exist" || reason === "Game already started"
+            ? "Sala não encontrada ou partida já iniciada."
+            : "Não foi possível conectar ao servidor da partida."
+      );
+      setInputLocked(false);
+    }
   }
 
   return (
@@ -231,15 +212,14 @@ function AnswerShape({ index }: { index: number }) {
 }
 
 function ChooseAnswer({ data }: { data: UserEvent.event }) {
-  const { socket } = useContext(PlayerContext);
+  const { sendAction } = useContext(PlayerContext);
   const choices = (data as UserEvent.RoundBegin).choices;
   const [madeChoice, setMadeChoice] = useState(false);
   const colors = [styles.red, styles.blue, styles.yellow, styles.green];
 
   function onChoiceMade(index: number) {
-    setMadeChoice(true);
     const request: action.Answer = { type: "answer", choice: index };
-    socket.send(JSON.stringify(request));
+    if (sendAction(request)) setMadeChoice(true);
   }
 
   if (madeChoice) {
@@ -367,82 +347,346 @@ function FinalRanking({
 }
 
 function Play() {
-  const [socket, setSocket] = useState<WebSocket | null>(null);
   const [points, setPoints] = useState(0);
   const [username, setUsername] = useState("");
   const [subpage, setSubpage] = useState<PlayerSubpage>("StartScreen");
-  const router = useRouter();
   const [subpageData, setSubpageData] = useState<UserEvent.event | null>(null);
+  const [connectionStatus, setConnectionStatus] =
+    useState<ConnectionStatus>("idle");
+  const [connectionError, setConnectionError] = useState("");
   const gameFinishedRef = useRef(false);
+  const mountedRef = useRef(false);
+  const stoppedRef = useRef(false);
+  const socketRef = useRef<WebSocket | null>(null);
+  const pendingSocketRef = useRef<WebSocket | null>(null);
+  const sessionRef = useRef<PlayerSession | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const reconnectAttemptRef = useRef(0);
+  const lastServerMessageAtRef = useRef(0);
+  const handleEventRef = useRef<(event: UserEvent.event) => void>(() => {});
+  const reconnectRef = useRef<() => void>(() => {});
+  const openSocketRef = useRef<
+    (
+      request: action.JoinRoom | action.ResumeRoom,
+      mode: "join" | "resume"
+    ) => Promise<void>
+  >(async () => {});
+
+  handleEventRef.current = (serverEvent) => {
+    switch (serverEvent.type) {
+      case "keepAlive":
+      case "joined":
+      case "joinFailed":
+        break;
+      case "gameEnd":
+        gameFinishedRef.current = true;
+        sessionRef.current = null;
+        window.sessionStorage.removeItem(PLAYER_SESSION_KEY);
+        setSubpage("Finished");
+        setSubpageData(serverEvent);
+        break;
+      case "roundBegin":
+        setPoints(serverEvent.totalPoints);
+        setSubpage("ChooseAnswer");
+        setSubpageData(serverEvent);
+        break;
+      case "roundEnd":
+        setPoints(serverEvent.totalPoints);
+        setSubpage("Result");
+        setSubpageData(serverEvent);
+        break;
+    }
+  };
+
+  openSocketRef.current = (request, mode) =>
+    new Promise<void>((resolve, reject) => {
+      const socket = new WebSocket(getWebSocketUrl());
+      pendingSocketRef.current = socket;
+      let connected = false;
+      let settled = false;
+
+      const openTimeout = window.setTimeout(() => {
+        if (connected) return;
+        settled = true;
+        socket.close();
+        reject(new Error("Connection timeout"));
+      }, SOCKET_OPEN_TIMEOUT_MS);
+
+      const rejectOnce = (cause: Error) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(openTimeout);
+        reject(cause);
+      };
+
+      socket.addEventListener("open", () => {
+        socket.send(JSON.stringify(request));
+      });
+
+      socket.addEventListener("message", (message) => {
+        lastServerMessageAtRef.current = Date.now();
+        let serverEvent: UserEvent.event;
+        try {
+          serverEvent = JSON.parse(String(message.data)) as UserEvent.event;
+        } catch {
+          return;
+        }
+
+        if (serverEvent.type === "joinFailed") {
+          rejectOnce(new Error(serverEvent.reason));
+          socket.close();
+          return;
+        }
+
+        if (serverEvent.type === "joined") {
+          connected = true;
+          settled = true;
+          window.clearTimeout(openTimeout);
+          const session: PlayerSession = {
+            roomId: request.roomId,
+            username: request.username,
+            sessionToken: serverEvent.sessionToken,
+          };
+          sessionRef.current = session;
+          socketRef.current = socket;
+          pendingSocketRef.current = null;
+          reconnectAttemptRef.current = 0;
+          setUsername(session.username);
+          setConnectionStatus("connected");
+          window.sessionStorage.setItem(
+            PLAYER_SESSION_KEY,
+            JSON.stringify(session)
+          );
+          setSubpage("LobbyWaiting");
+          resolve();
+          return;
+        }
+
+        handleEventRef.current(serverEvent);
+      });
+
+      socket.addEventListener("error", () => {
+        if (!connected) rejectOnce(new Error("Connection error"));
+      });
+
+      socket.addEventListener("close", () => {
+        window.clearTimeout(openTimeout);
+        if (pendingSocketRef.current === socket) pendingSocketRef.current = null;
+        if (socketRef.current === socket) socketRef.current = null;
+
+        if (!connected) {
+          rejectOnce(new Error("Connection closed"));
+          return;
+        }
+
+        if (
+          mountedRef.current &&
+          !stoppedRef.current &&
+          !gameFinishedRef.current &&
+          sessionRef.current
+        ) {
+          reconnectRef.current();
+        }
+      });
+    });
+
+  reconnectRef.current = () => {
+    if (
+      !mountedRef.current ||
+      stoppedRef.current ||
+      gameFinishedRef.current ||
+      !sessionRef.current ||
+      pendingSocketRef.current
+    ) {
+      return;
+    }
+
+    setConnectionStatus("reconnecting");
+    if (reconnectTimerRef.current !== null) return;
+
+    const attempt = reconnectAttemptRef.current;
+    const delay =
+      attempt === 0
+        ? 250
+        : Math.min(8_000, 500 * 2 ** Math.min(attempt - 1, 4)) +
+          Math.floor(Math.random() * 250);
+    reconnectAttemptRef.current += 1;
+    reconnectTimerRef.current = window.setTimeout(() => {
+      reconnectTimerRef.current = null;
+      const session = sessionRef.current;
+      if (!session) return;
+      const request: action.ResumeRoom = {
+        type: "resumeRoom",
+        roomId: session.roomId,
+        username: session.username,
+        sessionToken: session.sessionToken,
+      };
+      void openSocketRef
+        .current(request, "resume")
+        .catch((cause) => {
+          const reason = cause instanceof Error ? cause.message : "";
+          if (reason === "Invalid session" || reason === "Room does not exist") {
+            sessionRef.current = null;
+            window.sessionStorage.removeItem(PLAYER_SESSION_KEY);
+            setConnectionStatus("idle");
+            setSubpage("StartScreen");
+            setSubpageData(null);
+            setConnectionError(
+              "Não foi possível recuperar a partida. Entre novamente em uma sala."
+            );
+            return;
+          }
+          reconnectRef.current();
+        });
+    }, delay);
+  };
 
   useEffect(() => {
-    if (!socket) return;
-    const aborter = new AbortController();
-    socket.addEventListener(
-      "message",
-      (event) => {
-        const hostEvent = JSON.parse(event.data) as UserEvent.event;
-        switch (hostEvent.type) {
-          case "gameEnd":
-            gameFinishedRef.current = true;
-            setSubpage("Finished");
-            setSubpageData(hostEvent);
-            break;
-          case "roundBegin":
-            setSubpage("ChooseAnswer");
-            setSubpageData(hostEvent);
-            break;
-          case "roundEnd":
-            setPoints((current) => current + (hostEvent.pointGain || 0));
-            setSubpage("Result");
-            setSubpageData(hostEvent);
-            break;
+    mountedRef.current = true;
+    stoppedRef.current = false;
+
+    const savedSession = window.sessionStorage.getItem(PLAYER_SESSION_KEY);
+    if (savedSession) {
+      try {
+        const session = JSON.parse(savedSession) as PlayerSession;
+        if (
+          Number.isInteger(session.roomId) &&
+          session.username &&
+          session.sessionToken
+        ) {
+          sessionRef.current = session;
+          setUsername(session.username);
+          reconnectRef.current();
+        } else {
+          window.sessionStorage.removeItem(PLAYER_SESSION_KEY);
         }
-      },
-      { signal: aborter.signal }
-    );
-    socket.addEventListener(
-      "close",
-      () => {
-        if (!gameFinishedRef.current) void router.push("/");
-      },
-      { signal: aborter.signal }
-    );
-    return () => aborter.abort();
-  }, [router, socket]);
+      } catch {
+        window.sessionStorage.removeItem(PLAYER_SESSION_KEY);
+      }
+    }
+
+    const watchdog = window.setInterval(() => {
+      const socket = socketRef.current;
+      if (
+        socket?.readyState === WebSocket.OPEN &&
+        lastServerMessageAtRef.current > 0 &&
+        Date.now() - lastServerMessageAtRef.current > SOCKET_STALE_AFTER_MS
+      ) {
+        socket.close(4000, "Server heartbeat timeout");
+      }
+    }, 5_000);
+
+    const reconnectNow = () => {
+      const socket = socketRef.current;
+      if (
+        sessionRef.current &&
+        (!socket || socket.readyState !== WebSocket.OPEN)
+      ) {
+        if (reconnectTimerRef.current !== null) {
+          window.clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = null;
+        }
+        reconnectAttemptRef.current = 0;
+        reconnectRef.current();
+      }
+    };
+    window.addEventListener("online", reconnectNow);
+    document.addEventListener("visibilitychange", reconnectNow);
+
+    return () => {
+      mountedRef.current = false;
+      stoppedRef.current = true;
+      window.clearInterval(watchdog);
+      window.removeEventListener("online", reconnectNow);
+      document.removeEventListener("visibilitychange", reconnectNow);
+      if (reconnectTimerRef.current !== null) {
+        window.clearTimeout(reconnectTimerRef.current);
+      }
+      socketRef.current?.close();
+      pendingSocketRef.current?.close();
+    };
+  }, []);
+
+  async function joinRoom(roomId: number, playerName: string) {
+    stoppedRef.current = false;
+    gameFinishedRef.current = false;
+    sessionRef.current = null;
+    window.sessionStorage.removeItem(PLAYER_SESSION_KEY);
+    setConnectionStatus("connecting");
+    setConnectionError("");
+    const request: action.JoinRoom = {
+      type: "joinRoom",
+      roomId,
+      username: playerName,
+    };
+    try {
+      await openSocketRef.current(request, "join");
+    } catch (cause) {
+      setConnectionStatus("idle");
+      throw cause;
+    }
+  }
+
+  function sendAction(request: action.Answer) {
+    const socket = socketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      reconnectRef.current();
+      return false;
+    }
+    socket.send(JSON.stringify(request));
+    return true;
+  }
 
   function joinAnotherRoom() {
+    stoppedRef.current = true;
     gameFinishedRef.current = false;
-    setSocket(null);
+    socketRef.current?.close();
+    socketRef.current = null;
+    sessionRef.current = null;
+    window.sessionStorage.removeItem(PLAYER_SESSION_KEY);
     setPoints(0);
     setSubpageData(null);
+    setUsername("");
+    setConnectionStatus("idle");
     setSubpage("StartScreen");
+    window.setTimeout(() => {
+      stoppedRef.current = false;
+    }, 0);
   }
 
   return (
     <PlayerContext.Provider
       value={{
-        socket,
         points,
-        setSocket,
-        setPoints,
         username,
         setUsername,
         setSubpage,
+        connectionStatus,
+        joinRoom,
+        sendAction,
       }}
     >
-      {subpage === "StartScreen" && <StartScreen />}
-      {subpage === "LobbyWaiting" && <LobbyWaiting />}
-      {subpage === "ChooseAnswer" && subpageData && (
-        <ChooseAnswer data={subpageData} />
-      )}
-      {subpage === "Result" && subpageData && <Result data={subpageData} />}
-      {subpage === "Finished" && subpageData?.type === "gameEnd" && (
-        <FinalRanking
-          data={subpageData}
-          onJoinAnotherRoom={joinAnotherRoom}
+      <>
+        {subpage === "StartScreen" && <StartScreen />}
+        {subpage === "LobbyWaiting" && <LobbyWaiting />}
+        {subpage === "ChooseAnswer" && subpageData && (
+          <ChooseAnswer data={subpageData} />
+        )}
+        {subpage === "Result" && subpageData && <Result data={subpageData} />}
+        {subpage === "Finished" && subpageData?.type === "gameEnd" && (
+          <FinalRanking
+            data={subpageData}
+            onJoinAnotherRoom={joinAnotherRoom}
+          />
+        )}
+        <NoticeModal
+          open={connectionError !== ""}
+          title="Conexão encerrada"
+          messages={connectionError ? [connectionError] : []}
+          tone="error"
+          onClose={() => setConnectionError("")}
         />
-      )}
+      </>
     </PlayerContext.Provider>
   );
 }

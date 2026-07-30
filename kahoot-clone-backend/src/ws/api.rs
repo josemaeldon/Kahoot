@@ -25,6 +25,12 @@ pub enum Action {
     CreateRoom { questions: Vec<Question> },
     #[serde(rename_all = "camelCase")] // Renames fields as camelCase
     JoinRoom { room_id: RoomId, username: String },
+    #[serde(rename_all = "camelCase")]
+    ResumeRoom {
+        room_id: RoomId,
+        username: String,
+        session_token: String,
+    },
 
     // Player only
     Answer { choice: usize },
@@ -90,22 +96,33 @@ pub enum HostEvent {
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum UserEvent {
     /// Sent when the user successfully joins.
-    Joined,
+    #[serde(rename_all = "camelCase")]
+    Joined {
+        session_token: String,
+        resumed: bool,
+    },
     /// Sent when the user couldn't join.
     JoinFailed { reason: String },
+    KeepAlive,
 
     /// Sent when a new round begins.
     ///
     /// The user is only sent information about how many choices there are.
     #[serde(rename_all = "camelCase")]
-    RoundBegin { choices: Vec<String> },
+    RoundBegin {
+        choices: Vec<String>,
+        total_points: u32,
+    },
 
     /// Sent when the round ends.
     ///
     /// The point gain field is a `number` if the player answered correctly,
     /// otherwise it is `null`.
     #[serde(rename_all = "camelCase")]
-    RoundEnd { point_gain: Option<u32> },
+    RoundEnd {
+        point_gain: Option<u32>,
+        total_points: u32,
+    },
 
     /// Sent when the game is over.
     GameEnd { ranking: Vec<RankingEntry> },

@@ -54,6 +54,12 @@ export namespace action {
     roomId: number;
     username: string;
   }
+  declare interface ResumeRoom {
+    type: "resumeRoom";
+    roomId: number;
+    username: string;
+    sessionToken: string;
+  }
 
   declare interface Answer {
     type: "answer";
@@ -118,24 +124,37 @@ export namespace HostEvent {
 }
 
 export namespace UserEvent {
-  declare type event = Joined | JoinFailed | RoundBegin | RoundEnd | GameEnd;
+  declare type event =
+    | Joined
+    | JoinFailed
+    | KeepAlive
+    | RoundBegin
+    | RoundEnd
+    | GameEnd;
   declare interface Joined {
     type: "joined";
+    sessionToken: string;
+    resumed: boolean;
   }
 
   declare interface JoinFailed {
     type: "joinFailed";
     reason: string;
   }
+  declare interface KeepAlive {
+    type: "keepAlive";
+  }
 
   declare interface RoundBegin {
     type: "roundBegin";
     choices: string[];
+    totalPoints: number;
   }
 
   declare interface RoundEnd {
     type: "roundEnd";
     pointGain: number | null;
+    totalPoints: number;
   }
 
   declare interface GameEnd {
