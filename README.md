@@ -1,17 +1,17 @@
-# Kahoot
+# Play!
 
-Plataforma web de quizzes multiplayer em tempo real. Usuários podem criar,
-importar, organizar e publicar Kahoots; anfitriões abrem salas com PIN; e
+Plataforma web de Plays! multiplayer em tempo real. Usuários podem criar,
+importar, organizar e publicar Plays!; anfitriões abrem salas com PIN; e
 jogadores participam pelo navegador sem precisar de conta.
 
 ## Recursos
 
 - cadastro, login e sessão em cookie HTTP-only;
-- editor de quizzes com categorias, pastas, CSV e imagens;
-- biblioteca pública e catálogo inicial de Kahoots;
+- editor de Plays! com categorias, pastas, CSV e imagens;
+- biblioteca pública e catálogo inicial de Plays!;
 - partidas ao vivo com PIN, pontuação, ranking e reconexão de jogadores;
 - administração de usuários, períodos de acesso e novos cadastros;
-- geração opcional de quizzes com a API da OpenAI;
+- geração opcional de Plays! com a API da OpenAI;
 - execução em Docker Swarm com PostgreSQL e publicação automática no GHCR.
 
 ## Arquitetura
@@ -42,12 +42,12 @@ Requisitos:
 Instale e valide os módulos isoladamente:
 
 ```bash
-cd kahoot-clone-frontend
+cd play-frontend
 npm ci
 npm run typecheck
 npm run build
 
-cd ../kahoot-clone-backend
+cd ../play-backend
 cargo test --locked
 ```
 
@@ -66,10 +66,10 @@ cp .env.example .env
 set -a
 . ./.env
 set +a
-docker stack deploy --with-registry-auth -c docker-compose.yml kahoot
+docker stack deploy --with-registry-auth -c docker-compose.yml play
 ```
 
-A imagem padrão é `ghcr.io/josemaeldon/kahoot:latest`. O workflow
+A imagem padrão é `ghcr.io/josemaeldon/play:latest`. O workflow
 `.github/workflows/docker-publish.yml` publica `latest` e
 `sha-<commit>` para `linux/amd64` após alterações na branch `main`.
 
@@ -84,8 +84,8 @@ A imagem padrão é `ghcr.io/josemaeldon/kahoot:latest`. O workflow
 
 | Caminho | Responsabilidade |
 | --- | --- |
-| `kahoot-clone-frontend/` | Interface Next.js, API HTTP e proxy de produção |
-| `kahoot-clone-backend/` | servidor de partidas WebSocket em Rust |
+| `play-frontend/` | Interface Next.js, API HTTP e proxy de produção |
+| `play-backend/` | servidor de partidas WebSocket em Rust |
 | `db/migrations/` | esquema, índices e dados iniciais do PostgreSQL |
 | `.github/workflows/` | build e publicação da imagem Docker |
 | `Dockerfile` | build multi-stage e imagem única da aplicação |
@@ -93,5 +93,5 @@ A imagem padrão é `ghcr.io/josemaeldon/kahoot:latest`. O workflow
 
 ## Licença e marca
 
-Este repositório não declara uma licença de código aberto. “Kahoot!” é marca de
-seus respectivos proprietários; este projeto é uma implementação independente.
+Este repositório não declara uma licença de código aberto. Use o código e os
+ativos respeitando os direitos aplicáveis.

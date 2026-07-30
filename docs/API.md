@@ -34,19 +34,19 @@ Principais códigos:
 | `POST` | `/api/signout` | público | encerra a sessão |
 | `GET` | `/api/user` | público | informa a sessão atual, se houver |
 | `POST` | `/api/account` | autenticado | altera usuário, WhatsApp ou senha |
-| `POST` | `/api/getGames` | autenticado | lista quizzes, filtros, pastas, categorias e autores |
-| `POST` | `/api/getOneGame` | autenticado | carrega um quiz permitido |
-| `POST` | `/api/create` | autenticado | cria ou atualiza um quiz |
-| `POST` | `/api/deleteOneGame` | autenticado | exclui um quiz permitido |
+| `POST` | `/api/getGames` | autenticado | lista Plays! com filtros, pastas, categorias e autores |
+| `POST` | `/api/getOneGame` | autenticado | carrega um Play! permitido |
+| `POST` | `/api/create` | autenticado | cria ou atualiza um Play! |
+| `POST` | `/api/deleteOneGame` | autenticado | exclui um Play! permitido |
 | `POST` | `/api/folders` | autenticado | cria, renomeia ou exclui pasta |
-| `POST` | `/api/library` | autenticado | move quiz ou altera sua publicação |
+| `POST` | `/api/library` | autenticado | move Play! ou altera sua publicação |
 | `GET/POST/PUT/DELETE` | `/api/categories` | autenticado | lista e administra categorias conforme a propriedade/papel |
 | `POST` | `/api/ai/generate` | autenticado | gera dez perguntas para uma categoria |
 | `GET/POST` | `/api/admin/ai-settings` | superadmin | lê ou altera modelo, instruções e chave |
 | `GET/POST` | `/api/admin/users` | superadmin | lista e administra usuários e cadastros |
 
 As estruturas detalhadas usadas pela interface estão tipadas nos próprios
-endpoints e em `kahoot.d.ts`. Essa tabela documenta a superfície pública sem
+endpoints e em `play.d.ts`. Essa tabela documenta a superfície pública sem
 duplicar tipos que mudariam em dois lugares.
 
 ## WebSocket
@@ -203,5 +203,5 @@ No fim:
 ```
 
 O arquivo-fonte autoritativo do protocolo é
-`kahoot-clone-backend/src/ws/api.rs`. Os tipos TypeScript correspondentes ficam
-em `kahoot-clone-frontend/kahoot.d.ts`.
+`play-backend/src/ws/api.rs`. Os tipos TypeScript correspondentes ficam
+em `play-frontend/play.d.ts`.

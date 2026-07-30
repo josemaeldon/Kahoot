@@ -2,8 +2,8 @@
 
 FROM rust:1.88-bookworm AS backend-builder
 WORKDIR /build/backend
-COPY kahoot-clone-backend/Cargo.toml kahoot-clone-backend/Cargo.lock* ./
-COPY kahoot-clone-backend/src ./src
+COPY play-backend/Cargo.toml play-backend/Cargo.lock* ./
+COPY play-backend/src ./src
 RUN cargo build --release --locked
 
 FROM backend-builder AS backend-test
@@ -11,11 +11,11 @@ RUN ulimit -n 65536 && cargo test --release --locked -- --test-threads=1
 
 FROM node:24-bookworm-slim AS frontend-deps
 WORKDIR /build/frontend
-COPY kahoot-clone-frontend/package.json kahoot-clone-frontend/package-lock.json ./
+COPY play-frontend/package.json play-frontend/package-lock.json ./
 RUN npm ci
 
 FROM frontend-deps AS frontend-builder
-COPY kahoot-clone-frontend ./
+COPY play-frontend ./
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run typecheck && npm run build
 
@@ -24,11 +24,11 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     BACKEND_PORT=8000 \
-    BACKEND_BINARY=/app/kahoot-server \
+    BACKEND_BINARY=/app/play-server \
     MIGRATIONS_DIR=/app/db/migrations
 WORKDIR /app
 
-COPY --from=backend-test --chown=node:node /build/backend/target/release/kahoot-server /app/kahoot-server
+COPY --from=backend-test --chown=node:node /build/backend/target/release/play-server /app/play-server
 COPY --from=frontend-builder --chown=node:node /build/frontend/package.json /build/frontend/package-lock.json ./
 COPY --from=frontend-builder --chown=node:node /build/frontend/node_modules ./node_modules
 COPY --from=frontend-builder --chown=node:node /build/frontend/.next ./.next

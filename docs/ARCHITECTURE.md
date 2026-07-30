@@ -4,7 +4,7 @@
 
 ### Aplicação Next.js
 
-O diretório `kahoot-clone-frontend` contém:
+O diretório `play-frontend` contém:
 
 - páginas React no Pages Router;
 - endpoints HTTP em `pages/api`;
@@ -20,7 +20,7 @@ backend Rust.
 
 ### Servidor Rust
 
-O diretório `kahoot-clone-backend` implementa as salas em memória com Axum,
+O diretório `play-backend` implementa as salas em memória com Axum,
 Tokio e WebSockets. Cada conexão assume um papel depois da primeira mensagem:
 
 - `createRoom` cria uma sala e transforma a conexão em anfitrião;
@@ -32,7 +32,7 @@ persistidas: reiniciar a aplicação encerra partidas ativas.
 
 ### PostgreSQL
 
-O PostgreSQL armazena contas, configurações, quizzes e seu catálogo. Todas as
+O PostgreSQL armazena contas, configurações e o catálogo de Plays! Todas as
 consultas da aplicação usam parâmetros. O pool HTTP é criado por processo e tem
 tamanho configurável.
 
@@ -51,16 +51,16 @@ tamanho configurável.
 
 ### Criação e publicação
 
-1. O editor monta um quiz com categoria e até 100 perguntas.
+1. O editor monta um Play! com categoria e até 100 perguntas.
 2. A validação normaliza os dados antes de gravá-los.
-3. Quiz, perguntas e alternativas são salvos em uma transação.
-4. O proprietário pode organizar o quiz em uma pasta e torná-lo público.
+3. O conteúdo do Play!, suas perguntas e alternativas são salvos em uma transação.
+4. O proprietário pode organizar o Play! em uma pasta e torná-lo público.
 5. Superadministradores também podem administrar conteúdo público e categorias
    padrão.
 
 ### Partida
 
-1. O anfitrião carrega um quiz pela API HTTP.
+1. O anfitrião carrega um Play! pela API HTTP.
 2. O cliente envia as perguntas ao WebSocket com `createRoom`.
 3. O servidor valida os dados, embaralha a partida e devolve um PIN de seis
    dígitos.
@@ -89,16 +89,16 @@ identidade e a pontuação pelo período definido em
 | `schema_migrations` | versão e checksum das migrações aplicadas |
 
 Chaves estrangeiras removem perguntas e alternativas em cascata. A exclusão de
-uma pasta apenas limpa a referência dos quizzes. Categorias em uso são
+uma pasta apenas limpa a referência de cada Play! Categorias em uso são
 realocadas antes da exclusão, conforme as regras do repositório.
 
-As migrações também criam categorias e Kahoots públicos iniciais. Arquivos já
+As migrações também criam categorias e Plays! públicos iniciais. Arquivos já
 aplicados são imutáveis: o executor compara o SHA-256 do SQL com o checksum
 armazenado.
 
 ## Limites relevantes
 
-- título do quiz: até 160 caracteres no banco;
+- título do Play!: até 160 caracteres no banco;
 - perguntas por sala: de 1 a 100;
 - enunciado: de 1 a 500 caracteres no protocolo;
 - alternativas: de 2 a 4, com até 300 caracteres cada;
@@ -110,6 +110,6 @@ armazenado.
 ## Disponibilidade e escala
 
 O estado das partidas pertence a uma única réplica. Por isso a stack mantém
-`kahoot_app` com uma réplica; escalar horizontalmente exige afinidade de
+`play_app` com uma réplica; escalar horizontalmente exige afinidade de
 WebSocket e um estado de salas compartilhado. O banco é persistente, mas salas
 e controles de limite da geração por IA são locais ao processo.

@@ -5,21 +5,21 @@
 Instale as dependências do frontend:
 
 ```bash
-cd kahoot-clone-frontend
+cd play-frontend
 npm ci
 ```
 
 Compile o backend:
 
 ```bash
-cd ../kahoot-clone-backend
+cd ../play-backend
 cargo build --locked
 ```
 
 Crie um PostgreSQL 17 e uma base vazia. Em seguida, exporte ao menos:
 
 ```bash
-export DATABASE_URL='postgresql://postgres:senha@127.0.0.1:5432/kahoot_db'
+export DATABASE_URL='postgresql://postgres:senha@127.0.0.1:5432/play_db'
 export JWT_SECRET='um-segredo-local-com-pelo-menos-32-caracteres'
 export COOKIE_SECURE='false'
 ```
@@ -30,9 +30,9 @@ O caminho mais próximo da produção usa o build Next.js e `server.cjs`, que
 aplica migrações e inicia o Rust automaticamente:
 
 ```bash
-cd kahoot-clone-frontend
+cd play-frontend
 npm run build
-BACKEND_BINARY=../kahoot-clone-backend/target/debug/kahoot-server \
+BACKEND_BINARY=../play-backend/target/debug/play-server \
   node server.cjs
 ```
 
@@ -48,7 +48,7 @@ imagem Docker.
 Frontend:
 
 ```bash
-cd kahoot-clone-frontend
+cd play-frontend
 npm run typecheck
 npm run build
 ```
@@ -56,7 +56,7 @@ npm run build
 Backend:
 
 ```bash
-cd kahoot-clone-backend
+cd play-backend
 cargo fmt --check
 cargo test --locked
 ```
@@ -64,7 +64,7 @@ cargo test --locked
 Auditoria de dependências:
 
 ```bash
-cd kahoot-clone-frontend
+cd play-frontend
 npm audit
 ```
 
@@ -74,7 +74,7 @@ Com o sistema completo disponível, o PostgreSQL de teste vazio e Google Chrome
 instalado:
 
 ```bash
-cd kahoot-clone-frontend
+cd play-frontend
 E2E_BASE_URL=http://127.0.0.1:3000 npm run test:e2e
 ```
 
@@ -82,7 +82,7 @@ O cenário cobre, entre outros pontos:
 
 - sessão inválida e redirecionamento;
 - cadastro, login e alteração da conta;
-- criação, imagem, validação e persistência de quiz;
+- criação, imagem, validação e persistência de Play!;
 - filtros, categorias, pastas e biblioteca pública;
 - sala, entrada, resposta, saída, reconexão, pontuação e ranking;
 - administração de usuários e paginação;
@@ -99,7 +99,7 @@ repositório.
 Para aplicar migrações sem iniciar o sistema:
 
 ```bash
-cd kahoot-clone-frontend
+cd play-frontend
 node scripts/migrate.cjs
 ```
 
@@ -115,8 +115,8 @@ Regras:
 - mantenha acesso SQL nos repositórios de `lib` ou no endpoint responsável;
 - reutilize as funções de autenticação de `lib/auth.ts`;
 - valide toda entrada externa antes de persistir ou enviar ao Rust;
-- mantenha os tipos compartilhados do protocolo em `kahoot.d.ts` alinhados a
-  `kahoot-clone-backend/src/ws/api.rs`;
+- mantenha os tipos compartilhados do protocolo em `play.d.ts` alinhados a
+  `play-backend/src/ws/api.rs`;
 - adicione uma nova migração para mudanças de esquema;
 - não versione `.next`, `node_modules`, `target`, logs, segredos ou resultados
   de testes.

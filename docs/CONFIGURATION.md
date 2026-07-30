@@ -12,10 +12,10 @@
 | `COOKIE_SECURE` | não | depende de `NODE_ENV` | força `Secure` no cookie quando vale `true` |
 | `PORT` | não | `3000` | porta pública do processo Node |
 | `BACKEND_PORT` | não | `8000` | porta interna do servidor Rust |
-| `BACKEND_BINARY` | não | `/app/kahoot-server` | caminho do binário iniciado por `server.cjs` |
+| `BACKEND_BINARY` | não | `/app/play-server` | caminho do binário iniciado por `server.cjs` |
 | `MIGRATIONS_DIR` | não | `../db/migrations` | diretório dos arquivos SQL |
 | `PLAYER_RECONNECT_GRACE_SECONDS` | não | `120` | tolerância de reconexão, limitada entre 30 e 3.600 segundos |
-| `RUST_LOG` | não | `kahoot-server=trace` | filtro de logs do backend |
+| `RUST_LOG` | não | `play-server=trace` | filtro de logs do backend |
 | `OPENAI_API_KEY` | não | — | chave alternativa à armazenada pela administração |
 | `OPENAI_API_BASE_URL` | não | `https://api.openai.com/v1` | base compatível com a Responses API |
 | `NEXT_PUBLIC_APP_URL` | não | origem do navegador | URL usada na geração do QR Code; precisa existir no build do frontend |
@@ -28,9 +28,9 @@ rotacioná-lo.
 
 | Variável | Obrigatória | Padrão | Uso |
 | --- | --- | --- | --- |
-| `KAHOOT_DB_PASSWORD` | sim | — | senha do usuário PostgreSQL |
+| `PLAY_DB_PASSWORD` | sim | — | senha do usuário PostgreSQL |
 | `JWT_SECRET` | sim | — | repassado à aplicação |
-| `KAHOOT_IMAGE` | não | `ghcr.io/josemaeldon/kahoot:latest` | imagem implantada |
+| `PLAY_IMAGE` | não | `ghcr.io/josemaeldon/play:latest` | imagem implantada |
 
 ## Banco e migrações
 
@@ -58,7 +58,7 @@ A imagem expõe apenas `3000`; a porta Rust permanece interna.
 Build local:
 
 ```bash
-docker build -t kahoot:local .
+docker build -t play:local .
 ```
 
 ## Docker Swarm
@@ -83,20 +83,20 @@ set +a
 Implante:
 
 ```bash
-docker stack deploy --with-registry-auth -c docker-compose.yml kahoot
+docker stack deploy --with-registry-auth -c docker-compose.yml play
 ```
 
 Confira:
 
 ```bash
-docker stack services kahoot
-docker service logs -f kahoot_kahoot_app
+docker stack services play
+docker service logs -f play_play_app
 ```
 
 Remova os serviços sem apagar automaticamente o volume:
 
 ```bash
-docker stack rm kahoot
+docker stack rm play
 ```
 
 O serviço da aplicação tem limite de 2 CPUs, 2 GiB de memória e `nofile`
@@ -107,8 +107,8 @@ O serviço da aplicação tem limite de 2 CPUs, 2 GiB de memória e `nofile`
 Todo push em `main` dispara `.github/workflows/docker-publish.yml`. O job
 executa um build `linux/amd64`, usa cache do GitHub Actions e publica:
 
-- `ghcr.io/josemaeldon/kahoot:latest`;
-- `ghcr.io/josemaeldon/kahoot:sha-<commit>`.
+- `ghcr.io/josemaeldon/play:latest`;
+- `ghcr.io/josemaeldon/play:sha-<commit>`.
 
-Para uma implantação reproduzível, defina `KAHOOT_IMAGE` com a tag por SHA em
+Para uma implantação reproduzível, defina `PLAY_IMAGE` com a tag por SHA em
 vez de `latest`.

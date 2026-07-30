@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 440 150"
+  role="img"
+  aria-labelledby="play-logo-title"
+>
+  <title id="play-logo-title">Play!</title>
+  <g
+    fill="#46178f"
+    stroke="#46178f"
+    stroke-width="3"
+    stroke-linejoin="round"
+    paint-order="stroke fill"
+    font-family="'Arial Black', 'Arial Rounded MT Bold', Arial, sans-serif"
+    font-size="128"
+    font-style="italic"
+    font-weight="900"
+  >
+    <text x="4" y="126" textLength="420" lengthAdjust="spacingAndGlyphs">
+      Play!
+    </text>
+  </g>
+</svg>

@@ -1,18 +1,18 @@
 version: "3.8"
 
 services:
-  kahoot_postgres:
+  play_postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: kahoot_db
+      POSTGRES_DB: play_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: "${KAHOOT_DB_PASSWORD:?Defina KAHOOT_DB_PASSWORD}"
+      POSTGRES_PASSWORD: "${PLAY_DB_PASSWORD:?Defina PLAY_DB_PASSWORD}"
     volumes:
-      - kahoot_postgres_data:/var/lib/postgresql/data
+      - play_postgres_data:/var/lib/postgresql/data
     networks:
       - cloudbrnet
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d kahoot_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d play_db"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -26,10 +26,10 @@ services:
       restart_policy:
         condition: on-failure
 
-  kahoot_app:
-    image: "${KAHOOT_IMAGE:-ghcr.io/josemaeldon/kahoot:latest}"
+  play_app:
+    image: "${PLAY_IMAGE:-ghcr.io/josemaeldon/play:latest}"
     environment:
-      DATABASE_URL: "postgresql://postgres:${KAHOOT_DB_PASSWORD:?Defina KAHOOT_DB_PASSWORD}@kahoot_postgres:5432/kahoot_db"
+      DATABASE_URL: "postgresql://postgres:${PLAY_DB_PASSWORD:?Defina PLAY_DB_PASSWORD}@play_postgres:5432/play_db"
       DATABASE_POOL_SIZE: "10"
       JWT_SECRET: "${JWT_SECRET:?Defina JWT_SECRET com pelo menos 32 caracteres}"
       COOKIE_SECURE: "true"
@@ -74,17 +74,17 @@ services:
       labels:
         - traefik.enable=true
         - traefik.docker.network=cloudbrnet
-        - traefik.http.routers.kahoot_app.rule=Host(`play.cloudbr.app`)
-        - traefik.http.routers.kahoot_app.entrypoints=websecure
-        - traefik.http.routers.kahoot_app.tls=true
-        - traefik.http.routers.kahoot_app.tls.certresolver=letsencryptresolver
-        - traefik.http.routers.kahoot_app.tls.domains[0].main=play.cloudbr.app
-        - traefik.http.services.kahoot_app.loadbalancer.server.port=3000
+        - traefik.http.routers.play_app.rule=Host(`play.cloudbr.app`)
+        - traefik.http.routers.play_app.entrypoints=websecure
+        - traefik.http.routers.play_app.tls=true
+        - traefik.http.routers.play_app.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.play_app.tls.domains[0].main=play.cloudbr.app
+        - traefik.http.services.play_app.loadbalancer.server.port=3000
 
 networks:
   cloudbrnet:
     external: true
 
 volumes:
-  kahoot_postgres_data:
+  play_postgres_data:
     driver: local

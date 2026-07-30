@@ -1,41 +1,41 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/kahoot-clone-frontend/node_modules
-/kahoot-clone-frontend/.pnp
-/kahoot-clone-frontend/.pnp.js
+/play-frontend/node_modules
+/play-frontend/.pnp
+/play-frontend/.pnp.js
 
 # testing
-/kahoot-clone-frontend/coverage
+/play-frontend/coverage
 
 # next.js
-/kahoot-clone-frontend/.next/
-/kahoot-clone-frontend/out/
-/kahoot-clone-frontend/tsconfig.tsbuildinfo
+/play-frontend/.next/
+/play-frontend/out/
+/play-frontend/tsconfig.tsbuildinfo
 
 # production
-/kahoot-clone-frontend/build
+/play-frontend/build
 
 # misc
-/kahoot-clone-frontend/.DS_Store
-/kahoot-clone-frontend/*.pem
+/play-frontend/.DS_Store
+/play-frontend/*.pem
 
 # debug
-/kahoot-clone-frontend/npm-debug.log*
-/kahoot-clone-frontend/yarn-debug.log*
-/kahoot-clone-frontend/yarn-error.log*
-/kahoot-clone-frontend/.pnpm-debug.log*
+/play-frontend/npm-debug.log*
+/play-frontend/yarn-debug.log*
+/play-frontend/yarn-error.log*
+/play-frontend/.pnpm-debug.log*
 
 # local env files
 /.env
-/kahoot-clone-frontend/.env*.local
+/play-frontend/.env*.local
 
 # vercel
-/kahoot-clone-frontend/.vercel
+/play-frontend/.vercel
 
 # rust compiled binary files
-/kahoot-clone-backend/target/
-/kahoot-clone-backend/debug/
+/play-backend/target/
+/play-backend/debug/
 
 # rustfmt backup files
 **/*.rs.bk
