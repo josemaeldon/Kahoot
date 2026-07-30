@@ -104,11 +104,29 @@ function HostTopbar({
 
 function JoinHeader() {
   const { roomId } = useContext(HostContext);
+  const [isQrExpanded, setIsQrExpanded] = useState(false);
   const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
   const playUrl =
     configuredUrl ||
     (typeof window !== "undefined" ? window.location.origin : "");
   const qrPlayUrl = `${playUrl}/play?pin=${roomId}`;
+
+  useEffect(() => {
+    if (!isQrExpanded) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsQrExpanded(false);
+    };
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isQrExpanded]);
 
   return (
     <>
@@ -124,10 +142,11 @@ function JoinHeader() {
             Acesse <b>{playUrl ? `${playUrl}/play` : "/play"}</b>
           </p>
         </div>
-        <a
+        <button
+          type="button"
           className={styles.qrCard}
-          href={qrPlayUrl}
-          aria-label="Abrir o jogo com o PIN desta sala"
+          onClick={() => setIsQrExpanded(true)}
+          aria-label="Ampliar QR Code em tela cheia"
         >
           <QRCodeSVG
             value={qrPlayUrl}
@@ -140,8 +159,44 @@ function JoinHeader() {
             title="QR Code para entrar na sala"
           />
           <span>Escaneie para entrar</span>
-        </a>
+        </button>
       </section>
+      {isQrExpanded && (
+        <div
+          className={styles.qrFullscreen}
+          role="dialog"
+          aria-modal="true"
+          aria-label="QR Code ampliado"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setIsQrExpanded(false);
+          }}
+        >
+          <button
+            type="button"
+            className={styles.qrFullscreenClose}
+            onClick={() => setIsQrExpanded(false)}
+            aria-label="Fechar QR Code ampliado"
+            autoFocus
+          >
+            ×
+          </button>
+          <div className={styles.qrFullscreenCard}>
+            <QRCodeSVG
+              value={qrPlayUrl}
+              size={900}
+              className={styles.qrFullscreenCode}
+              bgColor="#ffffff"
+              fgColor="#25144f"
+              level="M"
+              marginSize={2}
+              title="QR Code ampliado para entrar na sala"
+            />
+            <p>
+              Game Pin: <strong>{formatPin(roomId)}</strong>
+            </p>
+          </div>
+        </div>
+      )}
     </>
   );
 }

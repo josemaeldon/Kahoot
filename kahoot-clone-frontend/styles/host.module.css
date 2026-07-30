@@ -117,6 +117,8 @@
 
 .qrCard {
   flex: 0 0 auto;
+  margin: 0;
+  border: 0;
   padding: clamp(14px, 2vmin, 22px) clamp(14px, 2vmin, 22px)
     clamp(12px, 1.6vmin, 18px);
   display: grid;
@@ -125,8 +127,17 @@
   border-radius: clamp(18px, 2.4vmin, 28px);
   background: white;
   color: var(--color-brand-900);
-  text-decoration: none;
+  font: inherit;
+  cursor: zoom-in;
   box-shadow: 0 32px 80px rgba(0, 0, 0, 0.32);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.qrCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 36px 86px rgba(0, 0, 0, 0.38);
 }
 
 .qrCard:focus-visible {
@@ -144,6 +155,72 @@
 .qrCard span {
   font-size: clamp(0.78rem, 1.5vmin, 1rem);
   font-weight: 850;
+}
+
+.qrFullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  padding: clamp(20px, 4vmin, 48px);
+  display: grid;
+  place-items: center;
+  background: rgba(18, 8, 43, 0.96);
+  backdrop-filter: blur(16px);
+}
+
+.qrFullscreenCard {
+  width: min(84vmin, 900px);
+  display: grid;
+  gap: clamp(12px, 2vmin, 22px);
+  justify-items: center;
+  padding: clamp(14px, 2vmin, 24px);
+  border-radius: clamp(20px, 3vmin, 36px);
+  background: white;
+  color: var(--color-brand-900);
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.48);
+}
+
+.qrFullscreenCode {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.qrFullscreenCard p {
+  margin: 0;
+  font-size: clamp(1rem, 2.5vmin, 1.65rem);
+  font-weight: 750;
+}
+
+.qrFullscreenCard strong {
+  font-size: 1.15em;
+  letter-spacing: 0.08em;
+}
+
+.qrFullscreenClose {
+  position: fixed;
+  top: clamp(16px, 3vmin, 32px);
+  right: clamp(16px, 3vmin, 32px);
+  z-index: 1;
+  width: 50px;
+  height: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.qrFullscreenClose:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.qrFullscreenClose:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
 }
 
 .lobby {
