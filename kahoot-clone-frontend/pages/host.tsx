@@ -108,6 +108,7 @@ function JoinHeader() {
   const playUrl =
     configuredUrl ||
     (typeof window !== "undefined" ? window.location.origin : "");
+  const qrPlayUrl = `${playUrl}/play?pin=${roomId}`;
 
   return (
     <>
@@ -123,12 +124,13 @@ function JoinHeader() {
             Acesse <b>{playUrl ? `${playUrl}/play` : "/play"}</b>
           </p>
         </div>
-        <div
+        <a
           className={styles.qrCard}
-          aria-label="QR Code para acessar o jogo"
+          href={qrPlayUrl}
+          aria-label="Abrir o jogo com o PIN desta sala"
         >
           <QRCodeSVG
-            value={`${playUrl}/play`}
+            value={qrPlayUrl}
             size={640}
             className={styles.qrCode}
             bgColor="#ffffff"
@@ -138,7 +140,7 @@ function JoinHeader() {
             title="QR Code para entrar na sala"
           />
           <span>Escaneie para entrar</span>
-        </div>
+        </a>
       </section>
     </>
   );

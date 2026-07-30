@@ -1,4 +1,5 @@
 import { action, UserEvent } from "kahoot";
+import { useRouter } from "next/router";
 import React, { useContext, useEffect, useRef, useState } from "react";
 import styles from "../styles/Play.module.css";
 import { getWebSocketUrl } from "@lib/websocket";
@@ -96,14 +97,25 @@ function LobbyWaiting() {
 }
 
 function StartScreen() {
+  const router = useRouter();
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const { setUsername, username, joinRoom: connectToRoom } =
     useContext(PlayerContext);
   const [inputLocked, setInputLocked] = useState(false);
+  const pinFromUrl =
+    router.isReady &&
+    typeof router.query.pin === "string" &&
+    /^\d{6}$/.test(router.query.pin)
+      ? router.query.pin
+      : "";
+
+  useEffect(() => {
+    if (pinFromUrl) setPin(pinFromUrl);
+  }, [pinFromUrl]);
 
   async function joinRoom() {
-    const normalizedPin = pin.replace(/\s/g, "");
+    const normalizedPin = (pinFromUrl || pin).replace(/\s/g, "");
     const normalizedUsername = username.trim();
     if (!/^\d{6}$/.test(normalizedPin)) {
       setError("Informe um PIN de 6 números.");
@@ -137,28 +149,44 @@ function StartScreen() {
         <p className={styles.eyebrow}>Jogar ao vivo</p>
         <h1>Entre na sala</h1>
         <p className={styles.intro}>
-          Digite o PIN mostrado pelo apresentador e escolha como quer aparecer.
+          {pinFromUrl
+            ? "O PIN desta sala já está preenchido. Digite apenas como quer aparecer."
+            : "Digite o PIN mostrado pelo apresentador e escolha como quer aparecer."}
         </p>
         <div className={styles.gameInput}>
-          <label>
-            <span>Game PIN</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              autoComplete="off"
-              placeholder="Game PIN"
-              className={styles.gameInputPin}
-              onChange={(event) => setPin(event.target.value)}
-              value={pin}
-              readOnly={inputLocked}
-              maxLength={7}
-            />
-          </label>
+          {pinFromUrl ? (
+            <div className={styles.automaticPin} aria-label="Game PIN preenchido">
+              <div>
+                <span>Game PIN</span>
+                <strong>
+                  {pinFromUrl.slice(0, 3)} {pinFromUrl.slice(3)}
+                </strong>
+              </div>
+              <small>Preenchido pelo QR Code</small>
+            </div>
+          ) : (
+            <label>
+              <span>Game PIN</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                autoFocus
+                placeholder="Game PIN"
+                className={styles.gameInputPin}
+                onChange={(event) => setPin(event.target.value)}
+                value={pin}
+                readOnly={inputLocked}
+                maxLength={7}
+              />
+            </label>
+          )}
           <label>
             <span>Seu nome</span>
             <input
               type="text"
               autoComplete="nickname"
+              autoFocus={Boolean(pinFromUrl)}
               placeholder="Seu nome"
               className={styles.gameInputPin}
               onChange={(event) => setUsername(event.target.value)}
