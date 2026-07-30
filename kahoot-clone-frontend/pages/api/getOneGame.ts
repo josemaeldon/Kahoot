@@ -1,10 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { db } from "../../kahoot";
 import { requireAuthenticatedUser } from "@lib/auth";
-import { findOwnedGame } from "@lib/gameRepository";
+import { findAccessibleGame, findOwnedGame } from "@lib/gameRepository";
 
 export type APIRequest = {
   gameId: string;
+  ownerOnly?: boolean;
 };
 
 export type APIResponse = Success | Error;
@@ -31,7 +32,9 @@ export default async function handler(
   if (!user) return;
   try {
     const request = req.body as APIRequest;
-    const game = await findOwnedGame(request.gameId, user._id);
+    const game = request.ownerOnly
+      ? await findOwnedGame(request.gameId, user._id)
+      : await findAccessibleGame(request.gameId, user._id);
     if (game) {
       return res.status(200).json({ error: false, game });
     }

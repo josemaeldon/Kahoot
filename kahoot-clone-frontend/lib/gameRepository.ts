@@ -6,12 +6,27 @@ interface GameRow extends Omit<db.KahootGame, "date"> {
   date: string | number;
 }
 
+interface GameSummaryRow {
+  _id: string;
+  author_id: string;
+  author_username: string;
+  title: string;
+  date: string | number;
+  questionCount: string | number;
+  isPublic: boolean;
+  folderId: string | null;
+  folderName: string | null;
+}
+
 const gameProjection = `
   select
     g.id::text as "_id",
     g.author_id::text as "author_id",
     u.username as "author_username",
     g.title,
+    g.is_public as "isPublic",
+    g.folder_id::text as "folderId",
+    f.name as "folderName",
     floor(extract(epoch from g.created_at) * 1000)::bigint as date,
     coalesce(
       jsonb_agg(
@@ -35,6 +50,7 @@ const gameProjection = `
     ) as questions
   from games g
   join users u on u.id = g.author_id
+  left join game_folders f on f.id = g.folder_id
   left join questions q on q.game_id = g.id
 `;
 
@@ -46,7 +62,7 @@ export async function listGamesByAuthor(authorId: string) {
   const result = await query<GameRow>(
     `${gameProjection}
      where g.author_id = $1::uuid
-     group by g.id, u.username
+     group by g.id, u.username, f.name
      order by g.created_at desc`,
     [authorId]
   );
@@ -57,10 +73,111 @@ export async function findOwnedGame(gameId: string, authorId: string) {
   const result = await query<GameRow>(
     `${gameProjection}
      where g.id = $1::uuid and g.author_id = $2::uuid
-     group by g.id, u.username`,
+     group by g.id, u.username, f.name`,
     [gameId, authorId]
   );
   return result.rows[0] ? mapGame(result.rows[0]) : null;
+}
+
+export async function findAccessibleGame(gameId: string, userId: string) {
+  const result = await query<GameRow>(
+    `${gameProjection}
+     where g.id = $1::uuid
+       and (g.author_id = $2::uuid or g.is_public = true)
+     group by g.id, u.username, f.name`,
+    [gameId, userId]
+  );
+  return result.rows[0] ? mapGame(result.rows[0]) : null;
+}
+
+export interface ListGameSummariesOptions {
+  userId: string;
+  scope: "mine" | "public";
+  folderId?: string | "unfiled" | null;
+  page: number;
+  pageSize: 10 | 20 | 50;
+}
+
+export async function listGameSummaries({
+  userId,
+  scope,
+  folderId,
+  page,
+  pageSize,
+}: ListGameSummariesOptions) {
+  const values: unknown[] = [];
+  const filters: string[] = [];
+
+  if (scope === "mine") {
+    values.push(userId);
+    filters.push(`g.author_id = $${values.length}::uuid`);
+
+    if (folderId === "unfiled") {
+      filters.push("g.folder_id is null");
+    } else if (typeof folderId === "string") {
+      values.push(folderId);
+      filters.push(`g.folder_id = $${values.length}::uuid`);
+    }
+  } else {
+    filters.push("g.is_public = true");
+  }
+
+  const whereSql = filters.length ? `where ${filters.join(" and ")}` : "";
+  const orderSql =
+    scope === "public"
+      ? "coalesce(g.published_at, g.created_at) desc, g.id desc"
+      : "g.created_at desc, g.id desc";
+  const offset = (page - 1) * pageSize;
+  const pageSizePosition = values.length + 1;
+  const offsetPosition = values.length + 2;
+
+  const [countResult, gamesResult] = await Promise.all([
+    query<{ total: string }>(
+      `select count(*)::text as total
+       from games g
+       ${whereSql}`,
+      values
+    ),
+    query<GameSummaryRow>(
+      `select
+         g.id::text as "_id",
+         g.author_id::text as "author_id",
+         u.username as "author_username",
+         g.title,
+         floor(extract(epoch from g.created_at) * 1000)::bigint as date,
+         (select count(*) from questions q where q.game_id = g.id)::int
+           as "questionCount",
+         g.is_public as "isPublic",
+         g.folder_id::text as "folderId",
+         f.name as "folderName"
+       from games g
+       join users u on u.id = g.author_id
+       left join game_folders f on f.id = g.folder_id
+       ${whereSql}
+       order by ${orderSql}
+       limit $${pageSizePosition}
+       offset $${offsetPosition}`,
+      [...values, pageSize, offset]
+    ),
+  ]);
+
+  const total = Number(countResult.rows[0]?.total || 0);
+  const games: db.KahootSummary[] = gamesResult.rows.map((row) => ({
+    ...row,
+    date: Number(row.date),
+    questionCount: Number(row.questionCount),
+    isPublic: Boolean(row.isPublic),
+  }));
+
+  return {
+    games,
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    },
+  };
 }
 
 async function insertQuestions(

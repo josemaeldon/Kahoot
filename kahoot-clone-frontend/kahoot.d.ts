@@ -5,7 +5,28 @@ export namespace db {
     author_username: string;
     title: string;
     date: number; //Time since unix epoch
+    isPublic?: boolean;
+    folderId?: string | null;
+    folderName?: string | null;
     questions: Question[];
+  }
+
+  declare interface KahootSummary {
+    _id: string;
+    author_id: string;
+    author_username: string;
+    title: string;
+    date: number;
+    questionCount: number;
+    isPublic: boolean;
+    folderId: string | null;
+    folderName: string | null;
+  }
+
+  declare interface KahootFolder {
+    id: string;
+    name: string;
+    gameCount: number;
   }
 
   declare interface Question {

@@ -127,6 +127,7 @@ function Create() {
 
     postData<GetGameReq, GetGameRes>("/api/getOneGame", {
       gameId: router.query.editingId as string,
+      ownerOnly: true,
     })
       .then((response) => {
         if (!("game" in response)) {

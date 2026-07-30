@@ -1,0 +1,156 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(18, 12, 39, 0.62);
+  backdrop-filter: blur(5px);
+}
+
+.modal {
+  width: min(100%, 500px);
+  display: flex;
+  gap: 18px;
+  padding: 26px;
+  border-radius: 20px;
+  background: white;
+  color: var(--color-text);
+  box-shadow: 0 28px 80px rgba(18, 12, 39, 0.34);
+}
+
+.icon {
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--color-brand-700);
+  background: var(--color-brand-100);
+}
+
+.icon svg {
+  width: 23px;
+  height: 23px;
+}
+
+.content {
+  min-width: 0;
+  flex: 1;
+}
+
+.content h2 {
+  margin: 1px 0 7px;
+  font-size: 22px;
+  font-weight: 820;
+  letter-spacing: -0.025em;
+}
+
+.content p {
+  margin: 0 0 20px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.content form {
+  display: grid;
+}
+
+.content label {
+  margin-bottom: 7px;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.content input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 13px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 10px;
+  color: var(--color-text);
+  background: white;
+  font: inherit;
+}
+
+.content input:focus {
+  border-color: var(--color-brand-600);
+  outline: 3px solid rgba(70, 23, 143, 0.13);
+}
+
+.actions {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 10px;
+}
+
+.cancelButton,
+.saveButton {
+  min-height: 44px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 760;
+}
+
+.cancelButton {
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text);
+  background: white;
+}
+
+.saveButton {
+  border: 1px solid var(--color-brand-700);
+  color: white;
+  background: var(--color-brand-700);
+  box-shadow: 0 3px 0 var(--color-brand-900);
+}
+
+.cancelButton:disabled,
+.saveButton:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+@media (max-width: 520px) {
+  .modal {
+    gap: 13px;
+    padding: 20px;
+  }
+
+  .icon {
+    flex-basis: 40px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .backdrop {
+    animation: fadeIn 140ms ease-out;
+  }
+
+  .modal {
+    animation: riseIn 180ms ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
