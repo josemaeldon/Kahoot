@@ -15,7 +15,7 @@ pub mod state;
 
 use api::{Action, HostEvent, Question, RankingEntry, RoomId, UserEvent};
 
-use state::{GameEvent, PlayerAnswer, Room, SharedState, Users};
+use state::{GameEvent, PlayerAction, Room, SharedState, Users};
 
 use crate::ext::{ToMessageExt, NextActionExt};
 
@@ -53,6 +53,11 @@ fn randomize_answer_positions<R: Rng + ?Sized>(questions: &mut [Question], rng: 
             .map(|(_, choice)| choice)
             .collect();
     }
+}
+
+fn randomize_game<R: Rng + ?Sized>(questions: &mut [Question], rng: &mut R) {
+    questions.shuffle(rng);
+    randomize_answer_positions(questions, rng);
 }
 
 /// Websocket api router.
@@ -129,7 +134,7 @@ async fn create_room(mut host: WebSocket, state: SharedState, mut questions: Vec
 
     {
         let mut rng = rand::thread_rng();
-        randomize_answer_positions(&mut questions, &mut rng);
+        randomize_game(&mut questions, &mut rng);
     }
 
     let (action_tx, mut action_rx) = mpsc::channel(2048);
@@ -280,37 +285,40 @@ async fn create_room(mut host: WebSocket, state: SharedState, mut questions: Vec
                 }
 
                 // User answers
-                Some(PlayerAnswer { username, choice }) = action_rx.recv() => {
-                    if answered.contains(&username) {
-                        continue;
-                    }
+                Some(player_action) = action_rx.recv() => {
+                    match player_action {
+                        PlayerAction::Answer { username, choice } => {
+                            if answered.contains(&username) {
+                                continue;
+                            }
 
-                    answered.insert(username.clone());
+                            answered.insert(username.clone());
 
-                    // Tell host user answered
-                    let _ = host_tx.send(HostEvent::UserAnswered {
-                            username: username.clone()
-                        }.to_message())
-                        .await;
+                            // Tell host user answered
+                            let _ = host_tx.send(HostEvent::UserAnswered {
+                                    username: username.clone()
+                                }.to_message())
+                                .await;
 
-                    tracing::debug!("`{username}` answered {choice}");
+                            tracing::debug!("`{username}` answered {choice}");
 
-                    // If the choice is correct
-                    if choice == answer {
-                        // Update points log
-                        tracing::debug!("`{username}` +{points}");
-                        point_gains.insert(username, points);
-
-                        // Decrease next point gain
-                        points = (points * 10 / 11).max(1);
+                            // If the choice is correct
+                            if choice == answer {
+                                tracing::debug!("`{username}` +{points}");
+                                point_gains.insert(username, points);
+                                points = (points * 10 / 11).max(1);
+                            }
+                        }
+                        PlayerAction::Leave { username } => {
+                            answered.remove(&username);
+                            point_gains.remove(&username);
+                        }
                     }
 
                     // Has every player answered
-                    let all_answered = room
-                        .users
-                        .usernames()
-                        .iter()
-                        .all(|name| answered.contains(name));
+                    let active_players = room.users.usernames();
+                    let all_answered = !active_players.is_empty()
+                        && active_players.iter().all(|name| answered.contains(name));
 
                     // If everyone has answered, leave loop
                     if all_answered {
@@ -548,11 +556,25 @@ async fn join_room(
                         return;
                     }
                     let _ = action_stream
-                        .send(PlayerAnswer {
+                        .send(PlayerAction::Answer {
                             username: action_username.clone(),
                             choice,
                         })
                         .await;
+                } else if let Action::LeaveRoom = action {
+                    if users
+                        .users
+                        .leave_user(&action_username, connection_id)
+                        .await
+                    {
+                        users.scores.lock().unwrap().remove(&action_username);
+                        let _ = action_stream
+                            .send(PlayerAction::Leave {
+                                username: action_username.clone(),
+                            })
+                            .await;
+                    }
+                    return;
                 }
             }
         })
@@ -590,7 +612,7 @@ fn player_event(
 /// Websocket api testing
 #[cfg(test)]
 mod tests {
-    use super::randomize_answer_positions;
+    use super::{randomize_answer_positions, randomize_game};
     use crate::ws::api::{Action, HostEvent, Question, RankingEntry, UserEvent};
     use crate::ws::router;
 
@@ -729,6 +751,10 @@ mod tests {
         async fn leave(mut self) {
             self.0.close(None).await.unwrap();
         }
+
+        async fn leave_room(&mut self) {
+            self.send(&Action::LeaveRoom).await;
+        }
     }
 
     // Macro magic, don't bother understanding
@@ -790,6 +816,43 @@ mod tests {
         }
 
         assert_eq!(observed_positions.len(), original.choices.len());
+    }
+
+    #[test]
+    fn randomizes_question_order_without_losing_questions() {
+        let originals: Vec<Question> = (0..10)
+            .map(|index| Question {
+                question: format!("Question {index}"),
+                image: None,
+                time: 30,
+                choices: vec!["Correct".into(), "Wrong".into()],
+                answer: 0,
+            })
+            .collect();
+        let original_texts: HashSet<_> =
+            originals.iter().map(|item| item.question.clone()).collect();
+        let mut observed_orders = HashSet::new();
+
+        for seed in 0..16 {
+            let mut questions = originals.clone();
+            let mut rng = StdRng::seed_from_u64(seed);
+            randomize_game(&mut questions, &mut rng);
+            assert_eq!(
+                questions
+                    .iter()
+                    .map(|item| item.question.clone())
+                    .collect::<HashSet<_>>(),
+                original_texts
+            );
+            observed_orders.insert(
+                questions
+                    .iter()
+                    .map(|item| item.question.clone())
+                    .collect::<Vec<_>>(),
+            );
+        }
+
+        assert!(observed_orders.len() > 1);
     }
 
     /// Tests a simple situation where there is one player and only one question.
@@ -1067,6 +1130,33 @@ mod tests {
 
         resumed.send(&Action::Answer { choice: 0 }).await;
         let_assert!(HostEvent::UserAnswered { username } = host.recv().await.unwrap());
+        assert_eq!(username, "Alice");
+    }
+
+    #[tokio::test]
+    async fn explicitly_leaves_room_without_reconnect_grace() {
+        let server = TestServer::new().await;
+        let (mut host, room_id) = server
+            .create_room(vec![question! {
+                "Fish?", time: 30 => [
+                    true => "foo",
+                    false => "bar",
+                ]
+            }])
+            .await;
+
+        let mut player = server.join_room(room_id, String::from("Alice")).await;
+        let_assert!(UserEvent::Joined { .. } = player.recv().await.unwrap());
+        let_assert!(HostEvent::UserJoined { username } = host.recv().await.unwrap());
+        assert_eq!(username, "Alice");
+
+        player.leave_room().await;
+        let_assert!(HostEvent::UserLeft { username } = host.recv().await.unwrap());
+        assert_eq!(username, "Alice");
+
+        let mut replacement = server.join_room(room_id, String::from("Alice")).await;
+        let_assert!(UserEvent::Joined { .. } = replacement.recv().await.unwrap());
+        let_assert!(HostEvent::UserJoined { username } = host.recv().await.unwrap());
         assert_eq!(username, "Alice");
     }
 

@@ -3,18 +3,26 @@ import AdminUserModal, {
 } from "@components/AdminUserModal";
 import Header from "@components/Header";
 import NoticeModal from "@components/NoticeModal";
+import SelectField from "@components/SelectField";
 import { getAccessPeriodSummary } from "@lib/accessPeriod";
 import { postData } from "@lib/postData";
 import useUser from "@lib/useUser";
 import styles from "@styles/admin.module.css";
 import type { ManagedUser } from "./api/admin/users";
+import type {
+  AiSettingsResponse,
+  PublicAiSettings,
+} from "./api/admin/ai-settings";
 import {
   FiCalendar,
   FiCheckCircle,
   FiClock,
+  FiCpu,
   FiEdit2,
+  FiKey,
   FiMessageCircle,
   FiPlus,
+  FiSave,
   FiSearch,
   FiShield,
   FiTrash2,
@@ -34,6 +42,26 @@ interface ApiError {
 }
 
 type AdminResponse = AdminData | ApiError;
+
+interface AiSettingsDraft {
+  enabled: boolean;
+  model: string;
+  reasoningEffort: PublicAiSettings["reasoningEffort"];
+  systemInstructions: string;
+  apiKey: string;
+  clearApiKey: boolean;
+}
+
+function settingsDraft(settings: PublicAiSettings): AiSettingsDraft {
+  return {
+    enabled: settings.enabled,
+    model: settings.model,
+    reasoningEffort: settings.reasoningEffort,
+    systemInstructions: settings.systemInstructions,
+    apiKey: "",
+    clearApiKey: false,
+  };
+}
 
 function userStatus(user: ManagedUser) {
   if (user.role === "superadmin") {
@@ -71,6 +99,10 @@ export default function Admin() {
   >(undefined);
   const [pendingDelete, setPendingDelete] = useState<ManagedUser | null>(null);
   const [saving, setSaving] = useState(false);
+  const [aiSettings, setAiSettings] = useState<PublicAiSettings | null>(null);
+  const [aiDraft, setAiDraft] = useState<AiSettingsDraft | null>(null);
+  const [aiSaving, setAiSaving] = useState(false);
+  const [aiError, setAiError] = useState("");
   const [formError, setFormError] = useState("");
   const [notice, setNotice] = useState<{
     title: string;
@@ -103,9 +135,34 @@ export default function Admin() {
     }
   }, []);
 
+  const loadAiSettings = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/ai-settings", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const payload = (await response.json()) as AiSettingsResponse;
+      if (!("settings" in payload)) throw new Error(payload.errorDescription);
+      setAiSettings(payload.settings);
+      setAiDraft(settingsDraft(payload.settings));
+    } catch (error) {
+      setNotice({
+        title: "Não foi possível carregar a IA",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Verifique sua conexão e tente novamente.",
+        tone: "error",
+      });
+    }
+  }, []);
+
   useEffect(() => {
-    if (user?.role === "superadmin") void loadData();
-  }, [loadData, user?.role]);
+    if (user?.role === "superadmin") {
+      void loadData();
+      void loadAiSettings();
+    }
+  }, [loadAiSettings, loadData, user?.role]);
 
   const filteredUsers = useMemo(() => {
     const normalized = search.trim().toLocaleLowerCase("pt-BR");
@@ -251,6 +308,35 @@ export default function Admin() {
     }
   }
 
+  async function saveAiSettings() {
+    if (!aiDraft) return;
+    setAiSaving(true);
+    setAiError("");
+    try {
+      const response = await postData<
+        AiSettingsDraft,
+        AiSettingsResponse
+      >("/api/admin/ai-settings", aiDraft);
+      if (!("settings" in response)) {
+        setAiError(response.errorDescription);
+        return;
+      }
+      setAiSettings(response.settings);
+      setAiDraft(settingsDraft(response.settings));
+      setNotice({
+        title: "Configurações de IA salvas",
+        message: response.settings.enabled
+          ? "A geração de Kahoots com IA está disponível para os usuários."
+          : "A geração com IA permanece desativada.",
+        tone: "info",
+      });
+    } catch {
+      setAiError("Não foi possível conectar ao servidor.");
+    } finally {
+      setAiSaving(false);
+    }
+  }
+
   return (
     <main className={styles.page}>
       <Header />
@@ -297,6 +383,186 @@ export default function Admin() {
             <span aria-hidden="true" />
             {data?.registrationEnabled ? "Ativado" : "Desativado"}
           </button>
+        </section>
+
+        <section className={styles.aiSection} aria-labelledby="ai-settings-title">
+          <div className={styles.aiHeader}>
+            <div className={styles.aiTitle}>
+              <span className={styles.aiIcon} aria-hidden="true">
+                <FiCpu />
+              </span>
+              <div>
+                <span className={styles.cardLabel}>Geração de conteúdo</span>
+                <h2 id="ai-settings-title">Inteligência artificial</h2>
+                <p>Controle o modelo e as regras usadas no editor de Kahoots.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={aiDraft?.enabled || false}
+              className={`${styles.switch} ${
+                aiDraft?.enabled ? styles.switchEnabled : ""
+              }`}
+              disabled={!aiDraft || aiSaving}
+              onClick={() =>
+                setAiDraft((current) =>
+                  current ? { ...current, enabled: !current.enabled } : current
+                )
+              }
+            >
+              <span aria-hidden="true" />
+              {aiDraft?.enabled ? "Ativada" : "Desativada"}
+            </button>
+          </div>
+
+          {!aiDraft ? (
+            <div className={styles.aiLoading}>
+              <span className="appSpinner" />
+              Carregando configurações...
+            </div>
+          ) : (
+            <form
+              className={styles.aiForm}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void saveAiSettings();
+              }}
+            >
+              <div className={styles.aiFormGrid}>
+                <label className={styles.aiField}>
+                  <span>Modelo da OpenAI</span>
+                  <input
+                    type="text"
+                    value={aiDraft.model}
+                    maxLength={80}
+                    disabled={aiSaving}
+                    onChange={(event) =>
+                      setAiDraft((current) =>
+                        current
+                          ? { ...current, model: event.target.value }
+                          : current
+                      )
+                    }
+                  />
+                </label>
+                <label className={styles.aiField}>
+                  <span>Esforço de raciocínio</span>
+                  <SelectField
+                    value={aiDraft.reasoningEffort}
+                    disabled={aiSaving}
+                    onChange={(event) =>
+                      setAiDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              reasoningEffort: event.target
+                                .value as AiSettingsDraft["reasoningEffort"],
+                            }
+                          : current
+                      )
+                    }
+                  >
+                    <option value="none">Nenhum</option>
+                    <option value="low">Baixo</option>
+                    <option value="medium">Médio</option>
+                    <option value="high">Alto</option>
+                  </SelectField>
+                </label>
+              </div>
+
+              <label className={styles.aiField}>
+                <span>Chave da API da OpenAI</span>
+                <div className={styles.aiKeyInput}>
+                  <FiKey aria-hidden="true" />
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    value={aiDraft.apiKey}
+                    minLength={20}
+                    disabled={aiSaving || aiDraft.clearApiKey}
+                    placeholder={
+                      aiSettings?.apiKeyConfigured
+                        ? "Chave configurada. Digite para substituir."
+                        : "Cole a chave da API"
+                    }
+                    onChange={(event) =>
+                      setAiDraft((current) =>
+                        current
+                          ? { ...current, apiKey: event.target.value }
+                          : current
+                      )
+                    }
+                  />
+                </div>
+              </label>
+
+              {aiSettings?.apiKeyConfigured && (
+                <label className={styles.clearKey}>
+                  <input
+                    type="checkbox"
+                    checked={aiDraft.clearApiKey}
+                    disabled={aiSaving}
+                    onChange={(event) =>
+                      setAiDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              clearApiKey: event.target.checked,
+                              apiKey: "",
+                              enabled: event.target.checked
+                                ? false
+                                : current.enabled,
+                            }
+                          : current
+                      )
+                    }
+                  />
+                  Remover a chave armazenada
+                </label>
+              )}
+
+              <label className={styles.aiField}>
+                <span>Instruções adicionais</span>
+                <textarea
+                  value={aiDraft.systemInstructions}
+                  maxLength={2000}
+                  disabled={aiSaving}
+                  onChange={(event) =>
+                    setAiDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            systemInstructions: event.target.value,
+                          }
+                        : current
+                    )
+                  }
+                />
+                <small>{aiDraft.systemInstructions.length} / 2.000</small>
+              </label>
+
+              {aiError && (
+                <p className={styles.aiError} role="alert">
+                  {aiError}
+                </p>
+              )}
+
+              <div className={styles.aiFooter}>
+                <p>
+                  A chave é criptografada no banco e nunca é exibida novamente.
+                </p>
+                <button
+                  type="submit"
+                  className={styles.aiSaveButton}
+                  disabled={aiSaving}
+                >
+                  <FiSave aria-hidden="true" />
+                  {aiSaving ? "Salvando..." : "Salvar IA"}
+                </button>
+              </div>
+            </form>
+          )}
         </section>
 
         <div className={styles.stats}>

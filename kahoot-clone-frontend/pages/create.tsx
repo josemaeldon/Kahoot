@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import styles from "../styles/create.module.css";
+import AiKahootModal from "@components/AiKahootModal";
 import Questions from "../Components/Questions";
 import Image from "next/image";
 import Editor from "../Components/Editor";
@@ -16,6 +17,7 @@ import {
 } from "./api/getOneGame";
 import {
   FiArrowLeft,
+  FiCpu,
   FiDownload,
   FiFileText,
   FiPlus,
@@ -28,6 +30,7 @@ import {
 import { KahootCsvError, parseKahootCsv } from "@lib/kahootCsv";
 import type { APIResponse as CategoriesResponse } from "./api/categories";
 import SelectField from "@components/SelectField";
+import type { AiGenerationResponse } from "./api/ai/generate";
 
 interface Notice {
   title: string;
@@ -131,6 +134,9 @@ function Create() {
   const [questionNumber, setQuestionNumber] = useState(0);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState("");
   const [categories, setCategories] = useState<db.KahootCategory[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [creatingCategory, setCreatingCategory] = useState(false);
@@ -382,6 +388,42 @@ function Create() {
     }
   }
 
+  async function generateWithAi(prompt: string, categoryId: string) {
+    setAiGenerating(true);
+    setAiError("");
+    try {
+      const response = await postData<
+        { prompt: string; categoryId: string },
+        AiGenerationResponse
+      >("/api/ai/generate", { prompt, categoryId });
+      if (!("game" in response)) {
+        setAiError(response.errorDescription);
+        return;
+      }
+
+      setGame((current) => ({
+        ...current,
+        title: response.game.title,
+        categoryId,
+        questions: response.game.questions,
+      }));
+      setQuestionNumber(0);
+      setFormErrors(null);
+      setAiModalOpen(false);
+      setNotice({
+        title: "Kahoot gerado",
+        messages: [
+          "As 10 perguntas foram adicionadas ao editor. Revise o conteúdo, selecione uma categoria e salve quando estiver pronto.",
+        ],
+        tone: "info",
+      });
+    } catch {
+      setAiError("Não foi possível conectar ao gerador de IA.");
+    } finally {
+      setAiGenerating(false);
+    }
+  }
+
   return (
     <main className={styles.page}>
       <header className={styles.topbar}>
@@ -554,6 +596,17 @@ function Create() {
             <FiDownload aria-hidden="true" />
             Baixar modelo
           </a>
+          <button
+            type="button"
+            className={styles.aiButton}
+            onClick={() => {
+              setAiError("");
+              setAiModalOpen(true);
+            }}
+          >
+            <FiCpu aria-hidden="true" />
+            Gerar com IA
+          </button>
           <label className={styles.importButton}>
             <FiUploadCloud aria-hidden="true" />
             Importar CSV
@@ -609,6 +662,19 @@ function Create() {
         messages={notice?.messages ?? []}
         tone={notice?.tone}
         onClose={() => setNotice(null)}
+      />
+      <AiKahootModal
+        open={aiModalOpen}
+        generating={aiGenerating}
+        error={aiError}
+        categories={categories}
+        initialCategoryId={game.categoryId}
+        onClose={() => {
+          if (!aiGenerating) setAiModalOpen(false);
+        }}
+        onGenerate={(prompt, categoryId) =>
+          void generateWithAi(prompt, categoryId)
+        }
       />
     </main>
   );

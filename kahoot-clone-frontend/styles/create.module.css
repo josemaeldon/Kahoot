@@ -206,6 +206,7 @@
 .importDescription,
 .importActions,
 .modelButton,
+.aiButton,
 .importButton {
   display: flex;
   align-items: center;
@@ -251,6 +252,7 @@
 }
 
 .modelButton,
+.aiButton,
 .importButton {
   min-height: 42px;
   justify-content: center;
@@ -272,6 +274,18 @@
 .modelButton:hover {
   color: var(--color-brand-900);
   border-color: var(--color-brand-500);
+}
+
+.aiButton {
+  color: white;
+  border: 1px solid #1368ce;
+  background: #1368ce;
+  box-shadow: 0 2px 0 #0d4f9f;
+}
+
+.aiButton:hover {
+  background: #0f5dbb;
+  transform: translateY(-1px);
 }
 
 .importButton {
@@ -377,6 +391,7 @@
   }
 
   .modelButton,
+  .aiButton,
   .importButton {
     flex: 1;
   }
@@ -388,6 +403,7 @@
   }
 
   .modelButton,
+  .aiButton,
   .importButton {
     padding: 0 9px;
     font-size: 11px;

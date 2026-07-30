@@ -101,6 +101,9 @@ export namespace action {
     type: "answer";
     choice: number;
   }
+  declare interface LeaveRoom {
+    type: "leaveRoom";
+  }
 
   declare interface BeginRound {
     type: "beginRound";

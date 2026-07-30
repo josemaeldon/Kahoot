@@ -34,6 +34,7 @@ pub enum Action {
 
     // Player only
     Answer { choice: usize },
+    LeaveRoom,
 
     // Host only
     BeginRound,

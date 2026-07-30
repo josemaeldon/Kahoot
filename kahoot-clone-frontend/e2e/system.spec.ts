@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import path from "node:path";
 
 const baseUrl = process.env.E2E_BASE_URL || "http://127.0.0.1:3000";
+const testAiGeneration = process.env.E2E_AI_ENABLED === "true";
 
 const staleSessionToken = jwt.sign(
   {
@@ -68,6 +69,7 @@ test("sessão sem usuário é encerrada antes de salvar", async ({ browser }) =>
 });
 
 test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
+  test.setTimeout(testAiGeneration ? 90_000 : 45_000);
   const hostContext = await browser.newContext({ viewport: { width: 1536, height: 1024 } });
   const host = await hostContext.newPage();
   const browserProblems: string[] = [];
@@ -152,6 +154,52 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   await expect(host).toHaveURL("/");
   await host.getByRole("button", { name: "Criar um quiz" }).click();
   await expect(host).toHaveURL("/profile");
+
+  if (testAiGeneration) {
+    await host.goto("/admin");
+    await expect(
+      host.getByRole("heading", { name: "Inteligência artificial" })
+    ).toBeVisible();
+    await host.getByLabel("Modelo da OpenAI").fill("gpt-5.6-sol");
+    await host.getByLabel("Chave da API da OpenAI").fill("sk-e2e-placeholder-key-123456789");
+    await host
+      .getByRole("switch", { name: "Desativada", exact: true })
+      .click();
+    await host.getByRole("button", { name: "Salvar IA" }).click();
+    const aiSettingsNotice = host.getByRole("alertdialog", {
+      name: "Configurações de IA salvas",
+    });
+    await expect(aiSettingsNotice).toBeVisible();
+    await aiSettingsNotice.getByRole("button", { name: "Entendi" }).click();
+    await host.screenshot({ path: "/tmp/kahoot-admin-ai-settings.png" });
+
+    await host.goto("/create");
+    const downloadModel = host.getByRole("link", { name: "Baixar modelo" });
+    const generateWithAi = host.getByRole("button", { name: "Gerar com IA" });
+    await expect(downloadModel).toBeVisible();
+    await expect(generateWithAi).toBeVisible();
+    await generateWithAi.click();
+    const aiModal = host.getByRole("dialog", { name: "Gerar Kahoot com IA" });
+    await expect(aiModal).toBeVisible();
+    await aiModal
+      .getByLabel("Categoria do Kahoot gerado por IA")
+      .selectOption({ label: "Ciências" });
+    await aiModal
+      .getByLabel("O que você quer ensinar?")
+      .fill("Sistema solar para alunos do sétimo ano");
+    await aiModal.getByRole("button", { name: "Gerar Kahoot" }).click();
+    const aiGeneratedNotice = host.getByRole("alertdialog", {
+      name: "Kahoot gerado",
+    });
+    await expect(aiGeneratedNotice).toBeVisible({ timeout: 20_000 });
+    await aiGeneratedNotice.getByRole("button", { name: "Entendi" }).click();
+    await expect(host.getByPlaceholder("Digite o título do Kahoot...")).toHaveValue(
+      "Ciências — Sistema Solar com IA"
+    );
+    await expect(host.getByText("10 perguntas")).toBeVisible();
+    await host.screenshot({ path: "/tmp/kahoot-create-ai-generated.png" });
+    await host.goto("/profile");
+  }
 
   await host.getByRole("button", { name: "Criar Kahoot" }).first().click();
   await expect(host).toHaveURL("/create");
@@ -285,6 +333,39 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
     path: "/tmp/kahoot-player-late-join-mobile.png",
   });
 
+  const leavingPlayerContext = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+  });
+  const leavingPlayer = await leavingPlayerContext.newPage();
+  await leavingPlayer.goto("/play");
+  await leavingPlayer.getByPlaceholder("Game PIN").fill(pin!);
+  await leavingPlayer.getByPlaceholder("Seu nome").fill("Jogador saindo");
+  await leavingPlayer.getByRole("button", { name: "Entrar na sala" }).click();
+  await expect(leavingPlayer.locator('[class*="answerGrid"] > button')).toHaveCount(2);
+  await leavingPlayer.getByRole("button", { name: "Sair", exact: true }).click();
+  const playerExitConfirmation = leavingPlayer.getByRole("alertdialog", {
+    name: "Sair da sala?",
+  });
+  await expect(playerExitConfirmation).toBeVisible();
+  await leavingPlayer.screenshot({
+    path: "/tmp/kahoot-player-exit-confirmation-mobile.png",
+  });
+  await playerExitConfirmation
+    .getByRole("button", { name: "Sair da sala" })
+    .click();
+  await expect(
+    leavingPlayer.getByRole("heading", { name: "Entre na sala" })
+  ).toBeVisible();
+  await leavingPlayer.getByPlaceholder("Game PIN").fill(pin!);
+  await leavingPlayer.getByPlaceholder("Seu nome").fill("Jogador saindo");
+  await leavingPlayer.getByRole("button", { name: "Entrar na sala" }).click();
+  await expect(leavingPlayer.locator('[class*="answerGrid"] > button')).toHaveCount(2);
+  await leavingPlayer.getByRole("button", { name: "Sair", exact: true }).click();
+  await leavingPlayer
+    .getByRole("alertdialog", { name: "Sair da sala?" })
+    .getByRole("button", { name: "Sair da sala" })
+    .click();
+
   const hostAnswers = host.locator('[class*="grid"] > article');
   const correctAnswerPosition = await hostAnswers
     .evaluateAll((answers) =>
@@ -356,5 +437,6 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
 
   await playerContext.close();
   await latePlayerContext.close();
+  await leavingPlayerContext.close();
   await hostContext.close();
 });

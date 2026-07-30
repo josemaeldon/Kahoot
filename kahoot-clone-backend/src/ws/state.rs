@@ -24,7 +24,7 @@ pub struct State {
 
 pub struct Room {
     pub users: Users,
-    pub action_stream: mpsc::Sender<PlayerAnswer>,
+    pub action_stream: mpsc::Sender<PlayerAction>,
     pub result_stream: watch::Receiver<GameEvent>,
     pub scores: Arc<Mutex<HashMap<String, u32>>>,
 }
@@ -52,9 +52,9 @@ pub struct UserPresence {
     reconnect_grace: Duration,
 }
 
-pub struct PlayerAnswer {
-    pub username: String,
-    pub choice: usize,
+pub enum PlayerAction {
+    Answer { username: String, choice: usize },
+    Leave { username: String },
 }
 
 #[derive(Clone)]
@@ -140,6 +140,27 @@ impl Users {
             .is_some_and(|session| {
                 session.connected && session.connection_id == connection_id
             })
+    }
+
+    pub async fn leave_user(&self, name: &str, connection_id: u64) -> bool {
+        let removed = {
+            let mut users = self.users.lock().unwrap();
+            let should_remove = users
+                .get(name)
+                .is_some_and(|session| session.connection_id == connection_id);
+            if should_remove {
+                users.remove(name);
+            }
+            should_remove
+        };
+
+        if removed {
+            let _ = self
+                .event_stream
+                .send(PlayerEvent::Left(name.to_owned()))
+                .await;
+        }
+        removed
     }
 
     /// Tries to add a user to the user map.

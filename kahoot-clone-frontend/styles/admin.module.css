@@ -105,6 +105,233 @@
   box-shadow: var(--shadow-sm);
 }
 
+.aiSection {
+  margin-top: 20px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.aiHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.aiTitle {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.aiIcon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 11px;
+  color: white;
+  background: #1368ce;
+  box-shadow: 0 3px 0 #0d4f9f;
+}
+
+.aiIcon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.aiHeader h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.aiHeader p {
+  margin: 4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.aiLoading {
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.aiLoading :global(.appSpinner) {
+  border-color: rgba(19, 104, 206, 0.2);
+  border-top-color: #1368ce;
+}
+
+.aiForm {
+  padding: 26px 28px;
+}
+
+.aiFormGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.7fr);
+  gap: 16px;
+}
+
+.aiField {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  margin-top: 17px;
+}
+
+.aiFormGrid .aiField {
+  margin-top: 0;
+}
+
+.aiField > span {
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.aiField > input,
+.aiField textarea,
+.aiKeyInput {
+  width: 100%;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  outline: 0;
+  color: var(--color-text);
+  background: white;
+  font: inherit;
+  font-size: 13px;
+}
+
+.aiField > input {
+  min-height: 46px;
+  padding: 0 13px;
+}
+
+.aiField textarea {
+  min-height: 100px;
+  resize: vertical;
+  padding: 12px 13px;
+  line-height: 1.5;
+}
+
+.aiField > input:focus,
+.aiField textarea:focus,
+.aiKeyInput:focus-within {
+  border-color: #1368ce;
+  box-shadow: 0 0 0 3px rgba(19, 104, 206, 0.12);
+}
+
+.aiField small {
+  justify-self: end;
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.aiKeyInput {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 13px;
+}
+
+.aiKeyInput svg {
+  flex: 0 0 auto;
+  color: #1368ce;
+}
+
+.aiKeyInput input {
+  min-width: 0;
+  height: 44px;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+}
+
+.aiKeyInput:has(input:disabled),
+.aiField textarea:disabled,
+.aiField > input:disabled {
+  background: #f1f2f6;
+}
+
+.clearKey {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: var(--color-danger);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.clearKey input {
+  accent-color: var(--color-danger);
+}
+
+.aiError {
+  margin: 16px 0 0;
+  padding: 11px 13px;
+  border: 1px solid #f1c8c4;
+  border-radius: var(--radius-sm);
+  color: var(--color-danger);
+  background: #fff5f3;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.aiFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.aiFooter p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.aiSaveButton {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 17px;
+  border: 1px solid #1368ce;
+  border-radius: var(--radius-sm);
+  color: white;
+  background: #1368ce;
+  box-shadow: 0 3px 0 #0d4f9f;
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.aiSaveButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .registrationCard h2,
 .sectionHeader h2 {
   font-size: 21px;
@@ -714,6 +941,7 @@
   }
 
   .registrationCard,
+  .aiHeader,
   .sectionHeader {
     align-items: stretch;
     flex-direction: column;
@@ -730,6 +958,19 @@
 
   .switch,
   .search {
+    width: 100%;
+  }
+
+  .aiFormGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .aiFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .aiSaveButton {
     width: 100%;
   }
 
@@ -766,6 +1007,8 @@
   }
 
   .registrationCard,
+  .aiHeader,
+  .aiForm,
   .sectionHeader,
   .userModal {
     padding: 22px;

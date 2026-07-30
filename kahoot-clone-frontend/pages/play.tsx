@@ -10,7 +10,13 @@ import {
   BsFillTriangleFill,
 } from "react-icons/bs";
 import { FaCheck } from "react-icons/fa";
-import { FiArrowLeft, FiClock, FiRefreshCw, FiWifi } from "react-icons/fi";
+import {
+  FiArrowLeft,
+  FiClock,
+  FiLogOut,
+  FiRefreshCw,
+  FiWifi,
+} from "react-icons/fi";
 
 const PlayerContext = React.createContext<Context>(null);
 
@@ -29,6 +35,7 @@ interface Context {
   connectionStatus: ConnectionStatus;
   joinRoom: (roomId: number, username: string) => Promise<void>;
   sendAction: (request: action.Answer) => boolean;
+  requestLeave: () => void;
 }
 
 type ConnectionStatus =
@@ -54,7 +61,8 @@ function PlayerFrame({
   children: React.ReactNode;
   stage?: string;
 }) {
-  const { connectionStatus } = useContext(PlayerContext);
+  const { connectionStatus, requestLeave } = useContext(PlayerContext);
+  const canLeave = Boolean(stage && stage !== "Partida concluída");
 
   return (
     <main className={styles.backdrop}>
@@ -68,7 +76,17 @@ function PlayerFrame({
               Reconectando
             </span>
           )}
-          {stage && <span>{stage}</span>}
+          {stage && <span className={styles.stageLabel}>{stage}</span>}
+          {canLeave && (
+            <button
+              type="button"
+              className={styles.leaveButton}
+              onClick={requestLeave}
+            >
+              <FiLogOut aria-hidden="true" />
+              Sair
+            </button>
+          )}
         </div>
       </header>
       <div className={styles.gameBox}>{children}</div>
@@ -383,6 +401,7 @@ function Play() {
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("idle");
   const [connectionError, setConnectionError] = useState("");
+  const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false);
   const gameFinishedRef = useRef(false);
   const mountedRef = useRef(false);
   const stoppedRef = useRef(false);
@@ -686,6 +705,16 @@ function Play() {
       .catch(() => window.location.assign("/play"));
   }
 
+  function leaveCurrentRoom() {
+    setLeaveConfirmationOpen(false);
+    const socket = socketRef.current;
+    if (socket?.readyState === WebSocket.OPEN) {
+      const request: action.LeaveRoom = { type: "leaveRoom" };
+      socket.send(JSON.stringify(request));
+    }
+    joinAnotherRoom();
+  }
+
   return (
     <PlayerContext.Provider
       value={{
@@ -696,6 +725,7 @@ function Play() {
         connectionStatus,
         joinRoom,
         sendAction,
+        requestLeave: () => setLeaveConfirmationOpen(true),
       }}
     >
       <>
@@ -711,6 +741,19 @@ function Play() {
             onJoinAnotherRoom={joinAnotherRoom}
           />
         )}
+        <NoticeModal
+          open={leaveConfirmationOpen}
+          title="Sair da sala?"
+          messages={[
+            "Você deixará esta partida e poderá entrar em outra sala.",
+          ]}
+          tone="warning"
+          closeLabel="Continuar jogando"
+          actionLabel="Sair da sala"
+          actionTone="danger"
+          onClose={() => setLeaveConfirmationOpen(false)}
+          onAction={leaveCurrentRoom}
+        />
         <NoticeModal
           open={connectionError !== ""}
           title="Conexão encerrada"
