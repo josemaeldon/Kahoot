@@ -1,6 +1,7 @@
 import Header from "@components/Header";
 import FolderModal from "@components/FolderModal";
 import NoticeModal from "@components/NoticeModal";
+import SelectField from "@components/SelectField";
 import styles from "@styles/profile.module.css";
 import React, { useEffect, useState } from "react";
 import useUser from "@lib/useSSRUser";
@@ -489,7 +490,9 @@ function Profile() {
                   <>
                     <label>
                       <span>Categoria</span>
-                      <select
+                      <SelectField
+                        density="compact"
+                        containerClassName={styles.categoryFilter}
                         aria-label="Filtrar Kahoots por categoria"
                         value={selectedCategory}
                         onChange={(event) =>
@@ -502,11 +505,12 @@ function Profile() {
                             {category.name}
                           </option>
                         ))}
-                      </select>
+                      </SelectField>
                     </label>
                     <label>
                       <span>Ordenar</span>
-                      <select
+                      <SelectField
+                        density="compact"
                         aria-label="Ordenar Kahoots públicos"
                         value={publicSort}
                         onChange={(event) => {
@@ -516,13 +520,14 @@ function Profile() {
                       >
                         <option value="newest">Mais recentes</option>
                         <option value="oldest">Mais antigos</option>
-                      </select>
+                      </SelectField>
                     </label>
                   </>
                 )}
                 <label>
                   <span>Exibir por página</span>
-                  <select
+                  <SelectField
+                    density="compact"
                     aria-label="Quantidade de Kahoots por página"
                     value={pageSize}
                     onChange={(event) => {
@@ -533,7 +538,7 @@ function Profile() {
                     <option value={10}>10</option>
                     <option value={20}>20</option>
                     <option value={50}>50</option>
-                  </select>
+                  </SelectField>
                 </label>
               </div>
             </div>
@@ -631,7 +636,8 @@ function Profile() {
                                 <span className={styles.srOnly}>
                                   Pasta de {game.title}
                                 </span>
-                                <select
+                                <SelectField
+                                  density="compact"
                                   aria-label={`Pasta de ${game.title}`}
                                   value={game.folderId || ""}
                                   disabled={isBusy}
@@ -648,7 +654,7 @@ function Profile() {
                                       {folder.name}
                                     </option>
                                   ))}
-                                </select>
+                                </SelectField>
                               </label>
                               <button
                                 type="button"

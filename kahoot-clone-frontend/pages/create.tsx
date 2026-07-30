@@ -27,6 +27,7 @@ import {
 } from "react-icons/fi";
 import { KahootCsvError, parseKahootCsv } from "@lib/kahootCsv";
 import type { APIResponse as CategoriesResponse } from "./api/categories";
+import SelectField from "@components/SelectField";
 
 interface Notice {
   title: string;
@@ -434,8 +435,9 @@ function Create() {
         <div className={styles.categorySelector}>
           <FiTag aria-hidden="true" />
           <label htmlFor="kahoot-category">Categoria</label>
-          <select
+          <SelectField
             id="kahoot-category"
+            containerClassName={styles.categorySelect}
             value={game.categoryId}
             disabled={categoriesLoading || categorySaving}
             className={
@@ -457,7 +459,7 @@ function Create() {
                 {category.isDefault ? "" : " (personalizada)"}
               </option>
             ))}
-          </select>
+          </SelectField>
           <button
             type="button"
             className={styles.newCategoryButton}

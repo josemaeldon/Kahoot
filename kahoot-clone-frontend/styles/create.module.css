@@ -134,7 +134,6 @@
   font-weight: 800;
 }
 
-.categorySelector select,
 .newCategoryForm input {
   height: 40px;
   border: 1px solid var(--color-border-strong);
@@ -144,9 +143,8 @@
   outline: 0;
 }
 
-.categorySelector select {
+.categorySelect {
   width: min(320px, 32vw);
-  padding: 0 34px 0 12px;
 }
 
 .newCategoryForm input {
@@ -154,7 +152,6 @@
   padding: 0 12px;
 }
 
-.categorySelector select:focus,
 .newCategoryForm input:focus {
   border-color: var(--color-brand-600);
   box-shadow: 0 0 0 3px rgba(109, 58, 242, 0.12);
@@ -364,7 +361,7 @@
     flex-wrap: wrap;
   }
 
-  .categorySelector select {
+  .categorySelect {
     width: auto;
     min-width: 0;
     flex: 1 1 180px;

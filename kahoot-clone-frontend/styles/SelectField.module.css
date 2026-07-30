@@ -1,0 +1,91 @@
+.control {
+  position: relative;
+  min-width: 0;
+  width: 100%;
+  display: inline-grid;
+  align-items: center;
+  color: var(--color-text-muted);
+  vertical-align: middle;
+}
+
+.control select {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  appearance: none;
+  padding: 0 42px 0 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  outline: 0;
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  font-weight: 720;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.control > svg {
+  position: absolute;
+  right: 14px;
+  width: 17px;
+  height: 17px;
+  pointer-events: none;
+  transition:
+    color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.control:hover select:not(:disabled) {
+  border-color: var(--color-brand-500);
+  background: var(--color-brand-50);
+}
+
+.control:focus-within select {
+  border-color: var(--color-brand-600);
+  background: white;
+  box-shadow:
+    0 0 0 3px rgba(109, 58, 242, 0.14),
+    var(--shadow-xs);
+}
+
+.control:focus-within > svg {
+  color: var(--color-brand-700);
+  transform: translateY(1px);
+}
+
+.control select:disabled {
+  cursor: not-allowed;
+  color: #8b8e9d;
+  border-color: var(--color-border);
+  background: #f1f2f6;
+  box-shadow: none;
+}
+
+.control:has(select:disabled) > svg {
+  color: #a6a8b3;
+}
+
+.compact select {
+  min-height: 38px;
+  padding-right: 36px;
+  padding-left: 11px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.compact > svg {
+  right: 11px;
+  width: 15px;
+  height: 15px;
+}
+
+.control option {
+  color: var(--color-text);
+  background: white;
+}

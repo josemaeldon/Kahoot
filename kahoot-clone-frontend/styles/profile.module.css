@@ -361,21 +361,6 @@
   white-space: nowrap;
 }
 
-.libraryToolbar select,
-.organizer select {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  color: var(--color-text);
-  background: white;
-  font: inherit;
-}
-
-.libraryToolbar select {
-  min-height: 34px;
-  padding: 0 27px 0 9px;
-  font-weight: 760;
-}
-
 .filterControls {
   display: flex;
   align-items: flex-end;
@@ -396,11 +381,11 @@
   font-weight: 720;
 }
 
-.filterControls select {
+.filterControls label > span:last-child {
   min-width: 135px;
 }
 
-.filterControls label:first-child select {
+.filterControls .categoryFilter {
   min-width: 205px;
 }
 
@@ -563,13 +548,8 @@
   gap: 6px;
 }
 
-.organizer select {
+.organizer label > span:last-child {
   width: 100%;
-  min-height: 34px;
-  padding: 0 24px 0 8px;
-  color: var(--color-text-muted);
-  font-size: 10px;
-  font-weight: 680;
 }
 
 .visibilityButton {
@@ -825,8 +805,8 @@
     grid-template-columns: 1fr;
   }
 
-  .filterControls select,
-  .filterControls label:first-child select {
+  .filterControls label > span:last-child,
+  .filterControls .categoryFilter {
     width: 100%;
   }
 

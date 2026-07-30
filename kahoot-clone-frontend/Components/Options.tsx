@@ -2,6 +2,7 @@ import React, { useContext } from "react";
 import { GameContext } from "../pages/create";
 import styles from "../styles/Options.module.css";
 import { FiClock, FiInfo } from "react-icons/fi";
+import SelectField from "./SelectField";
 
 function Options() {
   const { game, setGame, questionNumber } = useContext(GameContext);
@@ -15,8 +16,9 @@ function Options() {
           <FiClock aria-hidden="true" />
           Tempo
         </span>
-        <select
+        <SelectField
           value={question.time}
+          aria-label="Tempo da pergunta"
           onChange={(event) => {
             const time = Number(event.target.value);
             setGame((current) => ({
@@ -32,7 +34,7 @@ function Options() {
               {time} segundos
             </option>
           ))}
-        </select>
+        </SelectField>
       </label>
       <div className={styles.helper}>
         <FiInfo aria-hidden="true" />
