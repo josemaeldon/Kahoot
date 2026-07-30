@@ -44,7 +44,12 @@ export default async function handler(
     const updateGameId = requestBody.game_id;
 
     if (typeof updateGameId === "string") {
-      const updated = await updateGame(updateGameId, gameData, user._id);
+      const updated = await updateGame(
+        updateGameId,
+        gameData,
+        user._id,
+        user.role === "superadmin"
+      );
       if (!updated) {
         return res
           .status(404)

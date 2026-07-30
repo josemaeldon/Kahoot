@@ -76,12 +76,20 @@ export async function listGamesByAuthor(authorId: string) {
   return result.rows.map(mapGame);
 }
 
-export async function findOwnedGame(gameId: string, authorId: string) {
+export async function findEditableGame(
+  gameId: string,
+  userId: string,
+  isSuperadmin: boolean
+) {
   const result = await query<GameRow>(
     `${gameProjection}
-     where g.id = $1::uuid and g.author_id = $2::uuid
+     where g.id = $1::uuid
+       and (
+         g.author_id = $2::uuid
+         or ($3::boolean = true and g.is_public = true)
+       )
      group by g.id, u.username, f.name, cat.name`,
-    [gameId, authorId]
+    [gameId, userId, isSuperadmin]
   );
   return result.rows[0] ? mapGame(result.rows[0]) : null;
 }
@@ -257,17 +265,22 @@ export async function createGame(
 export async function updateGame(
   gameId: string,
   game: db.KahootGame,
-  authorId: string
+  userId: string,
+  isSuperadmin: boolean
 ) {
   return withTransaction(async (client) => {
     const updated = await client.query<{ id: string }>(
       `update games g
        set title = $1, category_id = c.id, updated_at = now()
        from categories c
-       where g.id = $2::uuid and g.author_id = $3::uuid
-         and c.id = $4::uuid
+       where g.id = $2::uuid
+         and (
+           g.author_id = $3::uuid
+           or ($4::boolean = true and g.is_public = true)
+         )
+         and c.id = $5::uuid
        returning g.id::text`,
-      [game.title, gameId, authorId, game.categoryId]
+      [game.title, gameId, userId, isSuperadmin, game.categoryId]
     );
     if (!updated.rowCount) return false;
 
@@ -289,7 +302,10 @@ export async function deleteGame(
      where id = $1::uuid
        and (
          (is_default = false and author_id = $2::uuid)
-         or (is_default = true and $3::boolean = true)
+         or (
+           $3::boolean = true
+           and (is_default = true or is_public = true)
+         )
        )`,
     [gameId, authorId, isSuperadmin]
   );

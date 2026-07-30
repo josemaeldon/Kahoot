@@ -321,7 +321,11 @@ function Create() {
         });
         return;
       }
-      await router.push("/profile");
+      await router.push(
+        router.query.returnScope === "public"
+          ? { pathname: "/profile", query: { scope: "public" } }
+          : "/profile"
+      );
     } catch {
       setNotice({
         title: "Não foi possível salvar",

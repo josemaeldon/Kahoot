@@ -170,6 +170,12 @@ function Profile() {
     return () => aborter.abort();
   }, [loggedIn, refreshKey]);
 
+  useEffect(() => {
+    if (router.isReady && router.query.scope === "public") {
+      setScope("public");
+    }
+  }, [router.isReady, router.query.scope]);
+
   if (!loggedIn) return null;
 
   function refreshLibrary() {
@@ -674,7 +680,6 @@ function Profile() {
                         <footer
                           className={`${styles.cardActions} ${
                             scope === "public" &&
-                            game.isDefault &&
                             user?.role === "superadmin"
                               ? styles.publicAdminActions
                               : ""
@@ -722,17 +727,35 @@ function Profile() {
                             </>
                           )}
                           {scope === "public" &&
-                            game.isDefault &&
                             user?.role === "superadmin" && (
-                              <button
-                                type="button"
-                                className={`${styles.iconButton} ${styles.deleteButton}`}
-                                aria-label={`Excluir ${game.title}`}
-                                disabled={isBusy}
-                                onClick={() => setPendingDelete(game)}
-                              >
-                                <FiTrash2 aria-hidden="true" />
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  className={styles.iconButton}
+                                  aria-label={`Editar ${game.title}`}
+                                  disabled={isBusy}
+                                  onClick={() =>
+                                    void router.push({
+                                      pathname: "/create",
+                                      query: {
+                                        editingId: game._id,
+                                        returnScope: "public",
+                                      },
+                                    })
+                                  }
+                                >
+                                  <FiEdit2 aria-hidden="true" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`${styles.iconButton} ${styles.deleteButton}`}
+                                  aria-label={`Excluir ${game.title}`}
+                                  disabled={isBusy}
+                                  onClick={() => setPendingDelete(game)}
+                                >
+                                  <FiTrash2 aria-hidden="true" />
+                                </button>
+                              </>
                             )}
                         </footer>
                       </article>
