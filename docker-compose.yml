@@ -38,6 +38,10 @@ services:
       BACKEND_PORT: "8000"
       PLAYER_RECONNECT_GRACE_SECONDS: "120"
       MIGRATIONS_DIR: /app/db/migrations
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     networks:
       - cloudbrnet
     healthcheck:

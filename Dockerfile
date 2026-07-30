@@ -28,7 +28,7 @@ ENV NODE_ENV=production \
     MIGRATIONS_DIR=/app/db/migrations
 WORKDIR /app
 
-COPY --from=backend-builder --chown=node:node /build/backend/target/release/kahoot-server /app/kahoot-server
+COPY --from=backend-test --chown=node:node /build/backend/target/release/kahoot-server /app/kahoot-server
 COPY --from=frontend-builder --chown=node:node /build/frontend/package.json /build/frontend/package-lock.json ./
 COPY --from=frontend-builder --chown=node:node /build/frontend/node_modules ./node_modules
 COPY --from=frontend-builder --chown=node:node /build/frontend/.next ./.next
