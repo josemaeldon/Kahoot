@@ -6,8 +6,11 @@ export namespace db {
     title: string;
     date: number; //Time since unix epoch
     isPublic?: boolean;
+    isDefault?: boolean;
     folderId?: string | null;
     folderName?: string | null;
+    categoryId: string;
+    categoryName?: string;
     questions: Question[];
   }
 
@@ -19,8 +22,20 @@ export namespace db {
     date: number;
     questionCount: number;
     isPublic: boolean;
+    isDefault: boolean;
     folderId: string | null;
     folderName: string | null;
+    categoryId: string;
+    categoryName: string;
+  }
+
+  declare interface KahootCategory {
+    id: string;
+    name: string;
+    slug: string;
+    isDefault: boolean;
+    createdByMe: boolean;
+    gameCount: number;
   }
 
   declare interface KahootFolder {

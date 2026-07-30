@@ -153,15 +153,17 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   await host.getByRole("button", { name: "Criar um quiz" }).click();
   await expect(host).toHaveURL("/profile");
 
-  await host.getByRole("button", { name: "Criar meu primeiro quiz" }).click();
+  await host.getByRole("button", { name: "Criar Kahoot" }).first().click();
   await expect(host).toHaveURL("/create");
 
   await host.locator('[data-placeholder="Questão..."]').fill("Quanto é 2 + 2?");
   await host.locator('[data-placeholder="Resposta 1"]').fill("4");
   await host.locator('[data-placeholder="Resposta 2"]').fill("3");
-  await host.locator('input[type="file"]').setInputFiles(
-    path.resolve(process.cwd(), "../design/concepts/home-desktop.png")
-  );
+  await host
+    .locator('input[accept="image/jpeg,image/png,image/webp"]')
+    .setInputFiles(
+      path.resolve(process.cwd(), "../design/concepts/home-desktop.png")
+    );
   await expect(
     host.getByAltText("Prévia da imagem da questão")
   ).toBeVisible();
@@ -179,10 +181,15 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   await validationModal.getByRole("button", { name: "Entendi" }).click();
   await expect(validationModal).toBeHidden();
 
+  await host
+    .getByLabel("Categoria", { exact: true })
+    .selectOption({ label: "Matemática" });
   await host.getByPlaceholder("Digite o título do Kahoot...").fill("Quiz E2E");
   await host.getByRole("button", { name: "Salvar" }).click();
   await expect(host).toHaveURL("/profile");
-  await expect(host.getByText("Quiz E2E")).toBeVisible();
+  await expect(
+    host.getByRole("heading", { name: "Quiz E2E" })
+  ).toBeVisible();
   await host.screenshot({ path: "/tmp/kahoot-profile-desktop.png" });
 
   await host.setViewportSize({ width: 390, height: 844 });

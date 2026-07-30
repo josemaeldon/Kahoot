@@ -23,6 +23,7 @@ import type {
   APIRequest as DeleteGameRequest,
   APIResponse as DeleteGameResponse,
 } from "./api/deleteOneGame";
+import type { APIResponse as CategoriesResponse } from "./api/categories";
 import {
   FiCalendar,
   FiChevronLeft,
@@ -35,12 +36,14 @@ import {
   FiLock,
   FiPlay,
   FiPlus,
+  FiTag,
   FiTrash2,
 } from "react-icons/fi";
 
 type LibraryScope = "mine" | "public";
 type FolderFilter = "all" | "unfiled" | string;
 type PageSize = 10 | 20 | 50;
+type PublicSort = "newest" | "oldest";
 
 interface Pagination {
   page: number;
@@ -62,11 +65,14 @@ const initialPagination: Pagination = {
 };
 
 function Profile() {
-  const { loggedIn } = useUser();
+  const { loggedIn, user } = useUser();
   const router = useRouter();
   const [scope, setScope] = useState<LibraryScope>("mine");
   const [games, setGames] = useState<db.KahootSummary[] | null>(null);
   const [folders, setFolders] = useState<db.KahootFolder[]>([]);
+  const [categories, setCategories] = useState<db.KahootCategory[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [publicSort, setPublicSort] = useState<PublicSort>("newest");
   const [ownedTotal, setOwnedTotal] = useState(0);
   const [unfiledCount, setUnfiledCount] = useState(0);
   const [selectedFolder, setSelectedFolder] =
@@ -104,6 +110,11 @@ function Profile() {
           scope === "mine" && selectedFolder !== "all"
             ? selectedFolder
             : null,
+        categoryId:
+          scope === "public" && selectedCategory !== "all"
+            ? selectedCategory
+            : null,
+        sort: publicSort,
       },
       aborter.signal
     )
@@ -127,7 +138,36 @@ function Profile() {
       });
 
     return () => aborter.abort();
-  }, [loggedIn, page, pageSize, refreshKey, scope, selectedFolder]);
+  }, [
+    loggedIn,
+    page,
+    pageSize,
+    publicSort,
+    refreshKey,
+    scope,
+    selectedCategory,
+    selectedFolder,
+  ]);
+
+  useEffect(() => {
+    if (!loggedIn) return;
+    const aborter = new AbortController();
+    fetch("/api/categories", {
+      credentials: "same-origin",
+      cache: "no-store",
+      signal: aborter.signal,
+    })
+      .then((response) => response.json() as Promise<CategoriesResponse>)
+      .then((response) => {
+        if ("categories" in response) setCategories(response.categories);
+      })
+      .catch((cause) => {
+        if ((cause as Error).name !== "AbortError") {
+          setError("Não foi possível carregar as categorias.");
+        }
+      });
+    return () => aborter.abort();
+  }, [loggedIn, refreshKey]);
 
   if (!loggedIn) return null;
 
@@ -142,6 +182,11 @@ function Profile() {
 
   function chooseFolder(folder: FolderFilter) {
     setSelectedFolder(folder);
+    setPage(1);
+  }
+
+  function changeCategory(categoryId: string) {
+    setSelectedCategory(categoryId);
     setPage(1);
   }
 
@@ -439,22 +484,58 @@ function Profile() {
                   {pagination.total === 1 ? "Kahoot" : "Kahoots"}
                 </strong>
               </div>
-              <label>
-                Exibir
-                <select
-                  aria-label="Quantidade de Kahoots por página"
-                  value={pageSize}
-                  onChange={(event) => {
-                    setPageSize(Number(event.target.value) as PageSize);
-                    setPage(1);
-                  }}
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-                por página
-              </label>
+              <div className={styles.filterControls}>
+                {scope === "public" && (
+                  <>
+                    <label>
+                      <span>Categoria</span>
+                      <select
+                        aria-label="Filtrar Kahoots por categoria"
+                        value={selectedCategory}
+                        onChange={(event) =>
+                          changeCategory(event.target.value)
+                        }
+                      >
+                        <option value="all">Todas as categorias</option>
+                        {categories.map((category) => (
+                          <option value={category.id} key={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      <span>Ordenar</span>
+                      <select
+                        aria-label="Ordenar Kahoots públicos"
+                        value={publicSort}
+                        onChange={(event) => {
+                          setPublicSort(event.target.value as PublicSort);
+                          setPage(1);
+                        }}
+                      >
+                        <option value="newest">Mais recentes</option>
+                        <option value="oldest">Mais antigos</option>
+                      </select>
+                    </label>
+                  </>
+                )}
+                <label>
+                  <span>Exibir por página</span>
+                  <select
+                    aria-label="Quantidade de Kahoots por página"
+                    value={pageSize}
+                    onChange={(event) => {
+                      setPageSize(Number(event.target.value) as PageSize);
+                      setPage(1);
+                    }}
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </label>
+              </div>
             </div>
 
             {games === null && (
@@ -513,6 +594,15 @@ function Profile() {
                               <span className={styles.folderBadge}>
                                 <FiFolder />
                                 {game.folderName}
+                              </span>
+                            )}
+                            <span className={styles.categoryBadge}>
+                              <FiTag />
+                              {game.categoryName}
+                            </span>
+                            {game.isDefault && (
+                              <span className={styles.defaultBadge}>
+                                Padrão
                               </span>
                             )}
                           </div>
@@ -575,7 +665,15 @@ function Profile() {
                           )}
                         </div>
 
-                        <footer className={styles.cardActions}>
+                        <footer
+                          className={`${styles.cardActions} ${
+                            scope === "public" &&
+                            game.isDefault &&
+                            user?.role === "superadmin"
+                              ? styles.publicAdminActions
+                              : ""
+                          }`}
+                        >
                           <button
                             type="button"
                             className={styles.playButton}
@@ -617,6 +715,19 @@ function Profile() {
                               </button>
                             </>
                           )}
+                          {scope === "public" &&
+                            game.isDefault &&
+                            user?.role === "superadmin" && (
+                              <button
+                                type="button"
+                                className={`${styles.iconButton} ${styles.deleteButton}`}
+                                aria-label={`Excluir ${game.title}`}
+                                disabled={isBusy}
+                                onClick={() => setPendingDelete(game)}
+                              >
+                                <FiTrash2 aria-hidden="true" />
+                              </button>
+                            )}
                         </footer>
                       </article>
                     );

@@ -329,14 +329,14 @@
   padding: 0 2px 14px;
 }
 
-.libraryToolbar > div {
+.libraryToolbar > div:first-child {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 
-.libraryToolbar > div > span {
+.libraryToolbar > div:first-child > span {
   overflow: hidden;
   color: var(--color-text);
   font-size: 15px;
@@ -345,7 +345,7 @@
   white-space: nowrap;
 }
 
-.libraryToolbar > div > strong {
+.libraryToolbar > div:first-child > strong {
   color: var(--color-text-muted);
   font-size: 11px;
   font-weight: 650;
@@ -374,6 +374,34 @@
   min-height: 34px;
   padding: 0 27px 0 9px;
   font-weight: 760;
+}
+
+.filterControls {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.filterControls label {
+  display: grid;
+  align-items: initial;
+  gap: 3px;
+  white-space: normal;
+}
+
+.filterControls label > span {
+  font-size: 10px;
+  font-weight: 720;
+}
+
+.filterControls select {
+  min-width: 135px;
+}
+
+.filterControls label:first-child select {
+  min-width: 205px;
 }
 
 .quizGrid {
@@ -435,6 +463,7 @@
   min-height: 23px;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 5px;
 }
 
@@ -472,6 +501,16 @@
 .folderBadge {
   color: var(--color-brand-700);
   background: var(--color-brand-50);
+}
+
+.categoryBadge {
+  color: #0b6650;
+  background: #e9f8f2;
+}
+
+.defaultBadge {
+  color: #8a3d08;
+  background: #fff1df;
 }
 
 .cardContent h2 {
@@ -564,6 +603,10 @@
 
 .publicLibrary .cardActions {
   grid-template-columns: 1fr;
+}
+
+.publicLibrary .publicAdminActions {
+  grid-template-columns: minmax(0, 1fr) 38px;
 }
 
 .playButton {
@@ -773,8 +816,18 @@
   }
 
   .libraryToolbar {
-    align-items: flex-start;
+    align-items: stretch;
     flex-direction: column;
+  }
+
+  .filterControls {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .filterControls select,
+  .filterControls label:first-child select {
+    width: 100%;
   }
 
   .quizGrid {

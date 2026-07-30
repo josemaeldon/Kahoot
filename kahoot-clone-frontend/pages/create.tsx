@@ -18,10 +18,15 @@ import {
   FiArrowLeft,
   FiDownload,
   FiFileText,
+  FiPlus,
   FiSave,
+  FiTag,
+  FiTrash2,
   FiUploadCloud,
+  FiX,
 } from "react-icons/fi";
 import { KahootCsvError, parseKahootCsv } from "@lib/kahootCsv";
+import type { APIResponse as CategoriesResponse } from "./api/categories";
 
 interface Notice {
   title: string;
@@ -38,6 +43,7 @@ export interface QuestionError {
 
 interface FormErrorReport {
   titleBlankError: boolean;
+  categoryBlankError: boolean;
   questionErrors: QuestionError[];
 }
 
@@ -59,6 +65,7 @@ const defaultGame: db.KahootGame = {
   author_id: "",
   author_username: "",
   title: "",
+  categoryId: "",
   date: 0,
   questions: [
     {
@@ -76,6 +83,7 @@ export const GameContext = React.createContext<GameContextValue>(null);
 function getFormErrors(game: db.KahootGame): FormErrorReport {
   return {
     titleBlankError: game.title.trim() === "",
+    categoryBlankError: game.categoryId === "",
     questionErrors: game.questions.map((question) => ({
       choicesRequiredError:
         question.choices[0].trim() === "" ||
@@ -93,6 +101,9 @@ function getValidationMessages(formErrors: FormErrorReport) {
 
   if (formErrors.titleBlankError) {
     messages.push("Informe um título para o quiz.");
+  }
+  if (formErrors.categoryBlankError) {
+    messages.push("Selecione uma categoria para o Kahoot.");
   }
 
   formErrors.questionErrors.forEach((questionError, index) => {
@@ -119,8 +130,44 @@ function Create() {
   const [questionNumber, setQuestionNumber] = useState(0);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const { loggedIn } = useUser();
+  const [categories, setCategories] = useState<db.KahootCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [categorySaving, setCategorySaving] = useState(false);
+  const [pendingCategoryDelete, setPendingCategoryDelete] =
+    useState<db.KahootCategory | null>(null);
+  const { loggedIn, user } = useUser();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!loggedIn) return;
+    const aborter = new AbortController();
+    setCategoriesLoading(true);
+    fetch("/api/categories", {
+      credentials: "same-origin",
+      cache: "no-store",
+      signal: aborter.signal,
+    })
+      .then((response) => response.json() as Promise<CategoriesResponse>)
+      .then((response) => {
+        if (!("categories" in response)) {
+          throw new Error(response.errorDescription);
+        }
+        setCategories(response.categories);
+      })
+      .catch((error) => {
+        if ((error as Error).name !== "AbortError") {
+          setNotice({
+            title: "Não foi possível carregar as categorias",
+            messages: [(error as Error).message],
+            tone: "error",
+          });
+        }
+      })
+      .finally(() => setCategoriesLoading(false));
+    return () => aborter.abort();
+  }, [loggedIn]);
 
   useEffect(() => {
     if (!loggedIn || !router.isReady || !router.query.editingId) return;
@@ -162,6 +209,82 @@ function Create() {
     const nextErrors = getFormErrors(gameToValidate);
     nextErrors.questionErrors[questionIndex].ignoreErrors = true;
     setFormErrors(nextErrors);
+  }
+
+  async function createNewCategory() {
+    const name = newCategoryName.trim();
+    if (!name) return;
+    setCategorySaving(true);
+    try {
+      const response = await postData<{ name: string }, CategoriesResponse>(
+        "/api/categories",
+        { name }
+      );
+      if (!("categories" in response)) {
+        setNotice({
+          title: "Não foi possível criar a categoria",
+          messages: [response.errorDescription],
+          tone: "error",
+        });
+        return;
+      }
+      setCategories(response.categories);
+      if (response.category) {
+        setGame((current) => ({
+          ...current,
+          categoryId: response.category!.id,
+        }));
+      }
+      setNewCategoryName("");
+      setCreatingCategory(false);
+    } catch {
+      setNotice({
+        title: "Não foi possível criar a categoria",
+        messages: ["Verifique sua conexão e tente novamente."],
+        tone: "error",
+      });
+    } finally {
+      setCategorySaving(false);
+    }
+  }
+
+  async function deletePendingCategory() {
+    if (!pendingCategoryDelete) return;
+    const categoryId = pendingCategoryDelete.id;
+    setPendingCategoryDelete(null);
+    setCategorySaving(true);
+    try {
+      const response = await fetch("/api/categories", {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryId }),
+      });
+      const payload = (await response.json()) as CategoriesResponse;
+      if (!("categories" in payload)) {
+        setNotice({
+          title: "Não foi possível excluir a categoria",
+          messages: [payload.errorDescription],
+          tone: "error",
+        });
+        return;
+      }
+      setCategories(payload.categories);
+      if (game.categoryId === categoryId) {
+        setGame((current) => ({
+          ...current,
+          categoryId: payload.categories[0]?.id || "",
+        }));
+      }
+    } catch {
+      setNotice({
+        title: "Não foi possível excluir a categoria",
+        messages: ["Verifique sua conexão e tente novamente."],
+        tone: "error",
+      });
+    } finally {
+      setCategorySaving(false);
+    }
   }
 
   async function saveGame() {
@@ -227,6 +350,7 @@ function Create() {
         _id: current._id,
         author_id: current.author_id,
         author_username: current.author_username,
+        categoryId: current.categoryId,
         date: current.date,
       }));
       setQuestionNumber(0);
@@ -306,6 +430,103 @@ function Create() {
         </div>
       </header>
 
+      <section className={styles.categoryBar} aria-label="Categoria do Kahoot">
+        <div className={styles.categorySelector}>
+          <FiTag aria-hidden="true" />
+          <label htmlFor="kahoot-category">Categoria</label>
+          <select
+            id="kahoot-category"
+            value={game.categoryId}
+            disabled={categoriesLoading || categorySaving}
+            className={
+              formErrors?.categoryBlankError ? styles.invalid : ""
+            }
+            onChange={(event) =>
+              setGame((current) => ({
+                ...current,
+                categoryId: event.target.value,
+              }))
+            }
+          >
+            <option value="">
+              {categoriesLoading ? "Carregando..." : "Selecione uma categoria"}
+            </option>
+            {categories.map((category) => (
+              <option value={category.id} key={category.id}>
+                {category.name}
+                {category.isDefault ? "" : " (personalizada)"}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className={styles.newCategoryButton}
+            onClick={() => setCreatingCategory(true)}
+          >
+            <FiPlus aria-hidden="true" />
+            Nova categoria
+          </button>
+          {(() => {
+            const selected = categories.find(
+              (category) => category.id === game.categoryId
+            );
+            const canDelete =
+              selected &&
+              (user?.role === "superadmin" ||
+                (!selected.isDefault && selected.createdByMe));
+            return canDelete ? (
+              <button
+                type="button"
+                className={styles.deleteCategoryButton}
+                aria-label={`Excluir categoria ${selected.name}`}
+                title={`Excluir categoria ${selected.name}`}
+                onClick={() => setPendingCategoryDelete(selected)}
+              >
+                <FiTrash2 aria-hidden="true" />
+              </button>
+            ) : null;
+          })()}
+        </div>
+        {creatingCategory && (
+          <form
+            className={styles.newCategoryForm}
+            onSubmit={(event) => {
+              event.preventDefault();
+              void createNewCategory();
+            }}
+          >
+            <input
+              autoFocus
+              type="text"
+              maxLength={80}
+              value={newCategoryName}
+              placeholder="Nome da nova categoria"
+              aria-label="Nome da nova categoria"
+              onChange={(event) => setNewCategoryName(event.target.value)}
+            />
+            <button
+              type="submit"
+              disabled={categorySaving || newCategoryName.trim().length < 2}
+            >
+              <FiPlus aria-hidden="true" />
+              Criar
+            </button>
+            <button
+              type="button"
+              className={styles.cancelCategoryButton}
+              aria-label="Cancelar nova categoria"
+              title="Cancelar"
+              onClick={() => {
+                setCreatingCategory(false);
+                setNewCategoryName("");
+              }}
+            >
+              <FiX aria-hidden="true" />
+            </button>
+          </form>
+        )}
+      </section>
+
       <section className={styles.importBar} aria-label="Importação de Kahoot">
         <div className={styles.importDescription}>
           <span className={styles.importIcon} aria-hidden="true">
@@ -361,6 +582,21 @@ function Create() {
         </div>
       </GameContext.Provider>
 
+      <NoticeModal
+        open={pendingCategoryDelete !== null}
+        title="Excluir categoria?"
+        messages={[
+          pendingCategoryDelete?.isDefault
+            ? "Os Kahoots padrão desta categoria serão excluídos. Outros Kahoots serão movidos para uma categoria disponível."
+            : "Os Kahoots desta categoria serão movidos para uma categoria disponível.",
+        ]}
+        tone="warning"
+        closeLabel="Cancelar"
+        actionLabel="Excluir categoria"
+        actionTone="danger"
+        onClose={() => setPendingCategoryDelete(null)}
+        onAction={() => void deletePendingCategory()}
+      />
       <NoticeModal
         open={notice !== null}
         title={notice?.title ?? ""}

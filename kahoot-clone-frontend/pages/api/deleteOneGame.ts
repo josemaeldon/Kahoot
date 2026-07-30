@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { requireAuthenticatedUser } from "@lib/auth";
-import { deleteOwnedGame } from "@lib/gameRepository";
+import { deleteGame } from "@lib/gameRepository";
 
 export type APIRequest = {
   gameId: string;
@@ -29,7 +29,13 @@ export default async function handler(
   if (!user) return;
   try {
     const request = req.body as APIRequest;
-    if (await deleteOwnedGame(request.gameId, user._id)) {
+    if (
+      await deleteGame(
+        request.gameId,
+        user._id,
+        user.role === "superadmin"
+      )
+    ) {
       return res.status(200).json({ error: false });
     }
     return res

@@ -106,6 +106,95 @@
   background: #fff8f7 !important;
 }
 
+.categoryBar {
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 9px 22px;
+  border-bottom: 1px solid var(--color-border);
+  background: white;
+}
+
+.categorySelector,
+.newCategoryForm {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.categorySelector > svg {
+  width: 18px;
+  height: 18px;
+  color: var(--color-brand-700);
+}
+
+.categorySelector label {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.categorySelector select,
+.newCategoryForm input {
+  height: 40px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  background: white;
+  outline: 0;
+}
+
+.categorySelector select {
+  width: min(320px, 32vw);
+  padding: 0 34px 0 12px;
+}
+
+.newCategoryForm input {
+  width: 240px;
+  padding: 0 12px;
+}
+
+.categorySelector select:focus,
+.newCategoryForm input:focus {
+  border-color: var(--color-brand-600);
+  box-shadow: 0 0 0 3px rgba(109, 58, 242, 0.12);
+}
+
+.newCategoryButton,
+.newCategoryForm button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid var(--color-brand-600);
+  border-radius: var(--radius-sm);
+  color: var(--color-brand-800);
+  background: var(--color-brand-50);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.newCategoryForm button[type="submit"] {
+  color: white;
+  background: var(--color-brand-700);
+}
+
+.newCategoryForm button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.deleteCategoryButton,
+.cancelCategoryButton {
+  width: 40px;
+  padding: 0 !important;
+  color: var(--color-danger) !important;
+  border-color: #f1b5ae !important;
+  background: #fff8f7 !important;
+}
+
 .importBar {
   min-height: 74px;
   display: flex;
@@ -207,7 +296,7 @@
 }
 
 .layout {
-  min-height: calc(100vh - 142px);
+  min-height: calc(100vh - 204px);
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr) 260px;
   grid-template-areas: "questions editor options";
@@ -262,6 +351,28 @@
     flex-direction: column;
     gap: 10px;
     padding: 12px;
+  }
+
+  .categoryBar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .categorySelector {
+    flex-wrap: wrap;
+  }
+
+  .categorySelector select {
+    width: auto;
+    min-width: 0;
+    flex: 1 1 180px;
+  }
+
+  .newCategoryForm input {
+    min-width: 0;
+    flex: 1;
   }
 
   .importActions {

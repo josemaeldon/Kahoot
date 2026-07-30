@@ -203,6 +203,7 @@ export function parseKahootCsv(rawSource: string): db.KahootGame {
     author_id: "",
     author_username: "",
     title,
+    categoryId: "",
     date: 0,
     questions,
   };

@@ -14,8 +14,11 @@ interface GameSummaryRow {
   date: string | number;
   questionCount: string | number;
   isPublic: boolean;
+  isDefault: boolean;
   folderId: string | null;
   folderName: string | null;
+  categoryId: string;
+  categoryName: string;
 }
 
 const gameProjection = `
@@ -25,8 +28,11 @@ const gameProjection = `
     u.username as "author_username",
     g.title,
     g.is_public as "isPublic",
+    g.is_default as "isDefault",
     g.folder_id::text as "folderId",
     f.name as "folderName",
+    g.category_id::text as "categoryId",
+    cat.name as "categoryName",
     floor(extract(epoch from g.created_at) * 1000)::bigint as date,
     coalesce(
       jsonb_agg(
@@ -51,6 +57,7 @@ const gameProjection = `
   from games g
   join users u on u.id = g.author_id
   left join game_folders f on f.id = g.folder_id
+  join categories cat on cat.id = g.category_id
   left join questions q on q.game_id = g.id
 `;
 
@@ -62,7 +69,7 @@ export async function listGamesByAuthor(authorId: string) {
   const result = await query<GameRow>(
     `${gameProjection}
      where g.author_id = $1::uuid
-     group by g.id, u.username, f.name
+     group by g.id, u.username, f.name, cat.name
      order by g.created_at desc`,
     [authorId]
   );
@@ -73,7 +80,7 @@ export async function findOwnedGame(gameId: string, authorId: string) {
   const result = await query<GameRow>(
     `${gameProjection}
      where g.id = $1::uuid and g.author_id = $2::uuid
-     group by g.id, u.username, f.name`,
+     group by g.id, u.username, f.name, cat.name`,
     [gameId, authorId]
   );
   return result.rows[0] ? mapGame(result.rows[0]) : null;
@@ -84,7 +91,7 @@ export async function findAccessibleGame(gameId: string, userId: string) {
     `${gameProjection}
      where g.id = $1::uuid
        and (g.author_id = $2::uuid or g.is_public = true)
-     group by g.id, u.username, f.name`,
+     group by g.id, u.username, f.name, cat.name`,
     [gameId, userId]
   );
   return result.rows[0] ? mapGame(result.rows[0]) : null;
@@ -94,6 +101,8 @@ export interface ListGameSummariesOptions {
   userId: string;
   scope: "mine" | "public";
   folderId?: string | "unfiled" | null;
+  categoryId?: string | null;
+  sort?: "newest" | "oldest";
   page: number;
   pageSize: 10 | 20 | 50;
 }
@@ -102,6 +111,8 @@ export async function listGameSummaries({
   userId,
   scope,
   folderId,
+  categoryId,
+  sort = "newest",
   page,
   pageSize,
 }: ListGameSummariesOptions) {
@@ -120,13 +131,17 @@ export async function listGameSummaries({
     }
   } else {
     filters.push("g.is_public = true");
+    if (categoryId) {
+      values.push(categoryId);
+      filters.push(`g.category_id = $${values.length}::uuid`);
+    }
   }
 
   const whereSql = filters.length ? `where ${filters.join(" and ")}` : "";
-  const orderSql =
-    scope === "public"
-      ? "coalesce(g.published_at, g.created_at) desc, g.id desc"
-      : "g.created_at desc, g.id desc";
+  const direction = scope === "public" && sort === "oldest" ? "asc" : "desc";
+  const orderSql = scope === "public"
+    ? `coalesce(g.published_at, g.created_at) ${direction}, g.id ${direction}`
+    : "g.created_at desc, g.id desc";
   const offset = (page - 1) * pageSize;
   const pageSizePosition = values.length + 1;
   const offsetPosition = values.length + 2;
@@ -148,11 +163,15 @@ export async function listGameSummaries({
          (select count(*) from questions q where q.game_id = g.id)::int
            as "questionCount",
          g.is_public as "isPublic",
+         g.is_default as "isDefault",
          g.folder_id::text as "folderId",
-         f.name as "folderName"
+         f.name as "folderName",
+         g.category_id::text as "categoryId",
+         cat.name as "categoryName"
        from games g
        join users u on u.id = g.author_id
        left join game_folders f on f.id = g.folder_id
+       join categories cat on cat.id = g.category_id
        ${whereSql}
        order by ${orderSql}
        limit $${pageSizePosition}
@@ -167,6 +186,7 @@ export async function listGameSummaries({
     date: Number(row.date),
     questionCount: Number(row.questionCount),
     isPublic: Boolean(row.isPublic),
+    isDefault: Boolean(row.isDefault),
   }));
 
   return {
@@ -218,11 +238,16 @@ export async function createGame(
 ) {
   return withTransaction(async (client) => {
     const inserted = await client.query<{ id: string }>(
-      `insert into games (author_id, title)
-       values ($1::uuid, $2)
+      `insert into games (author_id, category_id, title)
+       select $1::uuid, c.id, $2
+       from categories c
+       where c.id = $3::uuid
        returning id::text`,
-      [author._id, game.title]
+      [author._id, game.title, game.categoryId]
     );
+    if (!inserted.rows[0]) {
+      throw new Error("Categoria não encontrada.");
+    }
     const gameId = inserted.rows[0].id;
     await insertQuestions(client, gameId, game.questions);
     return gameId;
@@ -236,11 +261,13 @@ export async function updateGame(
 ) {
   return withTransaction(async (client) => {
     const updated = await client.query<{ id: string }>(
-      `update games
-       set title = $1, updated_at = now()
-       where id = $2::uuid and author_id = $3::uuid
-       returning id::text`,
-      [game.title, gameId, authorId]
+      `update games g
+       set title = $1, category_id = c.id, updated_at = now()
+       from categories c
+       where g.id = $2::uuid and g.author_id = $3::uuid
+         and c.id = $4::uuid
+       returning g.id::text`,
+      [game.title, gameId, authorId, game.categoryId]
     );
     if (!updated.rowCount) return false;
 
@@ -252,10 +279,19 @@ export async function updateGame(
   });
 }
 
-export async function deleteOwnedGame(gameId: string, authorId: string) {
+export async function deleteGame(
+  gameId: string,
+  authorId: string,
+  isSuperadmin: boolean
+) {
   const result = await query(
-    "delete from games where id = $1::uuid and author_id = $2::uuid",
-    [gameId, authorId]
+    `delete from games
+     where id = $1::uuid
+       and (
+         (is_default = false and author_id = $2::uuid)
+         or (is_default = true and $3::boolean = true)
+       )`,
+    [gameId, authorId, isSuperadmin]
   );
   return (result.rowCount || 0) > 0;
 }

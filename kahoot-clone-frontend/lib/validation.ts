@@ -2,6 +2,9 @@ import type { db } from "kahoot";
 
 export class ValidationError extends Error {}
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export function validateUsername(usernameValue: unknown) {
   const username = typeof usernameValue === "string" ? usernameValue.trim() : "";
 
@@ -48,6 +51,11 @@ export function validateGame(input: unknown): db.KahootGame {
   }
 
   const candidate = input as Partial<db.KahootGame>;
+  const categoryId =
+    typeof candidate.categoryId === "string" ? candidate.categoryId : "";
+  if (!UUID_PATTERN.test(categoryId)) {
+    throw new ValidationError("Selecione uma categoria para o Kahoot.");
+  }
   const title = typeof candidate.title === "string" ? candidate.title.trim() : "";
   if (!title || title.length > 160) {
     throw new ValidationError("O título deve ter entre 1 e 160 caracteres.");
@@ -133,6 +141,7 @@ export function validateGame(input: unknown): db.KahootGame {
     author_id: "",
     author_username: "",
     title,
+    categoryId,
     date: 0,
     questions,
   };

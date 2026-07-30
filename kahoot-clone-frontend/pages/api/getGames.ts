@@ -9,6 +9,8 @@ export interface APIRequest {
   page?: number;
   pageSize?: 10 | 20 | 50;
   folderId?: string | "unfiled" | null;
+  categoryId?: string | null;
+  sort?: "newest" | "oldest";
 }
 
 interface Pagination {
@@ -67,6 +69,13 @@ export default async function handler(
         UUID_PATTERN.test(request.folderId)))
       ? request.folderId
       : null;
+  const categoryId =
+    scope === "public" &&
+    typeof request.categoryId === "string" &&
+    UUID_PATTERN.test(request.categoryId)
+      ? request.categoryId
+      : null;
+  const sort = request.sort === "oldest" ? "oldest" : "newest";
 
   try {
     const [library, organization] = await Promise.all([
@@ -74,6 +83,8 @@ export default async function handler(
         userId: user._id,
         scope,
         folderId,
+        categoryId,
+        sort,
         page,
         pageSize,
       }),
