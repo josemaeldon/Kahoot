@@ -243,6 +243,9 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   await expect(
     host.getByAltText("Imagem da pergunta: Quanto é 2 + 2?")
   ).toBeVisible();
+  await expect(
+    host.getByRole("button", { name: "Entrar em tela cheia" })
+  ).toBeVisible();
   await host.getByRole("button", { name: "Sair", exact: true }).click();
   const exitConfirmation = host.getByRole("alertdialog", {
     name: "Sair da partida?",
@@ -251,8 +254,37 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   await exitConfirmation.getByRole("button", { name: "Cancelar" }).click();
   await expect(exitConfirmation).toBeHidden();
   await host.screenshot({ path: "/tmp/kahoot-host-question.png" });
+  await host.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    host.getByRole("button", { name: "Entrar em tela cheia" })
+  ).toBeVisible();
+  await host.screenshot({ path: "/tmp/kahoot-host-question-mobile.png" });
+  await host.setViewportSize({ width: 1536, height: 1024 });
+
   await expect(player.locator('[class*="answerGrid"] > button')).toHaveCount(2);
   await player.screenshot({ path: "/tmp/kahoot-player-answer-mobile.png" });
+
+  const latePlayerContext = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+  });
+  const latePlayer = await latePlayerContext.newPage();
+  latePlayer.on("console", (message) => {
+    if (["error", "warning"].includes(message.type())) {
+      browserProblems.push(`late player ${message.type()}: ${message.text()}`);
+    }
+  });
+  latePlayer.on("pageerror", (error) =>
+    browserProblems.push(`late player pageerror: ${error.message}`)
+  );
+  await latePlayer.goto("/play");
+  await latePlayer.getByPlaceholder("Game PIN").fill(pin!);
+  await latePlayer.getByPlaceholder("Seu nome").fill("Jogador atrasado");
+  await latePlayer.getByRole("button", { name: "Entrar na sala" }).click();
+  await expect(latePlayer.locator('[class*="answerGrid"] > button')).toHaveCount(2);
+  await latePlayer.screenshot({
+    path: "/tmp/kahoot-player-late-join-mobile.png",
+  });
+
   const hostAnswers = host.locator('[class*="grid"] > article');
   const correctAnswerPosition = await hostAnswers
     .evaluateAll((answers) =>
@@ -263,8 +295,14 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
     .locator('[class*="answerGrid"] > button')
     .nth(correctAnswerPosition)
     .click();
+  await latePlayer
+    .locator('[class*="answerGrid"] > button')
+    .nth(correctAnswerPosition)
+    .click();
   await expect(player.getByText(/Você acertou!/)).toBeVisible();
   await expect(player.getByText("Total: 1000 pontos")).toBeVisible();
+  await expect(latePlayer.getByText(/Você acertou!/)).toBeVisible();
+  await expect(latePlayer.getByText("Total: 909 pontos")).toBeVisible();
   await player.screenshot({ path: "/tmp/kahoot-player-result-mobile.png" });
 
   await expect(host.getByText("Quanto é 2 + 2?")).toBeVisible();
@@ -279,6 +317,7 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   ).toBeVisible();
   await expect(player.getByText("Sua posição:")).toContainText("1º lugar");
   await expect(player.getByText("Jogador E2E")).toBeVisible();
+  await expect(player.getByText("Jogador atrasado")).toBeVisible();
   await expect(player.getByText("1000 pontos")).toBeVisible();
   await player
     .getByRole("button", { name: "Entrar em uma nova sala" })
@@ -316,5 +355,6 @@ test("cadastro, criação de quiz e partida completa", async ({ browser }) => {
   expect(cleanup.ok()).toBe(true);
 
   await playerContext.close();
+  await latePlayerContext.close();
   await hostContext.close();
 });

@@ -71,7 +71,17 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-.exitButton svg {
+.topbarActions .fullscreenButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.exitButton svg,
+.fullscreenButton svg {
   width: 17px;
   height: 17px;
 }
@@ -252,6 +262,16 @@
 
   .topbarActions button {
     padding-inline: 13px;
+  }
+
+  .topbarActions .fullscreenButton {
+    width: 42px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .fullscreenButton span {
+    display: none;
   }
 
   .container {

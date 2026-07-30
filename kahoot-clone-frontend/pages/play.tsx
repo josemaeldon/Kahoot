@@ -135,8 +135,8 @@ function StartScreen() {
       setError(
         reason === "Duplicate user"
           ? "Esse nome já está sendo usado na sala."
-          : reason === "Room does not exist" || reason === "Game already started"
-            ? "Sala não encontrada ou partida já iniciada."
+          : reason === "Room does not exist"
+            ? "Sala não encontrada."
             : "Não foi possível conectar ao servidor da partida."
       );
       setInputLocked(false);

@@ -424,14 +424,6 @@ async fn join_room(
     }
 
     let is_resume = session_token.is_some();
-    let is_in_lobby = matches!(*room.result_stream.borrow(), GameEvent::InLobby);
-    if !is_resume && !is_in_lobby {
-        let event = UserEvent::JoinFailed {
-            reason: String::from("Game already started"),
-        };
-        let _ = socket.send(event.to_message()).await;
-        return;
-    }
 
     tracing::debug!("Joining room...");
 
@@ -482,10 +474,16 @@ async fn join_room(
         let username = username.clone();
         let scores = Arc::clone(&room.scores);
         tokio::spawn(async move {
-            // A resumed socket immediately receives the current game state,
-            // even if it missed the original watch notification.
-            if is_resume {
-                let current = event_watch.borrow_and_update().clone();
+            // Synchronize resumed players and new players who join during a
+            // question. A new player joining between questions waits for the
+            // next one instead of receiving a result for a round they missed.
+            let current = event_watch.borrow_and_update().clone();
+            if is_resume
+                || matches!(
+                    &current,
+                    GameEvent::RoundBegin { .. } | GameEvent::GameEnd { .. }
+                )
+            {
                 if let Some(event) = player_event(&current, &username, &scores) {
                     if user_tx.send(event.to_message()).await.is_err() {
                         return;
@@ -1070,6 +1068,57 @@ mod tests {
         resumed.send(&Action::Answer { choice: 0 }).await;
         let_assert!(HostEvent::UserAnswered { username } = host.recv().await.unwrap());
         assert_eq!(username, "Alice");
+    }
+
+    #[tokio::test]
+    async fn joins_player_after_game_has_started() {
+        let server = TestServer::new().await;
+        let (mut host, room_id) = server
+            .create_room(vec![question! {
+                "Fish?", time: 30 => [
+                    true => "foo",
+                    false => "bar",
+                ]
+            }])
+            .await;
+
+        let mut first_player = server.join_room(room_id, String::from("Alice")).await;
+        let_assert!(UserEvent::Joined { .. } = first_player.recv().await.unwrap());
+        let_assert!(HostEvent::UserJoined { .. } = host.recv().await.unwrap());
+
+        host.send(&Action::BeginRound).await;
+        let_assert!(HostEvent::RoundBegin { question } = host.recv().await.unwrap());
+        let_assert!(UserEvent::RoundBegin { .. } = first_player.recv().await.unwrap());
+
+        let mut late_player = server.join_room(room_id, String::from("Bob")).await;
+        let_assert!(UserEvent::Joined { resumed: false, .. } = late_player.recv().await.unwrap());
+        let_assert!(
+            UserEvent::RoundBegin {
+                choices,
+                total_points: 0
+            } = late_player.recv().await.unwrap()
+        );
+        assert_eq!(choices, question.choices);
+        let_assert!(HostEvent::UserJoined { username } = host.recv().await.unwrap());
+        assert_eq!(username, "Bob");
+
+        late_player
+            .send(&Action::Answer {
+                choice: question.answer,
+            })
+            .await;
+        let_assert!(HostEvent::UserAnswered { username } = host.recv().await.unwrap());
+        assert_eq!(username, "Bob");
+
+        host.send(&Action::EndRound).await;
+        let_assert!(HostEvent::RoundEnd { point_gains } = host.recv().await.unwrap());
+        assert_eq!(point_gains.get("Bob"), Some(&1000));
+        let_assert!(
+            UserEvent::RoundEnd {
+                point_gain: Some(1000),
+                total_points: 1000
+            } = late_player.recv().await.unwrap()
+        );
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

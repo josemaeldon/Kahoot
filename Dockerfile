@@ -7,7 +7,7 @@ COPY kahoot-clone-backend/src ./src
 RUN cargo build --release --locked
 
 FROM backend-builder AS backend-test
-RUN cargo test --release --locked
+RUN ulimit -n 65536 && cargo test --release --locked -- --test-threads=1
 
 FROM node:24-bookworm-slim AS frontend-deps
 WORKDIR /build/frontend

@@ -46,16 +46,7 @@ function formatPin(roomId: number) {
   return `${value.slice(0, 3)} ${value.slice(3, 6)}`;
 }
 
-function HostTopbar({
-  action,
-  onAction,
-  showExit = true,
-}: {
-  action?: string;
-  onAction?: () => void;
-  showExit?: boolean;
-}) {
-  const { requestExit } = useContext(HostContext);
+function FullscreenButton({ className }: { className: string }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -80,6 +71,35 @@ function HostTopbar({
   }
 
   return (
+    <button
+      type="button"
+      className={className}
+      onClick={() => void toggleFullscreen()}
+      aria-label={isFullscreen ? "Sair da tela cheia" : "Entrar em tela cheia"}
+      title={isFullscreen ? "Sair da tela cheia" : "Entrar em tela cheia"}
+    >
+      {isFullscreen ? (
+        <FiMinimize2 aria-hidden="true" />
+      ) : (
+        <FiMaximize2 aria-hidden="true" />
+      )}
+      <span>{isFullscreen ? "Sair da tela cheia" : "Tela cheia"}</span>
+    </button>
+  );
+}
+
+function HostTopbar({
+  action,
+  onAction,
+  showExit = true,
+}: {
+  action?: string;
+  onAction?: () => void;
+  showExit?: boolean;
+}) {
+  const { requestExit } = useContext(HostContext);
+
+  return (
     <header className={styles.hostTopbar}>
       <Image
         src="/kahootLogo.svg"
@@ -90,20 +110,7 @@ function HostTopbar({
       />
       <p>Abra no celular e participe da partida.</p>
       <div className={styles.hostTopbarActions}>
-        <button
-          type="button"
-          className={styles.fullscreenButton}
-          onClick={() => void toggleFullscreen()}
-          aria-label={isFullscreen ? "Sair da tela cheia" : "Entrar em tela cheia"}
-          title={isFullscreen ? "Sair da tela cheia" : "Entrar em tela cheia"}
-        >
-          {isFullscreen ? (
-            <FiMinimize2 aria-hidden="true" />
-          ) : (
-            <FiMaximize2 aria-hidden="true" />
-          )}
-          <span>{isFullscreen ? "Sair da tela cheia" : "Tela cheia"}</span>
-        </button>
+        <FullscreenButton className={styles.fullscreenButton} />
         {showExit && (
           <button
             type="button"
@@ -341,6 +348,7 @@ function QuestionDisplay({
           </span>
         </div>
         <div className={qStyles.topbarActions}>
+          <FullscreenButton className={qStyles.fullscreenButton} />
           <button
             type="button"
             className={qStyles.exitButton}
