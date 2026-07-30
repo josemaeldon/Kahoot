@@ -2,7 +2,7 @@
 
 import { NextApiRequest, NextApiResponse } from "next";
 import bcrypt from "bcryptjs";
-import type { auth, db } from "kahoot";
+import type { auth } from "kahoot";
 import { query } from "@lib/db";
 import { setSessionCookie } from "@lib/auth";
 export interface APIRequest {
@@ -50,8 +50,18 @@ export default async function handler(
       username: string;
       whatsapp: string | null;
       password_hash: string;
+      role: auth.UserRole;
+      is_enabled: boolean;
+      access_expires_at: Date | null;
     }>(
-      `select id::text, username, whatsapp, password_hash
+      `select
+         id::text,
+         username,
+         whatsapp,
+         password_hash,
+         role,
+         is_enabled,
+         access_expires_at
        from users
        where lower(username) = lower($1)
        limit 1`,
@@ -69,10 +79,33 @@ export default async function handler(
       });
     }
 
+    if (!user.is_enabled) {
+      return res.status(403).json({
+        error: true,
+        errorDescription:
+          "Seu acesso está desativado. Entre em contato com o administrador para reativar.",
+      });
+    }
+
+    if (
+      user.role !== "superadmin" &&
+      user.access_expires_at &&
+      user.access_expires_at.getTime() <= Date.now()
+    ) {
+      return res.status(403).json({
+        error: true,
+        errorDescription:
+          "Seu período de acesso terminou. Entre em contato com o administrador para reativar.",
+      });
+    }
+
     const payload: auth.accessTokenPayload = {
       _id: user.id,
       username: user.username,
       whatsapp: user.whatsapp || "",
+      role: user.role,
+      isEnabled: user.is_enabled,
+      accessExpiresAt: user.access_expires_at?.toISOString() || null,
     };
     setSessionCookie(res, payload);
     return res.status(200).json({ error: false, user: payload });

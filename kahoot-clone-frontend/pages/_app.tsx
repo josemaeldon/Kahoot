@@ -16,8 +16,9 @@ const publicRoutes = new Set([
 
 function AuthGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const { loggedIn, loading } = useUser();
+  const { loggedIn, loading, user } = useUser();
   const isPublic = publicRoutes.has(router.pathname);
+  const requiresSuperadmin = router.pathname.startsWith("/admin");
 
   useEffect(() => {
     if (!loading && !loggedIn && !isPublic) {
@@ -28,7 +29,21 @@ function AuthGuard({ children }: { children: ReactNode }) {
     }
   }, [isPublic, loading, loggedIn, router]);
 
-  if (!isPublic && (loading || !loggedIn)) {
+  useEffect(() => {
+    if (
+      !loading &&
+      loggedIn &&
+      requiresSuperadmin &&
+      user?.role !== "superadmin"
+    ) {
+      void router.replace("/");
+    }
+  }, [loading, loggedIn, requiresSuperadmin, router, user?.role]);
+
+  if (
+    (!isPublic && (loading || !loggedIn)) ||
+    (requiresSuperadmin && user?.role !== "superadmin")
+  ) {
     return (
       <main className="appLoading" aria-live="polite">
         <span className="appSpinner" />

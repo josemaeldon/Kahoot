@@ -1,12 +1,13 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import type { auth } from "kahoot";
-import { FiLock, FiPhone, FiUser, FiX } from "react-icons/fi";
+import { FiClock, FiLock, FiPhone, FiUser, FiX } from "react-icons/fi";
 import { postData } from "@lib/postData";
 import type {
   APIRequest,
   APIResponse,
 } from "../pages/api/account";
 import styles from "../styles/AccountModal.module.css";
+import { getAccessPeriodSummary } from "@lib/accessPeriod";
 
 interface AccountModalProps {
   open: boolean;
@@ -30,6 +31,7 @@ export default function AccountModal({
   const modalRef = useRef<HTMLElement>(null);
   const usernameRef = useRef<HTMLInputElement>(null);
   const savingRef = useRef(false);
+  const accessPeriod = getAccessPeriodSummary(user);
 
   useEffect(() => {
     if (!open) return;
@@ -124,6 +126,20 @@ export default function AccountModal({
             <FiX aria-hidden="true" />
           </button>
         </header>
+
+        <div
+          className={`${styles.accessCard} ${
+            styles[`accessCard_${accessPeriod.state}`]
+          }`}
+        >
+          <span className={styles.accessIcon} aria-hidden="true">
+            <FiClock />
+          </span>
+          <div>
+            <strong>{accessPeriod.label}</strong>
+            <p>{accessPeriod.detail}</p>
+          </div>
+        </div>
 
         <form onSubmit={(event) => void submit(event)}>
           {error && (

@@ -50,6 +50,12 @@ export function getAuthenticatedUser(
       _id: decoded._id,
       username: decoded.username,
       whatsapp: typeof decoded.whatsapp === "string" ? decoded.whatsapp : "",
+      role: decoded.role === "superadmin" ? "superadmin" : "user",
+      isEnabled: decoded.isEnabled !== false,
+      accessExpiresAt:
+        typeof decoded.accessExpiresAt === "string"
+          ? decoded.accessExpiresAt
+          : null,
     };
   } catch {
     return null;
@@ -70,15 +76,22 @@ export async function getActiveAuthenticatedUser(
     id: string;
     username: string;
     whatsapp: string | null;
+    role: auth.UserRole;
+    is_enabled: boolean;
+    access_expires_at: Date | null;
   }>(
-    `select id::text, username, whatsapp
+    `select id::text, username, whatsapp, role, is_enabled, access_expires_at
      from users
      where id = $1::uuid
      limit 1`,
     [tokenUser._id]
   );
   const activeUser = result.rows[0];
-  if (!activeUser) {
+  const accessExpired =
+    activeUser?.role !== "superadmin" &&
+    activeUser?.access_expires_at !== null &&
+    activeUser.access_expires_at.getTime() <= Date.now();
+  if (!activeUser || !activeUser.is_enabled || accessExpired) {
     if (res) clearSessionCookie(res);
     return null;
   }
@@ -87,6 +100,9 @@ export async function getActiveAuthenticatedUser(
     _id: activeUser.id,
     username: activeUser.username,
     whatsapp: activeUser.whatsapp || "",
+    role: activeUser.role,
+    isEnabled: activeUser.is_enabled,
+    accessExpiresAt: activeUser.access_expires_at?.toISOString() || null,
   };
 }
 
@@ -99,6 +115,23 @@ export async function requireAuthenticatedUser(
     res.status(401).json({
       error: true,
       errorDescription: "Sessão inválida ou expirada",
+    });
+    return null;
+  }
+  return user;
+}
+
+export async function requireSuperadmin(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const user = await requireAuthenticatedUser(req, res);
+  if (!user) return null;
+
+  if (user.role !== "superadmin") {
+    res.status(403).json({
+      error: true,
+      errorDescription: "Acesso restrito ao superadministrador.",
     });
     return null;
   }

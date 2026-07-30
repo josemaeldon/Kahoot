@@ -24,12 +24,33 @@ function Signup() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [registrationEnabled, setRegistrationEnabled] = useState<
+    boolean | null
+  >(null);
+  const [registrationNotice, setRegistrationNotice] = useState(false);
   const router = useRouter();
   const { loggedIn, loading } = useUser();
 
   useEffect(() => {
     if (!loading && loggedIn) void router.replace("/");
   }, [loading, loggedIn, router]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/registration-status", {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then((response) => response.json())
+      .then((response) => {
+        if (!response.error) {
+          setRegistrationEnabled(response.registrationEnabled);
+          setRegistrationNotice(!response.registrationEnabled);
+        }
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
 
   const signupHandler = async () => {
     setIsLoading(true);
@@ -161,9 +182,13 @@ function Signup() {
             <button
               type="submit"
               className={styles.primaryButton}
-              disabled={isLoading}
+              disabled={isLoading || registrationEnabled === false}
             >
-              {isLoading ? "Criando conta..." : "Criar conta"}
+              {isLoading
+                ? "Criando conta..."
+                : registrationEnabled === false
+                  ? "Cadastros desativados"
+                  : "Criar conta"}
             </button>
 
             <p className={styles.switchText}>
@@ -180,6 +205,15 @@ function Signup() {
         messages={error ? [error] : []}
         tone="error"
         onClose={() => setError(null)}
+      />
+      <NoticeModal
+        open={registrationNotice}
+        title="Cadastros temporariamente desativados"
+        messages={[
+          "Entre em contato com o administrador para solicitar seu acesso.",
+        ]}
+        tone="warning"
+        onClose={() => setRegistrationNotice(false)}
       />
     </main>
   );

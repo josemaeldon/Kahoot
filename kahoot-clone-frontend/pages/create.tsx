@@ -14,12 +14,19 @@ import {
   APIResponse as GetGameRes,
   APIRequest as GetGameReq,
 } from "./api/getOneGame";
-import { FiArrowLeft, FiSave } from "react-icons/fi";
+import {
+  FiArrowLeft,
+  FiDownload,
+  FiFileText,
+  FiSave,
+  FiUploadCloud,
+} from "react-icons/fi";
+import { KahootCsvError, parseKahootCsv } from "@lib/kahootCsv";
 
 interface Notice {
   title: string;
   messages: string[];
-  tone: "warning" | "error";
+  tone: "warning" | "error" | "info";
 }
 
 export interface QuestionError {
@@ -201,6 +208,50 @@ function Create() {
     }
   }
 
+  async function importCsv(file: File | undefined) {
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      setNotice({
+        title: "Arquivo muito grande",
+        messages: ["O CSV deve ter no máximo 1 MB e até 100 perguntas."],
+        tone: "error",
+      });
+      return;
+    }
+
+    try {
+      const importedGame = parseKahootCsv(await file.text());
+      setGame((current) => ({
+        ...importedGame,
+        _id: current._id,
+        author_id: current.author_id,
+        author_username: current.author_username,
+        date: current.date,
+      }));
+      setQuestionNumber(0);
+      setFormErrors(null);
+      setNotice({
+        title: "Importação concluída",
+        messages: [
+          `${importedGame.questions.length} ${
+            importedGame.questions.length === 1 ? "pergunta foi importada" : "perguntas foram importadas"
+          }. Revise o conteúdo e adicione imagens antes de salvar.`,
+        ],
+        tone: "info",
+      });
+    } catch (error) {
+      setNotice({
+        title: "Não foi possível importar",
+        messages: [
+          error instanceof KahootCsvError
+            ? error.message
+            : "O arquivo não pôde ser lido. Baixe o modelo e tente novamente.",
+        ],
+        tone: "error",
+      });
+    }
+  }
+
   return (
     <main className={styles.page}>
       <header className={styles.topbar}>
@@ -253,6 +304,43 @@ function Create() {
           </button>
         </div>
       </header>
+
+      <section className={styles.importBar} aria-label="Importação de Kahoot">
+        <div className={styles.importDescription}>
+          <span className={styles.importIcon} aria-hidden="true">
+            <FiFileText />
+          </span>
+          <div>
+            <strong>Importe um Kahoot pronto</strong>
+            <small>
+              Preencha o modelo CSV no Excel ou Google Planilhas e envie aqui.
+            </small>
+          </div>
+        </div>
+        <div className={styles.importActions}>
+          <a
+            href="/modelo-importacao-kahoot.csv"
+            download
+            className={styles.modelButton}
+          >
+            <FiDownload aria-hidden="true" />
+            Baixar modelo
+          </a>
+          <label className={styles.importButton}>
+            <FiUploadCloud aria-hidden="true" />
+            Importar CSV
+            <input
+              data-testid="kahoot-csv-input"
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(event) => {
+                void importCsv(event.target.files?.[0]);
+                event.target.value = "";
+              }}
+            />
+          </label>
+        </div>
+      </section>
 
       <GameContext.Provider
         value={{

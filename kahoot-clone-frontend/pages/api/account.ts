@@ -67,17 +67,30 @@ export default async function handler(
       id: string;
       username: string;
       whatsapp: string;
+      role: auth.UserRole;
+      is_enabled: boolean;
+      access_expires_at: Date | null;
     }>(
       `update users
        set username = $1, whatsapp = $2, password_hash = $3
        where id = $4::uuid
-       returning id::text, username, whatsapp`,
+       returning
+         id::text,
+         username,
+         whatsapp,
+         role,
+         is_enabled,
+         access_expires_at`,
       [username, whatsapp, passwordHash, authenticatedUser._id]
     );
     const user: auth.accessTokenPayload = {
       _id: updated.rows[0].id,
       username: updated.rows[0].username,
       whatsapp: updated.rows[0].whatsapp,
+      role: updated.rows[0].role,
+      isEnabled: updated.rows[0].is_enabled,
+      accessExpiresAt:
+        updated.rows[0].access_expires_at?.toISOString() || null,
     };
     setSessionCookie(res, user);
     return res.status(200).json({ error: false, user });

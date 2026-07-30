@@ -25,10 +25,15 @@ export namespace db {
 }
 
 export namespace auth {
+  declare type UserRole = "user" | "superadmin";
+
   declare interface accessTokenPayload {
     _id: string;
     username: string;
     whatsapp: string;
+    role: UserRole;
+    isEnabled: boolean;
+    accessExpiresAt: string | null;
   }
 }
 
