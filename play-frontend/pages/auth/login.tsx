@@ -11,7 +11,7 @@ import { FiLock, FiUser } from "react-icons/fi";
 
 function Login() {
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -24,7 +24,7 @@ function Login() {
   const loginHandler = async () => {
     setError(null);
     setIsLoading(true);
-    const request: APIRequest = { username, password };
+    const request: APIRequest = { identifier, password };
     try {
       const response = await postData<APIRequest, APIResponse>(
         "/api/login",
@@ -76,16 +76,17 @@ function Login() {
             </div>
 
             <label className={styles.field}>
-              <span>Usuário</span>
+              <span>Usuário ou e-mail</span>
               <div className={styles.inputShell}>
                 <FiUser aria-hidden="true" />
                 <input
                   type="text"
-                  id="username"
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  placeholder="Digite seu usuário"
+                  id="identifier"
+                  value={identifier}
+                  onChange={(event) => setIdentifier(event.target.value)}
+                  placeholder="Digite seu usuário ou e-mail"
                   autoComplete="username"
+                  required
                 />
               </div>
             </label>
@@ -101,6 +102,7 @@ function Login() {
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Digite sua senha"
                   autoComplete="current-password"
+                  required
                 />
               </div>
             </label>
@@ -112,6 +114,10 @@ function Login() {
             >
               {isLoading ? "Entrando..." : "Entrar"}
             </button>
+
+            <p className={styles.switchText}>
+              <Link href="/auth/forgotpassword">Esqueci a senha</Link>
+            </p>
 
             <p className={styles.switchText}>
               Não tem uma conta?{" "}

@@ -6,7 +6,7 @@ import type { auth } from "play";
 import { query } from "@lib/db";
 import { setSessionCookie } from "@lib/auth";
 export interface APIRequest {
-  username: string;
+  identifier: string;
   password: string;
 }
 
@@ -33,20 +33,27 @@ export default async function handler(
     });
   }
 
-  const username =
-    typeof req.body?.username === "string" ? req.body.username.trim() : "";
+  const identifier =
+    typeof req.body?.identifier === "string"
+      ? req.body.identifier.trim()
+      : typeof req.body?.username === "string"
+        ? req.body.username.trim()
+        : "";
   const password =
     typeof req.body?.password === "string" ? req.body.password : "";
-  if (!username || !password) {
+  if (!identifier || !password) {
     return res.status(400).json({
       error: true,
-      errorDescription: "Informe usuário e senha.",
+      errorDescription: "Informe usuário ou e-mail e senha.",
     });
   }
 
   try {
     const result = await query<{
       id: string;
+      full_name: string | null;
+      email: string | null;
+      cpf: string | null;
       username: string;
       whatsapp: string | null;
       password_hash: string;
@@ -56,6 +63,9 @@ export default async function handler(
     }>(
       `select
          id::text,
+         full_name,
+         email,
+         cpf,
          username,
          whatsapp,
          password_hash,
@@ -64,8 +74,9 @@ export default async function handler(
          access_expires_at
        from users
        where lower(username) = lower($1)
+          or lower(email) = lower($1)
        limit 1`,
-      [username]
+      [identifier]
     );
     const user = result.rows[0];
     const correct = user
@@ -75,7 +86,7 @@ export default async function handler(
     if (!user || !correct) {
       return res.status(401).json({
         error: true,
-        errorDescription: "Usuário ou senha inválidos.",
+        errorDescription: "Usuário, e-mail ou senha inválidos.",
       });
     }
 
@@ -89,6 +100,9 @@ export default async function handler(
 
     const payload: auth.accessTokenPayload = {
       _id: user.id,
+      fullName: user.full_name || "",
+      email: user.email || "",
+      cpf: user.cpf || "",
       username: user.username,
       whatsapp: user.whatsapp || "",
       role: user.role,

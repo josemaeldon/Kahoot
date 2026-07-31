@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import type { auth } from "play";
-import { FiClock, FiLock, FiPhone, FiUser, FiX } from "react-icons/fi";
+import { FiClock, FiCreditCard, FiLock, FiMail, FiPhone, FiUser, FiX } from "react-icons/fi";
 import { postData } from "@lib/postData";
 import type {
   APIRequest,
@@ -8,6 +8,7 @@ import type {
 } from "../pages/api/account";
 import styles from "../styles/AccountModal.module.css";
 import { getAccessPeriodSummary } from "@lib/accessPeriod";
+import { maskCpfOrCnpj, maskPhone } from "@lib/masks";
 
 interface AccountModalProps {
   open: boolean;
@@ -22,8 +23,11 @@ export default function AccountModal({
   onClose,
   onUpdated,
 }: AccountModalProps) {
+  const [fullName, setFullName] = useState(user.fullName);
+  const [email, setEmail] = useState(user.email);
+  const [cpf, setCpf] = useState(() => maskCpfOrCnpj(user.cpf));
   const [username, setUsername] = useState(user.username);
-  const [whatsapp, setWhatsapp] = useState(user.whatsapp);
+  const [whatsapp, setWhatsapp] = useState(() => maskPhone(user.whatsapp));
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
@@ -35,8 +39,11 @@ export default function AccountModal({
 
   useEffect(() => {
     if (!open) return;
+    setFullName(user.fullName);
+    setEmail(user.email);
+    setCpf(maskCpfOrCnpj(user.cpf));
     setUsername(user.username);
-    setWhatsapp(user.whatsapp);
+    setWhatsapp(maskPhone(user.whatsapp));
     setCurrentPassword("");
     setNewPassword("");
     setError("");
@@ -69,7 +76,7 @@ export default function AccountModal({
       document.removeEventListener("keydown", handleKeyDown);
       previouslyFocused?.focus();
     };
-  }, [onClose, open, user.username, user.whatsapp]);
+  }, [onClose, open, user.cpf, user.email, user.fullName, user.username, user.whatsapp]);
 
   if (!open) return null;
 
@@ -80,6 +87,9 @@ export default function AccountModal({
     savingRef.current = true;
     try {
       const response = await postData<APIRequest, APIResponse>("/api/account", {
+        fullName,
+        email,
+        cpf,
         username,
         whatsapp,
         currentPassword,
@@ -149,6 +159,30 @@ export default function AccountModal({
           )}
 
           <label className={styles.field}>
+            <span>Nome completo</span>
+            <div className={styles.inputShell}>
+              <FiUser aria-hidden="true" />
+              <input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" maxLength={160} required />
+            </div>
+          </label>
+
+          <label className={styles.field}>
+            <span>E-mail</span>
+            <div className={styles.inputShell}>
+              <FiMail aria-hidden="true" />
+              <input type="email" value={email} onChange={(event) => setEmail(event.target.value.trimStart())} autoComplete="email" maxLength={254} required />
+            </div>
+          </label>
+
+          <label className={styles.field}>
+            <span>CPF ou CNPJ</span>
+            <div className={styles.inputShell}>
+              <FiCreditCard aria-hidden="true" />
+              <input value={cpf} onChange={(event) => setCpf(maskCpfOrCnpj(event.target.value))} inputMode="numeric" maxLength={18} required />
+            </div>
+          </label>
+
+          <label className={styles.field}>
             <span>Usuário</span>
             <div className={styles.inputShell}>
               <FiUser aria-hidden="true" />
@@ -170,11 +204,12 @@ export default function AccountModal({
               <input
                 type="tel"
                 value={whatsapp}
-                onChange={(event) => setWhatsapp(event.target.value)}
+                onChange={(event) => setWhatsapp(maskPhone(event.target.value))}
                 autoComplete="tel"
                 inputMode="tel"
                 placeholder="(91) 99999-9999"
                 required
+                maxLength={15}
               />
             </div>
           </label>
@@ -204,6 +239,8 @@ export default function AccountModal({
                 onChange={(event) => setNewPassword(event.target.value)}
                 autoComplete="new-password"
                 placeholder="Deixe em branco para manter"
+                minLength={8}
+                maxLength={128}
               />
             </div>
           </label>

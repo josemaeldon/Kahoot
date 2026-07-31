@@ -4,6 +4,9 @@ import type { auth } from "play";
 import { requireAuthenticatedUser, setSessionCookie } from "@lib/auth";
 import { query } from "@lib/db";
 import {
+  validateCpfOrCnpj,
+  validateEmail,
+  validateFullName,
   validatePassword,
   validateUsername,
   validateWhatsapp,
@@ -11,6 +14,9 @@ import {
 } from "@lib/validation";
 
 export interface APIRequest {
+  fullName: string;
+  email: string;
+  cpf: string;
   username: string;
   whatsapp: string;
   currentPassword: string;
@@ -35,6 +41,9 @@ export default async function handler(
   if (!authenticatedUser) return;
 
   try {
+    const fullName = validateFullName(req.body?.fullName);
+    const email = validateEmail(req.body?.email);
+    const cpf = validateCpfOrCnpj(req.body?.cpf);
     const username = validateUsername(req.body?.username);
     const whatsapp = validateWhatsapp(req.body?.whatsapp);
     const currentPassword = validatePassword(req.body?.currentPassword);
@@ -65,6 +74,9 @@ export default async function handler(
       : current.rows[0].password_hash;
     const updated = await query<{
       id: string;
+      full_name: string;
+      email: string;
+      cpf: string;
       username: string;
       whatsapp: string;
       role: auth.UserRole;
@@ -72,19 +84,31 @@ export default async function handler(
       access_expires_at: Date | null;
     }>(
       `update users
-       set username = $1, whatsapp = $2, password_hash = $3
-       where id = $4::uuid
+       set full_name = $1,
+           email = $2,
+           cpf = $3,
+           username = $4,
+           whatsapp = $5,
+           password_hash = $6,
+           updated_at = now()
+       where id = $7::uuid
        returning
          id::text,
+         full_name,
+         email,
+         cpf,
          username,
          whatsapp,
          role,
          is_enabled,
          access_expires_at`,
-      [username, whatsapp, passwordHash, authenticatedUser._id]
+      [fullName, email, cpf, username, whatsapp, passwordHash, authenticatedUser._id]
     );
     const user: auth.accessTokenPayload = {
       _id: updated.rows[0].id,
+      fullName: updated.rows[0].full_name,
+      email: updated.rows[0].email,
+      cpf: updated.rows[0].cpf,
       username: updated.rows[0].username,
       whatsapp: updated.rows[0].whatsapp,
       role: updated.rows[0].role,
@@ -101,9 +125,15 @@ export default async function handler(
         .json({ error: true, errorDescription: error.message });
     }
     if ((error as { code?: string }).code === "23505") {
-      return res
-        .status(409)
-        .json({ error: true, errorDescription: "Este usuário já existe." });
+      const constraint = (error as { constraint?: string }).constraint;
+      return res.status(409).json({
+        error: true,
+        errorDescription: constraint?.includes("cpf")
+          ? "Este CPF ou CNPJ já possui uma conta."
+          : constraint?.includes("email")
+            ? "Este e-mail já possui uma conta."
+            : "Este usuário já existe.",
+      });
     }
     console.error("Falha ao atualizar conta", error);
     return res.status(500).json({

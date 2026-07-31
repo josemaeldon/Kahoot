@@ -24,7 +24,7 @@ import type {
 import type { SubscriptionPlan } from "./api/admin/plans";
 import type { PublicSmtpSettings, SmtpSettingsResponse } from "./api/admin/smtp-settings";
 import type { AdminNotification, AdminNotificationsResponse, NotificationUser } from "./api/admin/notifications";
-import { maskCpf, maskCurrency } from "@lib/masks";
+import { maskCpfOrCnpj, maskCurrency } from "@lib/masks";
 import {
   FiCalendar,
   FiBell,
@@ -1158,7 +1158,8 @@ export default function Admin() {
                       <div className={styles.userMeta}>
                         <span>@{managedUser.username}</span>
                         {managedUser.email && <span>{managedUser.email}</span>}
-                        {managedUser.cpf && <span>CPF {maskCpf(managedUser.cpf)}</span>}
+                        {managedUser.cpf && <span>{managedUser.cpf.length === 14 ? "CNPJ" : "CPF"} {maskCpfOrCnpj(managedUser.cpf)}</span>}
+                        {managedUser.assignedPlanName && <span>Plano {managedUser.assignedPlanName}</span>}
                         <a
                           href={`https://wa.me/${managedUser.whatsapp.replace(
                             /\D/g,
@@ -1268,6 +1269,7 @@ export default function Admin() {
           user={modalUser}
           saving={saving}
           error={formError}
+          plans={plans}
           onClose={() => {
             if (!saving) setModalUser(undefined);
           }}

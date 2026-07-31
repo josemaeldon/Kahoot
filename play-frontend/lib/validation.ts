@@ -80,6 +80,34 @@ export function validateCpf(value: unknown) {
   return cpf;
 }
 
+export function validateCnpj(value: unknown) {
+  const cnpj = typeof value === "string" ? value.replace(/\D/g, "") : "";
+  if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) {
+    throw new ValidationError("Informe um CNPJ válido.");
+  }
+
+  const calculateDigit = (base: string, weights: number[]) => {
+    const sum = base
+      .split("")
+      .reduce((total, digit, index) => total + Number(digit) * weights[index], 0);
+    const remainder = sum % 11;
+    return remainder < 2 ? 0 : 11 - remainder;
+  };
+  const first = calculateDigit(cnpj.slice(0, 12), [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  const second = calculateDigit(`${cnpj.slice(0, 12)}${first}`, [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  if (first !== Number(cnpj[12]) || second !== Number(cnpj[13])) {
+    throw new ValidationError("Informe um CNPJ válido.");
+  }
+  return cnpj;
+}
+
+export function validateCpfOrCnpj(value: unknown) {
+  const document = typeof value === "string" ? value.replace(/\D/g, "") : "";
+  if (document.length === 11) return validateCpf(document);
+  if (document.length === 14) return validateCnpj(document);
+  throw new ValidationError("Informe um CPF ou CNPJ válido.");
+}
+
 export function validateCredentials(usernameValue: unknown, passwordValue: unknown) {
   return {
     username: validateUsername(usernameValue),

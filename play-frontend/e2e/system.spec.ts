@@ -101,35 +101,30 @@ test("cadastro, criação de Play! e partida completa", async ({ browser }) => {
 
   await host.goto("/auth/login");
   await host.screenshot({ path: "/tmp/play-login-desktop.png" });
-  await host.getByLabel("Usuário").fill("usuario_inexistente");
+  await expect(host.getByRole("link", { name: "Esqueci a senha" })).toHaveAttribute("href", "/auth/forgotpassword");
+  await host.getByLabel("Usuário ou e-mail").fill("usuario_inexistente");
   await host.getByLabel("Senha").fill("SenhaInvalida123!");
   await host.getByRole("button", { name: "Entrar" }).click();
   const loginErrorModal = host.getByRole("alertdialog", {
     name: "Não foi possível entrar",
   });
   await expect(loginErrorModal).toBeVisible();
-  await expect(loginErrorModal.getByText("Usuário ou senha inválidos.")).toBeVisible();
+  await expect(loginErrorModal.getByText("Usuário, e-mail ou senha inválidos.")).toBeVisible();
   await loginErrorModal.getByRole("button", { name: "Entendi" }).click();
   browserProblems.length = 0;
 
   await host.goto("/auth/signup");
   await host.screenshot({ path: "/tmp/play-signup-desktop.png" });
   const uniqueUsername = `e2e_${Date.now()}`;
-  await host.getByLabel("Nome completo").fill("Usuário Teste E2E");
-  await host.getByLabel("E-mail").fill(`${uniqueUsername}@example.com`);
-  await host.getByLabel("CPF").fill(validCpf(Date.now()));
+  const uniqueEmail = `${uniqueUsername}@example.com`;
+  await host.getByLabel("Nome completo").fill("Usuário Teste Completo");
+  await host.getByLabel("E-mail").fill(uniqueEmail);
+  await host.getByLabel("CPF ou CNPJ").fill(validCpf(Date.now()));
   await host.getByLabel("Usuário").fill(uniqueUsername);
   await host.getByPlaceholder("Digite sua senha").fill("SenhaTeste123!");
   await host.getByRole("button", { name: "Criar conta" }).click();
-  const whatsappRequiredModal = host.getByRole("alertdialog", {
-    name: "Não foi possível criar a conta",
-  });
-  await expect(
-    whatsappRequiredModal.getByText(
-      "Informe um número de WhatsApp válido com DDD."
-    )
-  ).toBeVisible();
-  await whatsappRequiredModal.getByRole("button", { name: "Entendi" }).click();
+  await expect(host.getByLabel("WhatsApp")).toBeFocused();
+  await expect(host).toHaveURL("/auth/signup");
   browserProblems.length = 0;
   await host.getByLabel("WhatsApp").fill("(91) 99999-9999");
   await host.getByRole("button", { name: "Criar conta" }).click();
@@ -146,6 +141,7 @@ test("cadastro, criação de Play! e partida completa", async ({ browser }) => {
   await expect(accountModal).toBeVisible();
   const editedUsername = `editado_${Date.now()}`;
   await accountModal.getByLabel("Usuário").fill(editedUsername);
+  await accountModal.getByLabel("Nome completo").fill("Usuário Editado Completo");
   await accountModal.getByLabel("WhatsApp").fill("(91) 98888-7777");
   await accountModal.getByLabel("Senha atual").fill("SenhaTeste123!");
   await accountModal.getByLabel("Nova senha").fill("NovaSenhaTeste123!");
@@ -163,7 +159,7 @@ test("cadastro, criação de Play! e partida completa", async ({ browser }) => {
 
   await host.getByRole("button", { name: "Sair" }).click();
   await expect(host).toHaveURL("/auth/login");
-  await host.getByLabel("Usuário").fill(editedUsername);
+  await host.getByLabel("Usuário ou e-mail").fill(uniqueEmail);
   await host.getByLabel("Senha").fill("NovaSenhaTeste123!");
   await host.getByRole("button", { name: "Entrar" }).click();
   await expect(host).toHaveURL("/");

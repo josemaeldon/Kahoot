@@ -7,7 +7,7 @@ import { useRouter } from "next/router";
 import Header from "@components/Header";
 import NoticeModal from "@components/NoticeModal";
 import useUser from "@lib/useUser";
-import { maskCpf, maskPhone } from "@lib/masks";
+import { maskCpfOrCnpj, maskPhone } from "@lib/masks";
 import { FiCreditCard, FiEye, FiEyeOff, FiLock, FiMail, FiPhone, FiUser } from "react-icons/fi";
 
 interface Info {
@@ -101,7 +101,6 @@ function Signup() {
         <section className={styles.formRegion}>
           <form
             className={styles.form}
-            noValidate
             onSubmit={(event) => {
               event.preventDefault();
               void signupHandler();
@@ -148,18 +147,18 @@ function Signup() {
             </label>
 
             <label className={styles.field}>
-              <span>CPF</span>
+              <span>CPF ou CNPJ</span>
               <div className={styles.inputShell}>
                 <FiCreditCard aria-hidden="true" />
                 <input
                   type="text"
                   id="cpf"
                   value={info.cpf}
-                  onChange={(event) => setInfo((current) => ({ ...current, cpf: maskCpf(event.target.value) }))}
-                  placeholder="000.000.000-00"
+                  onChange={(event) => setInfo((current) => ({ ...current, cpf: maskCpfOrCnpj(event.target.value) }))}
+                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
                   autoComplete="off"
                   inputMode="numeric"
-                  maxLength={14}
+                  maxLength={18}
                   required
                 />
               </div>
@@ -181,6 +180,8 @@ function Signup() {
                   }
                   placeholder="Digite seu nome de usuário"
                   autoComplete="username"
+                  minLength={3}
+                  maxLength={40}
                   required
                 />
               </div>
@@ -230,6 +231,7 @@ function Signup() {
                   placeholder="Digite sua senha"
                   autoComplete="new-password"
                   minLength={8}
+                  maxLength={128}
                   required
                 />
                 <button

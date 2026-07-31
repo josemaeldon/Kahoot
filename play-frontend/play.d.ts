@@ -71,6 +71,9 @@ export namespace auth {
 
   declare interface accessTokenPayload {
     _id: string;
+    fullName: string;
+    email: string;
+    cpf: string;
     username: string;
     whatsapp: string;
     role: UserRole;

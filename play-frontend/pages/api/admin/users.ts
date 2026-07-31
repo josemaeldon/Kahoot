@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { requireSuperadmin } from "@lib/auth";
 import { query, withTransaction } from "@lib/db";
 import {
-  validateCpf,
+  validateCpfOrCnpj,
   validateEmail,
   validateFullName,
   validatePassword,
@@ -26,6 +26,8 @@ export interface ManagedUser {
   role: auth.UserRole;
   isEnabled: boolean;
   accessExpiresAt: string | null;
+  assignedPlanId: string | null;
+  assignedPlanName: string | null;
   createdAt: string;
 }
 
@@ -93,6 +95,7 @@ async function applyAccess(
       `update users
        set is_enabled = true,
            access_expires_at = null,
+           assigned_plan_id = null,
            updated_at = now()
        where id = $1::uuid`,
       [userId]
@@ -105,6 +108,7 @@ async function applyAccess(
       `update users
        set is_enabled = false,
            access_expires_at = null,
+           assigned_plan_id = null,
            updated_at = now()
        where id = $1::uuid`,
       [userId]
@@ -117,6 +121,7 @@ async function applyAccess(
       `update users
        set is_enabled = true,
            access_expires_at = null,
+           assigned_plan_id = null,
            updated_at = now()
        where id = $1::uuid`,
       [userId]
@@ -128,9 +133,28 @@ async function applyAccess(
     `update users
      set is_enabled = true,
          access_expires_at = now() + make_interval(days => $2::int),
+         assigned_plan_id = null,
          updated_at = now()
      where id = $1::uuid`,
     [userId, Number(access)]
+  );
+}
+
+async function applyPlan(client: PoolClient, userId: string, planId: string) {
+  if (!userIdPattern.test(planId)) throw new ValidationError("Plano inválido.");
+  const plan = await client.query<{ duration_days: number }>(
+    `select duration_days from subscription_plans where id = $1::uuid limit 1`,
+    [planId]
+  );
+  if (!plan.rows[0]) throw new ValidationError("Plano não encontrado.");
+  await client.query(
+    `update users
+     set is_enabled = true,
+         access_expires_at = now() + make_interval(days => $2::int),
+         assigned_plan_id = $3::uuid,
+         updated_at = now()
+     where id = $1::uuid`,
+    [userId, plan.rows[0].duration_days, planId]
   );
 }
 
@@ -218,38 +242,43 @@ async function loadAdminData({
       role: auth.UserRole;
       is_enabled: boolean;
       access_expires_at: Date | null;
+      assigned_plan_id: string | null;
+      assigned_plan_name: string | null;
       created_at: Date;
     }>(
       `select
-         id::text,
-         full_name,
-         email,
-         cpf,
-         username,
-         whatsapp,
-         role,
-         is_enabled,
-         access_expires_at,
-         created_at
-       from users
+         u.id::text,
+         u.full_name,
+         u.email,
+         u.cpf,
+         u.username,
+         u.whatsapp,
+         u.role,
+         u.is_enabled,
+         u.access_expires_at,
+         u.assigned_plan_id::text,
+         p.name as assigned_plan_name,
+         u.created_at
+       from users u
+       left join subscription_plans p on p.id = u.assigned_plan_id
        where (
          $1 = ''
-         or username ilike $2
-         or coalesce(full_name, '') ilike $2
-         or coalesce(email, '') ilike $2
-         or coalesce(cpf, '') ilike $2
-         or coalesce(whatsapp, '') ilike $2
+         or u.username ilike $2
+         or coalesce(u.full_name, '') ilike $2
+         or coalesce(u.email, '') ilike $2
+         or coalesce(u.cpf, '') ilike $2
+         or coalesce(u.whatsapp, '') ilike $2
        )
        order by
-         case when role = 'superadmin' then 0 else 1 end,
+         case when u.role = 'superadmin' then 0 else 1 end,
          case
-           when not is_enabled then 0
-           when access_expires_at is not null and access_expires_at <= now()
+           when not u.is_enabled then 0
+           when u.access_expires_at is not null and u.access_expires_at <= now()
              then 0
            else 1
          end,
-         created_at desc,
-         id
+         u.created_at desc,
+         u.id
        limit $3
        offset $4`,
     [search, searchPattern, pageSize, offset]
@@ -268,6 +297,8 @@ async function loadAdminData({
       role: user.role,
       isEnabled: user.is_enabled,
       accessExpiresAt: user.access_expires_at?.toISOString() || null,
+      assignedPlanId: user.assigned_plan_id,
+      assignedPlanName: user.assigned_plan_name,
       createdAt: user.created_at.toISOString(),
     })),
     totals: {
@@ -321,13 +352,14 @@ export default async function handler(
     if (req.body?.type === "createUser") {
       const fullName = validateFullName(req.body?.fullName);
       const email = validateEmail(req.body?.email);
-      const cpf = validateCpf(req.body?.cpf);
+      const cpf = validateCpfOrCnpj(req.body?.cpf);
       const username = validateUsername(req.body?.username);
       const whatsapp = validateWhatsapp(req.body?.whatsapp);
       const password = validatePassword(req.body?.password);
       const role = parseRole(req.body?.role);
       const access =
         role === "superadmin" ? "unlimited" : parseAccess(req.body?.access);
+      const planId = role === "user" && typeof req.body?.planId === "string" ? req.body.planId : null;
       const passwordHash = await bcrypt.hash(password, 12);
 
       await withTransaction(async (client) => {
@@ -347,7 +379,8 @@ export default async function handler(
            returning id::text`,
           [fullName, email, cpf, username, whatsapp, passwordHash, role]
         );
-        await applyAccess(client, inserted.rows[0].id, role, access);
+        if (planId) await applyPlan(client, inserted.rows[0].id, planId);
+        else await applyAccess(client, inserted.rows[0].id, role, access);
       });
       return res.status(201).json(await loadAdminData(listOptions));
     }
@@ -356,7 +389,7 @@ export default async function handler(
       const userId = parseUserId(req.body?.userId);
       const fullName = validateFullName(req.body?.fullName);
       const email = validateEmail(req.body?.email);
-      const cpf = validateCpf(req.body?.cpf);
+      const cpf = validateCpfOrCnpj(req.body?.cpf);
       const username = validateUsername(req.body?.username);
       const whatsapp = validateWhatsapp(req.body?.whatsapp);
       const role = parseRole(req.body?.role);
@@ -365,6 +398,7 @@ export default async function handler(
           ? "keep"
           : parseAccess(req.body?.access);
       const access = role === "superadmin" ? "unlimited" : requestedAccess;
+      const planId = role === "user" && typeof req.body?.planId === "string" ? req.body.planId : null;
       const password =
         typeof req.body?.password === "string" && req.body.password !== ""
           ? validatePassword(req.body.password)
@@ -407,7 +441,9 @@ export default async function handler(
            where id = $1::uuid`,
           [userId, fullName, email, cpf, username, whatsapp, role, passwordHash]
         );
-        if (role === "superadmin") {
+        if (planId) {
+          await applyPlan(client, userId, planId);
+        } else if (role === "superadmin") {
           await applyAccess(client, userId, role, "unlimited");
         } else if (access === "keep") {
           if (target.rows[0].role === "superadmin") {
@@ -538,7 +574,7 @@ export default async function handler(
       return res.status(409).json({
         error: true,
         errorDescription: constraint?.includes("cpf")
-          ? "Este CPF já possui uma conta."
+          ? "Este CPF ou CNPJ já possui uma conta."
           : constraint?.includes("email")
             ? "Este e-mail já possui uma conta."
             : "Este nome de usuário já está em uso.",

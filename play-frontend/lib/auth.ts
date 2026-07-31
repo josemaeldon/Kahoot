@@ -48,6 +48,9 @@ export function getAuthenticatedUser(
     }
     return {
       _id: decoded._id,
+      fullName: typeof decoded.fullName === "string" ? decoded.fullName : "",
+      email: typeof decoded.email === "string" ? decoded.email : "",
+      cpf: typeof decoded.cpf === "string" ? decoded.cpf : "",
       username: decoded.username,
       whatsapp: typeof decoded.whatsapp === "string" ? decoded.whatsapp : "",
       role: decoded.role === "superadmin" ? "superadmin" : "user",
@@ -74,13 +77,16 @@ export async function getActiveAuthenticatedUser(
 
   const result = await query<{
     id: string;
+    full_name: string | null;
+    email: string | null;
+    cpf: string | null;
     username: string;
     whatsapp: string | null;
     role: auth.UserRole;
     is_enabled: boolean;
     access_expires_at: Date | null;
   }>(
-    `select id::text, username, whatsapp, role, is_enabled, access_expires_at
+    `select id::text, full_name, email, cpf, username, whatsapp, role, is_enabled, access_expires_at
      from users
      where id = $1::uuid
      limit 1`,
@@ -99,6 +105,9 @@ export async function getActiveAuthenticatedUser(
 
   return {
     _id: activeUser.id,
+    fullName: activeUser.full_name || "",
+    email: activeUser.email || "",
+    cpf: activeUser.cpf || "",
     username: activeUser.username,
     whatsapp: activeUser.whatsapp || "",
     role: activeUser.role,
@@ -118,13 +127,16 @@ export async function getSessionAuthenticatedUser(
   }
   const result = await query<{
     id: string;
+    full_name: string | null;
+    email: string | null;
+    cpf: string | null;
     username: string;
     whatsapp: string | null;
     role: auth.UserRole;
     is_enabled: boolean;
     access_expires_at: Date | null;
   }>(
-    `select id::text, username, whatsapp, role, is_enabled, access_expires_at
+    `select id::text, full_name, email, cpf, username, whatsapp, role, is_enabled, access_expires_at
      from users where id = $1::uuid limit 1`,
     [tokenUser._id]
   );
@@ -135,6 +147,9 @@ export async function getSessionAuthenticatedUser(
   }
   return {
     _id: user.id,
+    fullName: user.full_name || "",
+    email: user.email || "",
+    cpf: user.cpf || "",
     username: user.username,
     whatsapp: user.whatsapp || "",
     role: user.role,

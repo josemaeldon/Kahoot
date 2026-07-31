@@ -161,7 +161,7 @@ function Header({ authMode = false }: { authMode?: boolean }) {
       <NoticeModal
         open={updatedNotice}
         title="Dados atualizados"
-        messages={["Seu usuário e suas credenciais foram salvos."]}
+        messages={["Seus dados pessoais e suas credenciais foram salvos."]}
         tone="info"
         onClose={() => setUpdatedNotice(false)}
       />

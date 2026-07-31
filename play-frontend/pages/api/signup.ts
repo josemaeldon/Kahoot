@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import { withTransaction } from "@lib/db";
 import { setSessionCookie } from "@lib/auth";
 import {
-  validateCpf,
+  validateCpfOrCnpj,
   validateCredentials,
   validateEmail,
   validateFullName,
@@ -53,7 +53,7 @@ export default async function handler(
     );
     const fullName = validateFullName(req.body?.fullName);
     const email = validateEmail(req.body?.email);
-    const cpf = validateCpf(req.body?.cpf);
+    const cpf = validateCpfOrCnpj(req.body?.cpf);
     const whatsapp = validateWhatsapp(req.body?.whatsapp);
     const passwordHash = await bcrypt.hash(password, 12);
     const inserted = await withTransaction(async (client) => {
@@ -80,6 +80,9 @@ export default async function handler(
 
       return client.query<{
         id: string;
+        full_name: string;
+        email: string;
+        cpf: string;
         username: string;
         whatsapp: string;
         role: auth.UserRole;
@@ -113,6 +116,9 @@ export default async function handler(
          )
          returning
            id::text,
+           full_name,
+           email,
+           cpf,
            username,
            whatsapp,
            role,
@@ -123,6 +129,9 @@ export default async function handler(
     });
     const payload: auth.accessTokenPayload = {
       _id: inserted.rows[0].id,
+      fullName: inserted.rows[0].full_name,
+      email: inserted.rows[0].email,
+      cpf: inserted.rows[0].cpf,
       username: inserted.rows[0].username,
       whatsapp: inserted.rows[0].whatsapp,
       role: inserted.rows[0].role,
@@ -147,7 +156,7 @@ export default async function handler(
     if ((error as { code?: string }).code === "23505") {
       const constraint = (error as { constraint?: string }).constraint;
       const description = constraint?.includes("cpf")
-        ? "Este CPF já possui uma conta."
+        ? "Este CPF ou CNPJ já possui uma conta."
         : constraint?.includes("email")
           ? "Este e-mail já possui uma conta."
           : "Este usuário já existe.";

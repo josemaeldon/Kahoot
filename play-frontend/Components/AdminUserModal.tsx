@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import type { auth } from "play";
 import type { AccessOption, ManagedUser } from "../pages/api/admin/users";
+import type { SubscriptionPlan } from "../pages/api/admin/plans";
 import { getAccessPeriodSummary } from "@lib/accessPeriod";
 import {
   FiCreditCard,
@@ -12,7 +13,7 @@ import {
   FiUser,
   FiX,
 } from "react-icons/fi";
-import { maskCpf, maskPhone } from "@lib/masks";
+import { maskCpfOrCnpj, maskPhone } from "@lib/masks";
 import styles from "../styles/admin.module.css";
 
 export interface AdminUserFormValues {
@@ -24,12 +25,14 @@ export interface AdminUserFormValues {
   password: string;
   role: auth.UserRole;
   access: AccessOption | "keep";
+  planId: string;
 }
 
 interface AdminUserModalProps {
   user: ManagedUser | null;
   saving: boolean;
   error: string;
+  plans: SubscriptionPlan[];
   onClose: () => void;
   onSubmit: (values: AdminUserFormValues) => void;
 }
@@ -47,6 +50,7 @@ export default function AdminUserModal({
   user,
   saving,
   error,
+  plans,
   onClose,
   onSubmit,
 }: AdminUserModalProps) {
@@ -59,18 +63,20 @@ export default function AdminUserModal({
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<auth.UserRole>("user");
   const [access, setAccess] = useState<AccessOption | "keep">("30");
+  const [planId, setPlanId] = useState("");
   const modalRef = useRef<HTMLElement>(null);
   const usernameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setFullName(user?.fullName || "");
     setEmail(user?.email || "");
-    setCpf(maskCpf(user?.cpf || ""));
+    setCpf(maskCpfOrCnpj(user?.cpf || ""));
     setUsername(user?.username || "");
     setWhatsapp(maskPhone(user?.whatsapp || ""));
     setPassword("");
     setRole(user?.role || "user");
     setAccess(user ? "keep" : "30");
+    setPlanId(user?.assignedPlanId || "");
     usernameRef.current?.focus();
   }, [user]);
 
@@ -100,7 +106,7 @@ export default function AdminUserModal({
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    onSubmit({ fullName, email, cpf, username, whatsapp, password, role, access });
+    onSubmit({ fullName, email, cpf, username, whatsapp, password, role, access, planId });
   }
 
   const currentAccess = user ? getAccessPeriodSummary(user) : null;
@@ -168,8 +174,8 @@ export default function AdminUserModal({
               <div className={styles.inputShell}><FiMail aria-hidden="true" /><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} maxLength={254} autoComplete="off" placeholder="usuario@exemplo.com" required /></div>
             </label>
             <label className={styles.field}>
-              <span>CPF</span>
-              <div className={styles.inputShell}><FiCreditCard aria-hidden="true" /><input value={cpf} onChange={(event) => setCpf(maskCpf(event.target.value))} inputMode="numeric" maxLength={14} autoComplete="off" placeholder="000.000.000-00" required /></div>
+              <span>CPF ou CNPJ</span>
+              <div className={styles.inputShell}><FiCreditCard aria-hidden="true" /><input value={cpf} onChange={(event) => setCpf(maskCpfOrCnpj(event.target.value))} inputMode="numeric" maxLength={18} autoComplete="off" placeholder="CPF ou CNPJ" required /></div>
             </label>
           </div>
 
@@ -274,6 +280,28 @@ export default function AdminUserModal({
           </fieldset>
 
           {role === "user" && (
+            <label className={styles.field}>
+              <span>Plano atribuído</span>
+              <select
+                value={planId}
+                onChange={(event) => {
+                  const nextPlanId = event.target.value;
+                  setPlanId(nextPlanId);
+                  if (!nextPlanId && user?.assignedPlanId) setAccess("30");
+                }}
+              >
+                <option value="">Sem plano específico — usar período manual</option>
+                {plans.map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.name} · {plan.durationDays} dias{plan.isActive ? "" : " · arquivado"}
+                  </option>
+                ))}
+              </select>
+              {user?.assignedPlanName && <small>Plano atual: {user.assignedPlanName}</small>}
+            </label>
+          )}
+
+          {role === "user" && !planId && (
             <fieldset className={styles.accessFieldset}>
               <legend>Período de uso</legend>
               <div className={styles.accessOptions}>
