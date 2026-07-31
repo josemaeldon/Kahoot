@@ -49,6 +49,10 @@ function formatPin(roomId: number) {
   return `${value.slice(0, 3)} ${value.slice(3, 6)}`;
 }
 
+function getQuestionTextForDisplay(question: string) {
+  return question.replace(/^Edição \d{2} de .*? — pergunta \d+: /, "");
+}
+
 function FullscreenButton({ className }: { className: string }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -342,6 +346,7 @@ function QuestionDisplay({
 }: QuestionDisplayProps) {
   const { players, requestExit, roomId } = useContext(HostContext);
   const colors = [qStyles.red, qStyles.blue, qStyles.yellow, qStyles.green];
+  const displayedQuestion = getQuestionTextForDisplay(question.question);
 
   return (
     <main className={qStyles.screen}>
@@ -382,12 +387,14 @@ function QuestionDisplay({
         </div>
 
         <div className={qStyles.questionPresentation}>
-          <h1 className={qStyles.question}>{question.question}</h1>
+          <h1 className={qStyles.question}>
+            {displayedQuestion}
+          </h1>
           {question.image && (
             <img
               className={qStyles.questionImage}
               src={question.image}
-              alt={`Imagem da pergunta: ${question.question}`}
+              alt={`Imagem da pergunta: ${displayedQuestion}`}
             />
           )}
         </div>
