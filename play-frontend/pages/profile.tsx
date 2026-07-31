@@ -25,8 +25,10 @@ import type {
   APIResponse as DeleteGameResponse,
 } from "./api/deleteOneGame";
 import type { APIResponse as CategoriesResponse } from "./api/categories";
+import type { CurrentPlan, PlansResponse } from "./api/plans";
 import {
   FiCalendar,
+  FiCreditCard,
   FiChevronLeft,
   FiChevronRight,
   FiEdit2,
@@ -106,6 +108,7 @@ function Profile() {
   const [categorySaving, setCategorySaving] = useState(false);
   const [pendingCategoryDelete, setPendingCategoryDelete] =
     useState<db.PlayCategory | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<CurrentPlan | null>(null);
 
   useEffect(() => {
     if (!loggedIn) return;
@@ -188,6 +191,16 @@ function Profile() {
       });
     return () => aborter.abort();
   }, [loggedIn, refreshKey]);
+
+  useEffect(() => {
+    if (!loggedIn) return;
+    fetch("/api/plans", { credentials: "same-origin", cache: "no-store" })
+      .then((response) => response.json() as Promise<PlansResponse>)
+      .then((response) => {
+        if ("currentPlan" in response) setCurrentPlan(response.currentPlan);
+      })
+      .catch(() => undefined);
+  }, [loggedIn]);
 
   useEffect(() => {
     if (router.isReady && router.query.scope === "public") {
@@ -441,6 +454,16 @@ function Profile() {
             <FiPlus aria-hidden="true" />
             Criar Play!
           </button>
+        </div>
+
+        <div className={styles.profilePlan}>
+          <FiCreditCard aria-hidden="true" />
+          <div>
+            <span>Plano atual</span>
+            <strong>{currentPlan?.name || "Nenhum plano ativo"}</strong>
+            <p>{currentPlan ? `${currentPlan.durationDays} dias · ${currentPlan.source === "subscription" ? "Assinatura ativa" : "Plano atribuído"}` : "Escolha um plano para liberar seu acesso completo."}</p>
+          </div>
+          <button type="button" onClick={() => void router.push("/plans")}>{currentPlan ? "Ver planos e upgrade" : "Conhecer planos"}</button>
         </div>
 
         <div className={styles.libraryTabs} role="tablist" aria-label="Biblioteca">

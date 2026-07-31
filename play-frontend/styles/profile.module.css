@@ -42,6 +42,10 @@
   font-size: 16px;
 }
 
+.profilePlan { margin-top: 24px; display: flex; align-items: center; gap: 14px; padding: 16px 18px; border: 1px solid #d8d0f5; border-radius: 14px; background: var(--color-brand-50); }
+.profilePlan > svg { flex: 0 0 auto; width: 22px; height: 22px; color: var(--color-brand-700); }
+.profilePlan > div { min-width: 0; flex: 1; }.profilePlan span { display: block; color: var(--color-brand-700); font-size: 10px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }.profilePlan strong { display: block; margin-top: 3px; font-size: 17px; }.profilePlan p { margin: 3px 0 0; color: var(--color-text-muted); font-size: 12px; }.profilePlan button { min-height: 38px; padding: 0 13px; border: 1px solid var(--color-brand-700); border-radius: 9px; color: var(--color-brand-700); background: white; font-size: 12px; font-weight: 800; cursor: pointer; }
+
 .createButton,
 .emptyButton,
 .playButton {

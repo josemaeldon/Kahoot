@@ -2,7 +2,7 @@ import Header from "@components/Header";
 import NoticeModal from "@components/NoticeModal";
 import useUser from "@lib/useUser";
 import styles from "@styles/plans.module.css";
-import type { PlansResponse, PublicPlan } from "./api/plans";
+import type { CurrentPlan, PlansResponse, PublicPlan } from "./api/plans";
 import { FiCheck, FiCreditCard, FiExternalLink, FiRefreshCw } from "react-icons/fi";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
@@ -17,6 +17,7 @@ export default function Plans() {
   const [plans, setPlans] = useState<PublicPlan[]>([]);
   const [paymentsEnabled, setPaymentsEnabled] = useState(false);
   const [hasSubscription, setHasSubscription] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState<CurrentPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [action, setAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +30,7 @@ export default function Plans() {
         setPlans(payload.plans);
         setPaymentsEnabled(payload.paymentsEnabled);
         setHasSubscription(payload.hasSubscription);
+        setCurrentPlan(payload.currentPlan);
       })
       .catch((reason) => setError(reason instanceof Error ? reason.message : "Não foi possível carregar os planos."))
       .finally(() => setLoading(false));
@@ -44,7 +46,14 @@ export default function Plans() {
         body: JSON.stringify(body),
       });
       const payload = await response.json();
-      if (payload.error || !payload.url) throw new Error(payload.errorDescription || "Não foi possível continuar.");
+      if (payload.error) throw new Error(payload.errorDescription || "Não foi possível continuar.");
+      if (payload.upgraded) {
+        const upgradedPlan = plans.find((plan) => plan.id === body.planId);
+        if (upgradedPlan) setCurrentPlan({ ...upgradedPlan, source: "subscription", subscriptionId: currentPlan?.subscriptionId || null });
+        setAction(null);
+        return;
+      }
+      if (!payload.url) throw new Error("Não foi possível continuar.");
       window.location.assign(payload.url);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Não foi possível continuar.");
@@ -74,11 +83,20 @@ export default function Plans() {
             </button>
           </div>
         )}
+        {currentPlan && (
+          <div className={styles.currentPlan}>
+            <div><span>Seu plano atual</span><strong>{currentPlan.name}</strong><small>{currentPlan.durationDays} dias · {price(currentPlan.amountCents)}</small></div>
+            <p>{currentPlan.source === "subscription" ? "Assinatura ativa" : "Plano atribuído à sua conta"}</p>
+          </div>
+        )}
 
         {loading ? <div className={styles.loading}><span className="appSpinner" /> Carregando planos...</div> : (
           <div className={styles.grid}>
-            {plans.map((plan) => (
-              <article key={plan.id}>
+            {plans.map((plan) => {
+              const isCurrent = currentPlan?.id === plan.id;
+              const isUpgrade = Boolean(currentPlan && (plan.durationDays > currentPlan.durationDays || (plan.durationDays === currentPlan.durationDays && plan.amountCents > currentPlan.amountCents)));
+              const isLower = Boolean(currentPlan && !isCurrent && !isUpgrade);
+              return <article key={plan.id}>
                 <span className={styles.duration}>{plan.durationDays} dias</span>
                 <h2>{plan.name}</h2>
                 <p>{plan.description || "Acesso completo a todos os recursos do Play!"}</p>
@@ -86,13 +104,13 @@ export default function Plans() {
                 <small>cobrado a cada {plan.durationDays} dias</small>
                 <ul><li><FiCheck /> Acesso completo</li><li><FiRefreshCw /> Renovação automática</li><li><FiCreditCard /> Somente cartão de crédito</li></ul>
                 <button
-                  disabled={!paymentsEnabled || hasSubscription || action !== null}
-                  onClick={() => void redirect("/api/plans", { planId: plan.id })}
+                  disabled={!paymentsEnabled || isCurrent || isLower || action !== null}
+                  onClick={() => void redirect("/api/plans", { planId: plan.id, ...(hasSubscription && isUpgrade ? { action: "upgrade" } : {}) })}
                 >
-                  {action === "/api/plans" ? "Abrindo pagamento..." : hasSubscription ? "Assinatura ativa" : "Assinar plano"}
+                  {action === "/api/plans" ? (hasSubscription && isUpgrade ? "Atualizando plano..." : "Abrindo pagamento...") : isCurrent ? "Plano atual" : isLower ? "Plano inferior" : currentPlan ? "Fazer upgrade" : "Assinar plano"}
                 </button>
               </article>
-            ))}
+            })}
           </div>
         )}
         {!loading && plans.length === 0 && <p className={styles.empty}>Nenhum plano está disponível no momento.</p>}
