@@ -90,6 +90,8 @@ pub enum HostEvent {
     /// Sent if there are no more questions.
     ///
     GameEnd,
+    /// Sent after a replacement game has been loaded and can be started.
+    NextGameReady,
 }
 
 /// Messages sent by the server to a player.

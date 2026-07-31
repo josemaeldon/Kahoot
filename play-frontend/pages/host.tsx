@@ -39,6 +39,7 @@ interface Context {
     React.SetStateAction<"lobby" | "questions" | "finished">
   >;
   gameFinishedRef: React.MutableRefObject<boolean>;
+  nextGameReady: boolean;
   startNextGame: () => void;
   requestExit: () => void;
 }
@@ -230,7 +231,8 @@ function JoinHeader() {
 }
 
 function Lobby() {
-  const { socket, players, setPlayers, setPhase } = useContext(HostContext);
+  const { socket, players, setPlayers, setPhase, nextGameReady } =
+    useContext(HostContext);
 
   useEffect(() => {
     const aborter = new AbortController();
@@ -270,7 +272,7 @@ function Lobby() {
         <button
           type="button"
           className={styles.startButton}
-          disabled={players.length === 0}
+          disabled={players.length === 0 || !nextGameReady}
           onClick={() => setPhase("questions")}
         >
           Começar
@@ -289,7 +291,9 @@ function Lobby() {
         <p>
           {players.length === 0
             ? "Os nomes aparecerão aqui assim que entrarem."
-            : "Confira os participantes e inicie quando quiser."}
+            : nextGameReady
+              ? "Confira os participantes e inicie quando quiser."
+              : "Aguarde a próxima partida ficar pronta."}
         </p>
         <div className={styles.lobbyUserContainer}>
           {players.map((player) => (
@@ -681,6 +685,7 @@ function Host() {
   const [game, setGame] = useState<db.PlayGame | null>(null);
   const [roomId, setRoomId] = useState<number | null>(null);
   const [connectionClosed, setConnectionClosed] = useState(false);
+  const [nextGameReady, setNextGameReady] = useState(true);
   const [exitConfirmationOpen, setExitConfirmationOpen] = useState(false);
   const gameFinishedRef = useRef(false);
   const [error, setError] = useState("");
@@ -712,6 +717,7 @@ function Host() {
       gameFinishedRef.current = false;
       setGame(response.game);
       setPlayers((current) => current.map((player) => ({ ...player, points: 0 })));
+      setNextGameReady(false);
       setPhase("lobby");
       socket.send(JSON.stringify(request));
     } catch (cause) {
@@ -748,6 +754,10 @@ function Host() {
 
     Promise.all([socketPromise, gamePromise])
       .then(([connectedSocket, loadedGame]) => {
+        connectedSocket.addEventListener("message", (event) => {
+          const roomData = JSON.parse(event.data) as HostEvent.Event;
+          if (roomData.type === "nextGameReady") setNextGameReady(true);
+        });
         connectedSocket.addEventListener(
           "message",
           function roomListener(event) {
@@ -843,6 +853,7 @@ function Host() {
         setPlayers,
         setPhase,
         gameFinishedRef,
+        nextGameReady,
         startNextGame,
         requestExit: () => setExitConfirmationOpen(true),
       }}

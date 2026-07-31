@@ -135,7 +135,8 @@ export namespace HostEvent {
     | UserAnswered
     | RoundBegin
     | RoundEnd
-    | GameEnd;
+    | GameEnd
+    | NextGameReady;
   declare interface RoomCreated {
     type: "roomCreated";
     roomId: number;
@@ -172,6 +173,9 @@ export namespace HostEvent {
 
   declare interface GameEnd {
     type: "gameEnd";
+  }
+  declare interface NextGameReady {
+    type: "nextGameReady";
   }
 }
 

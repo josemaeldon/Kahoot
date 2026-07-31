@@ -408,6 +408,7 @@ async fn create_room(mut host: WebSocket, state: SharedState, mut questions: Vec
                 room.scores.lock().unwrap().values_mut().for_each(|score| *score = 0);
                 questions = next_questions;
                 let _ = result_tx.send(GameEvent::NextGame);
+                let _ = host_tx.send(HostEvent::NextGameReady.to_message()).await;
 
                 // Give players time to render the new lobby before the first
                 // round event is published. The watch channel keeps only the
