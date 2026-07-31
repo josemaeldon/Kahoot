@@ -36,6 +36,7 @@ export interface Fail {
 }
 
 class RegistrationDisabledError extends Error {}
+class FreeTrialUnavailableError extends Error {}
 
 export default async function handler(
   req: NextApiRequest,
@@ -78,6 +79,16 @@ export default async function handler(
         }
       }
 
+      const trial = await client.query<{ id: string; duration_days: number }>(
+        `select id::text, duration_days
+         from subscription_plans
+         where is_free_trial = true and is_active = true
+         limit 1`
+      );
+      if (!isFirstAccess && !trial.rows[0]) {
+        throw new FreeTrialUnavailableError();
+      }
+
       return client.query<{
         id: string;
         full_name: string;
@@ -98,7 +109,8 @@ export default async function handler(
            password_hash,
            role,
            is_enabled,
-           access_expires_at
+           access_expires_at,
+           assigned_plan_id
          )
          values (
            $1,
@@ -109,10 +121,10 @@ export default async function handler(
            $6,
            $7,
            true,
-           case when $7 = 'superadmin'
-             then null
-             else now() + interval '30 days'
-           end
+           case when $7 = 'superadmin' then null
+             else now() + make_interval(days => $8::int)
+           end,
+           case when $7 = 'superadmin' then null else $9::uuid end
          )
          returning
            id::text,
@@ -124,7 +136,7 @@ export default async function handler(
            role,
            is_enabled,
            access_expires_at`,
-        [fullName, email, cpf, username, whatsapp, passwordHash, isFirstAccess ? "superadmin" : "user"]
+        [fullName, email, cpf, username, whatsapp, passwordHash, isFirstAccess ? "superadmin" : "user", trial.rows[0]?.duration_days || 0, trial.rows[0]?.id || null]
       );
     });
     const payload: auth.accessTokenPayload = {
@@ -146,6 +158,12 @@ export default async function handler(
       return res.status(403).json({
         error: true,
         errorDescription: "Novos cadastros estão temporariamente desativados.",
+      });
+    }
+    if (error instanceof FreeTrialUnavailableError) {
+      return res.status(403).json({
+        error: true,
+        errorDescription: "O plano de teste grátis está desativado. Tente novamente quando o administrador reativá-lo.",
       });
     }
     if (error instanceof ValidationError) {

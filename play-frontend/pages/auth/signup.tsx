@@ -35,6 +35,8 @@ function Signup() {
     boolean | null
   >(null);
   const [registrationNotice, setRegistrationNotice] = useState(false);
+  const [trialDays, setTrialDays] = useState<number | null>(null);
+  const [trialName, setTrialName] = useState<string | null>(null);
   const router = useRouter();
   const { loggedIn, loading } = useUser();
 
@@ -52,7 +54,9 @@ function Signup() {
       .then((response) => {
         if (!response.error) {
           setRegistrationEnabled(response.registrationEnabled);
-          setRegistrationNotice(!response.registrationEnabled);
+          setTrialDays(response.trialDays ?? null);
+          setTrialName(response.trialName ?? null);
+          setRegistrationNotice(!response.registrationEnabled || response.trialEnabled === false);
         }
       })
       .catch(() => undefined);
@@ -108,7 +112,11 @@ function Signup() {
           >
             <div className={styles.heading}>
               <h1>Crie sua conta</h1>
-              <p>Comece com 30 dias gratuitos para criar seus Plays!</p>
+              <p>
+                {trialName && trialDays
+                  ? `Comece com ${trialDays} dias gratuitos no plano ${trialName}.`
+                  : "Crie sua conta para começar a usar o Play!"}
+              </p>
             </div>
 
             <label className={styles.field}>
@@ -280,7 +288,9 @@ function Signup() {
         open={registrationNotice}
         title="Cadastros temporariamente desativados"
         messages={[
-          "Entre em contato com o administrador para solicitar seu acesso.",
+          registrationEnabled === false
+            ? "Entre em contato com o administrador para solicitar seu acesso."
+            : "O plano de teste grátis está temporariamente desativado. Tente novamente mais tarde.",
         ]}
         tone="warning"
         onClose={() => setRegistrationNotice(false)}

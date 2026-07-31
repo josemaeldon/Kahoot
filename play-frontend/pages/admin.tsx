@@ -104,8 +104,9 @@ interface PlanDraft {
   id: string | null;
   name: string;
   description: string;
-  durationDays: 30 | 60 | 90;
+  durationDays: number;
   amountCents: number;
+  isFreeTrial: boolean;
 }
 
 interface SmtpDraft {
@@ -123,6 +124,7 @@ const emptyPlan: PlanDraft = {
   description: "",
   durationDays: 30,
   amountCents: 0,
+  isFreeTrial: false,
 };
 const emptyNotification: NotificationDraft = { id: null, audience: "all", userId: "", title: "", message: "" };
 
@@ -569,6 +571,30 @@ export default function Admin() {
       setNotice({ title: planDraft.id ? "Plano atualizado" : "Plano criado", message: "O preço recorrente correspondente foi sincronizado com a Stripe.", tone: "info" });
     } catch { setPlanError("Não foi possível conectar ao servidor."); }
     finally { setPlanSaving(false); }
+  }
+
+  async function toggleTrial(plan: SubscriptionPlan) {
+    setPlanSaving(true);
+    setPlanError("");
+    try {
+      const response = await postData<Record<string, unknown>, { error: false; plans: SubscriptionPlan[] } | ApiError>(
+        "/api/admin/plans",
+        { type: "toggleTrial", id: plan.id }
+      );
+      if ("errorDescription" in response) throw new Error(response.errorDescription);
+      setPlans(response.plans);
+      setNotice({
+        title: response.plans.find((item) => item.id === plan.id)?.isActive ? "Teste grátis ativado" : "Teste grátis desativado",
+        message: response.plans.find((item) => item.id === plan.id)?.isActive
+          ? "Novos cadastros receberão este plano automaticamente."
+          : "Novos cadastros comuns ficarão bloqueados até um teste grátis ser ativado.",
+        tone: "info",
+      });
+    } catch (error) {
+      setPlanError(error instanceof Error ? error.message : "Não foi possível atualizar o teste grátis.");
+    } finally {
+      setPlanSaving(false);
+    }
   }
 
   async function archivePlan(plan: SubscriptionPlan) {
@@ -1019,19 +1045,20 @@ export default function Admin() {
           <div className={styles.plansLayout}>
             <section className={styles.planFormCard}>
               <span className={styles.cardLabel}>{planDraft.id ? "Editar plano" : "Novo plano"}</span>
-              <h2>{planDraft.id ? "Atualize o plano" : "Crie um plano pago"}</h2>
-              <p>O preço será recorrente a cada 30, 60 ou 90 dias.</p>
+              <h2>{planDraft.id ? "Atualize o plano" : "Crie um plano"}</h2>
+              <p>{planDraft.isFreeTrial ? "Defina por quantos dias novos usuários terão acesso gratuito." : "O preço será recorrente conforme o período escolhido."}</p>
               <form onSubmit={(event) => { event.preventDefault(); void savePlan(); }}>
                 <label className={styles.aiField}><span>Nome do plano</span><input required maxLength={100} value={planDraft.name} onChange={(event) => setPlanDraft((current) => ({ ...current, name: event.target.value }))} /></label>
                 <label className={styles.aiField}><span>Descrição</span><textarea maxLength={500} value={planDraft.description} onChange={(event) => setPlanDraft((current) => ({ ...current, description: event.target.value }))} /></label>
+                <label className={styles.clearKey}><input type="checkbox" checked={planDraft.isFreeTrial} onChange={(event) => setPlanDraft((current) => ({ ...current, isFreeTrial: event.target.checked, amountCents: event.target.checked ? 0 : Math.max(current.amountCents, 50) }))} /> Plano de teste grátis</label>
                 <div className={styles.aiFormGrid}>
-                  <label className={styles.aiField}><span>Período</span><SelectField value={planDraft.durationDays} onChange={(event) => setPlanDraft((current) => ({ ...current, durationDays: Number(event.target.value) as 30 | 60 | 90 }))}><option value={30}>30 dias</option><option value={60}>60 dias</option><option value={90}>90 dias</option></SelectField></label>
-                  <label className={styles.aiField}><span>Preço recorrente</span><input inputMode="numeric" value={maskCurrency(String(planDraft.amountCents))} onChange={(event) => setPlanDraft((current) => ({ ...current, amountCents: Number(event.target.value.replace(/\D/g, "") || 0) }))} /></label>
+                  <label className={styles.aiField}><span>Período em dias</span>{planDraft.isFreeTrial ? <input type="number" min={1} max={3650} value={planDraft.durationDays} onChange={(event) => setPlanDraft((current) => ({ ...current, durationDays: Number(event.target.value) }))} required /> : <SelectField value={planDraft.durationDays} onChange={(event) => setPlanDraft((current) => ({ ...current, durationDays: Number(event.target.value) }))}><option value={30}>30 dias</option><option value={60}>60 dias</option><option value={90}>90 dias</option></SelectField>}</label>
+                  <label className={styles.aiField}><span>{planDraft.isFreeTrial ? "Preço" : "Preço recorrente"}</span><input inputMode="numeric" disabled={planDraft.isFreeTrial} value={planDraft.isFreeTrial ? "Grátis" : maskCurrency(String(planDraft.amountCents))} onChange={(event) => setPlanDraft((current) => ({ ...current, amountCents: Number(event.target.value.replace(/\D/g, "") || 0) }))} /></label>
                 </div>
                 {planError && <p className={styles.aiError} role="alert">{planError}</p>}
                 <div className={styles.planFormActions}>
                   {planDraft.id && <button type="button" onClick={() => setPlanDraft(emptyPlan)}>Cancelar</button>}
-                  <button type="submit" className={styles.aiSaveButton} disabled={planSaving || planDraft.amountCents < 50}><FiSave /> {planSaving ? "Sincronizando..." : "Salvar plano"}</button>
+                  <button type="submit" className={styles.aiSaveButton} disabled={planSaving || (!planDraft.isFreeTrial && planDraft.amountCents < 50)}><FiSave /> {planSaving ? "Sincronizando..." : "Salvar plano"}</button>
                 </div>
               </form>
             </section>
@@ -1039,11 +1066,12 @@ export default function Admin() {
               <div><span className={styles.cardLabel}>Catálogo</span><h2>Planos cadastrados</h2></div>
               {plansLoading ? <div className={styles.loading}><span className="appSpinner" /></div> : plans.length === 0 ? <div className={styles.empty}>Nenhum plano criado.</div> : (
                 <div className={styles.planAdminList}>{plans.map((plan) => <article key={plan.id} className={!plan.isActive ? styles.planArchived : ""}>
-                  <div><span>{plan.durationDays} dias</span><h3>{plan.name}</h3><p>{plan.description || "Sem descrição"}</p></div>
-                  <strong>{(plan.amountCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong>
-                  <small>{plan.isActive ? (plan.stripeSynced ? "Ativo na Stripe" : "Pendente") : "Arquivado"}</small>
+                  <div><span>{plan.isFreeTrial ? "Teste grátis" : `${plan.durationDays} dias`}</span><h3>{plan.name}</h3><p>{plan.description || "Sem descrição"}</p></div>
+                  <strong>{plan.isFreeTrial ? "Grátis" : (plan.amountCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong>
+                  <small>{plan.isFreeTrial ? (plan.isActive ? "Ativo para novos cadastros" : "Desativado") : (plan.isActive ? (plan.stripeSynced ? "Ativo na Stripe" : "Pendente") : "Arquivado")}</small>
                   <div className={styles.planRowActions}>
-                    <button type="button" onClick={() => setPlanDraft({ id: plan.id, name: plan.name, description: plan.description, durationDays: plan.durationDays, amountCents: plan.amountCents })}><FiEdit2 /> Editar</button>
+                    <button type="button" onClick={() => setPlanDraft({ id: plan.id, name: plan.name, description: plan.description, durationDays: plan.durationDays, amountCents: plan.amountCents, isFreeTrial: plan.isFreeTrial })}><FiEdit2 /> Editar</button>
+                    {plan.isFreeTrial && <button type="button" disabled={planSaving} onClick={() => void toggleTrial(plan)}>{plan.isActive ? "Desativar teste" : "Ativar teste"}</button>}
                     {plan.isActive && <button type="button" onClick={() => void archivePlan(plan)}><FiTrash2 /> Arquivar</button>}
                   </div>
                 </article>)}</div>
