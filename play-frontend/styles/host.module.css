@@ -303,6 +303,24 @@
   box-shadow: var(--shadow-lg);
 }
 
+.secondaryPlayAgainButton {
+  min-height: 42px;
+  margin-top: 10px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.secondaryPlayAgainButton:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  color: white;
+}
+
 .startButton:disabled {
   opacity: 0.42;
   cursor: not-allowed;

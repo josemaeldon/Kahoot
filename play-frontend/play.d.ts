@@ -120,6 +120,10 @@ export namespace action {
   declare interface EndRound {
     type: "endRound";
   }
+  declare interface StartNextGame {
+    type: "startNextGame";
+    questions: rustServerQuestion[];
+  }
 }
 
 export namespace HostEvent {
@@ -178,7 +182,8 @@ export namespace UserEvent {
     | KeepAlive
     | RoundBegin
     | RoundEnd
-    | GameEnd;
+    | GameEnd
+    | NextGame;
   declare interface Joined {
     type: "joined";
     sessionToken: string;
@@ -211,5 +216,8 @@ export namespace UserEvent {
       username: string;
       points: number;
     }>;
+  }
+  declare interface NextGame {
+    type: "nextGame";
   }
 }

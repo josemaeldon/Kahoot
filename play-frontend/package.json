@@ -2,6 +2,10 @@
   "name": "play",
   "version": "1.0.0",
   "private": true,
+  "browserslist": {
+    "production": ["> 0.5%", "last 4 versions", "Firefox ESR", "Safari >= 10", "not dead"],
+    "development": ["last 2 Chrome versions", "last 2 Firefox versions", "last 2 Safari versions"]
+  },
   "engines": {
     "node": ">=22.0.0"
   },

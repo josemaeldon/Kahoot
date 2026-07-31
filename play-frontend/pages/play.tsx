@@ -427,10 +427,14 @@ function Play() {
       case "joinFailed":
         break;
       case "gameEnd":
-        gameFinishedRef.current = true;
-        sessionRef.current = null;
-        window.sessionStorage.removeItem(PLAYER_SESSION_KEY);
+        gameFinishedRef.current = false;
         setSubpage("Finished");
+        setSubpageData(serverEvent);
+        break;
+      case "nextGame":
+        gameFinishedRef.current = false;
+        setPoints(0);
+        setSubpage("LobbyWaiting");
         setSubpageData(serverEvent);
         break;
       case "roundBegin":

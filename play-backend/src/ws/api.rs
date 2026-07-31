@@ -39,6 +39,7 @@ pub enum Action {
     // Host only
     BeginRound,
     EndRound,
+    StartNextGame { questions: Vec<Question> },
 }
 
 /// Messages sent by the server to the room host.
@@ -88,7 +89,6 @@ pub enum HostEvent {
     },
     /// Sent if there are no more questions.
     ///
-    /// The websocket connection will close after this message is sent.
     GameEnd,
 }
 
@@ -127,6 +127,7 @@ pub enum UserEvent {
 
     /// Sent when the game is over.
     GameEnd { ranking: Vec<RankingEntry> },
+    NextGame,
 }
 
 /// A type alias representing a room's id.

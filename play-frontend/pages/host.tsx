@@ -24,6 +24,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { getWebSocketUrl } from "@lib/websocket";
 import NoticeModal from "@components/NoticeModal";
 import { FiLogOut, FiMaximize2, FiMinimize2 } from "react-icons/fi";
+import type { APIResponse as RandomGameResponse } from "./api/randomGameByCategory";
 
 const HostContext = React.createContext<Context>(null);
 type Players = { username: string; points: number }[];
@@ -38,6 +39,7 @@ interface Context {
     React.SetStateAction<"lobby" | "questions" | "finished">
   >;
   gameFinishedRef: React.MutableRefObject<boolean>;
+  startNextGame: () => void;
   requestExit: () => void;
 }
 
@@ -629,7 +631,7 @@ function StartScreen() {
 }
 
 function FinishedScreen() {
-  const { players } = useContext(HostContext);
+  const { players, startNextGame } = useContext(HostContext);
   const ranking = [...players].sort((a, b) => b.points - a.points);
 
   return (
@@ -655,6 +657,13 @@ function FinishedScreen() {
         <button
           type="button"
           className={styles.playAgainButton}
+          onClick={startNextGame}
+        >
+          Jogar outro Play! da categoria
+        </button>
+        <button
+          type="button"
+          className={styles.secondaryPlayAgainButton}
           onClick={() => window.location.assign("/profile")}
         >
           Voltar aos meus Plays!
@@ -679,6 +688,41 @@ function Host() {
     "lobby"
   );
   const gameId = router.query.gameId as string;
+
+  const startNextGame = useCallback(async () => {
+    if (!game || !socket || socket.readyState !== WebSocket.OPEN) return;
+    try {
+      const response = await postData<
+        { categoryId: string; excludeGameId: string },
+        RandomGameResponse
+      >("/api/randomGameByCategory", {
+        categoryId: game.categoryId,
+        excludeGameId: game._id,
+      });
+      if (!("game" in response)) throw new Error(response.errorDescription);
+
+      const questions = response.game.questions.map((question) => ({
+        question: question.question,
+        image: question.image,
+        choices: question.choices,
+        answer: question.correctAnswer,
+        time: question.time,
+      }));
+      const request: action.StartNextGame = { type: "startNextGame", questions };
+      gameFinishedRef.current = false;
+      setGame(response.game);
+      setPlayers((current) => current.map((player) => ({ ...player, points: 0 })));
+      setPhase("lobby");
+      socket.send(JSON.stringify(request));
+    } catch (cause) {
+      console.error("Falha ao iniciar próximo Play!", cause);
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Não foi possível iniciar outro Play! da categoria."
+      );
+    }
+  }, [game, gameFinishedRef, socket]);
 
   useEffect(() => {
     if (!loggedIn || !router.isReady) return;
@@ -799,6 +843,7 @@ function Host() {
         setPlayers,
         setPhase,
         gameFinishedRef,
+        startNextGame,
         requestExit: () => setExitConfirmationOpen(true),
       }}
     >

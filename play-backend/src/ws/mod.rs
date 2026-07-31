@@ -231,7 +231,8 @@ async fn create_room(mut host: WebSocket, state: SharedState, mut questions: Vec
 
     tracing::debug!("Starting game...");
 
-    for question in questions.into_iter() {
+    'game: loop {
+    for question in questions.clone().into_iter() {
         let mut point_gains = HashMap::new();
         let mut answered = HashSet::new();
         let mut points = 1000;
@@ -377,9 +378,6 @@ async fn create_room(mut host: WebSocket, state: SharedState, mut questions: Vec
     tracing::debug!("Alerting host that game has ended...");
     let _ = host_tx.send(HostEvent::GameEnd.to_message()).await;
 
-    // Stop sending heartbeat to host
-    heartbeat.abort();
-
     // Alert players game ended
     let mut ranking: Vec<RankingEntry> = room
         .scores
@@ -399,7 +397,29 @@ async fn create_room(mut host: WebSocket, state: SharedState, mut questions: Vec
         ranking: Arc::new(ranking),
     });
 
-    state.remove_room(&room_id).await;
+    loop {
+        match host_rx.next_action().await {
+            Some(Action::StartNextGame { questions: mut next_questions })
+                if !next_questions.is_empty()
+                    && next_questions.len() <= 100
+                    && next_questions.iter().all(Question::is_valid) =>
+            {
+                randomize_game(&mut next_questions, &mut rand::thread_rng());
+                room.scores.lock().unwrap().values_mut().for_each(|score| *score = 0);
+                questions = next_questions;
+                let _ = result_tx.send(GameEvent::NextGame);
+                continue 'game;
+            }
+            Some(_) => (),
+            None => {
+                tracing::debug!("Closing room...");
+                state.remove_room(&room_id).await;
+                heartbeat.abort();
+                return;
+            }
+        }
+    }
+    }
 }
 
 /// Handles room joining.
@@ -516,13 +536,7 @@ async fn join_room(
                         // Get event
                         let game_event = { event_watch.borrow().clone() };
                         if let Some(event) = player_event(&game_event, &username, &scores) {
-                            let game_ended = matches!(game_event, GameEvent::GameEnd { .. });
                             if user_tx.send(event.to_message()).await.is_err() {
-                                return;
-                            }
-                            if game_ended {
-                                tracing::debug!("Game ended, closing user connection...");
-                                let _ = user_tx.close().await;
                                 return;
                             }
                         }
@@ -606,6 +620,7 @@ fn player_event(
         GameEvent::GameEnd { ranking } => Some(UserEvent::GameEnd {
             ranking: ranking.as_ref().clone(),
         }),
+        GameEvent::NextGame => Some(UserEvent::NextGame),
     }
 }
 

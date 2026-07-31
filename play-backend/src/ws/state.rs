@@ -69,6 +69,7 @@ pub enum GameEvent {
     GameEnd {
         ranking: Arc<Vec<RankingEntry>>,
     },
+    NextGame,
 }
 
 pub enum PlayerEvent {

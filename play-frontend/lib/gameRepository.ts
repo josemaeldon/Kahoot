@@ -105,6 +105,24 @@ export async function findAccessibleGame(gameId: string, userId: string) {
   return result.rows[0] ? mapGame(result.rows[0]) : null;
 }
 
+export async function findRandomAccessibleGameInCategory(
+  categoryId: string,
+  userId: string,
+  excludeGameId?: string
+) {
+  const result = await query<GameRow>(
+    `${gameProjection}
+     where g.category_id = $1::uuid
+       and (g.author_id = $2::uuid or g.is_public = true)
+       and ($3::uuid is null or g.id <> $3::uuid)
+     group by g.id, u.username, f.name, cat.name
+     order by random()
+     limit 1`,
+    [categoryId, userId, excludeGameId || null]
+  );
+  return result.rows[0] ? mapGame(result.rows[0]) : null;
+}
+
 export interface ListGameSummariesOptions {
   userId: string;
   scope: "mine" | "public";
