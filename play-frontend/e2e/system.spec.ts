@@ -4,6 +4,19 @@ import jwt from "jsonwebtoken";
 const baseUrl = process.env.E2E_BASE_URL || "http://127.0.0.1:3000";
 const testAiGeneration = process.env.E2E_AI_ENABLED === "true";
 
+function validCpf(seed: number) {
+  const base = String(seed % 1_000_000_000).padStart(9, "0").split("").map(Number);
+  if (base.every((digit) => digit === base[0])) base[8] = (base[8] + 1) % 10;
+  const addDigit = (digits: number[]) => {
+    const sum = digits.reduce((total, digit, index) => total + digit * (digits.length + 1 - index), 0);
+    const remainder = (sum * 10) % 11;
+    digits.push(remainder === 10 ? 0 : remainder);
+  };
+  addDigit(base);
+  addDigit(base);
+  return base.join("");
+}
+
 const staleSessionToken = jwt.sign(
   {
     _id: "00000000-0000-4000-8000-000000000999",
@@ -102,6 +115,9 @@ test("cadastro, criação de Play! e partida completa", async ({ browser }) => {
   await host.goto("/auth/signup");
   await host.screenshot({ path: "/tmp/play-signup-desktop.png" });
   const uniqueUsername = `e2e_${Date.now()}`;
+  await host.getByLabel("Nome completo").fill("Usuário Teste E2E");
+  await host.getByLabel("E-mail").fill(`${uniqueUsername}@example.com`);
+  await host.getByLabel("CPF").fill(validCpf(Date.now()));
   await host.getByLabel("Usuário").fill(uniqueUsername);
   await host.getByPlaceholder("Digite sua senha").fill("SenhaTeste123!");
   await host.getByRole("button", { name: "Criar conta" }).click();

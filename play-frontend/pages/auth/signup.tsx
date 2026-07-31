@@ -7,9 +7,13 @@ import { useRouter } from "next/router";
 import Header from "@components/Header";
 import NoticeModal from "@components/NoticeModal";
 import useUser from "@lib/useUser";
-import { FiEye, FiEyeOff, FiLock, FiPhone, FiUser } from "react-icons/fi";
+import { maskCpf, maskPhone } from "@lib/masks";
+import { FiCreditCard, FiEye, FiEyeOff, FiLock, FiMail, FiPhone, FiUser } from "react-icons/fi";
 
 interface Info {
+  fullName: string;
+  email: string;
+  cpf: string;
   username: string;
   whatsapp: string;
   password: string;
@@ -17,6 +21,9 @@ interface Info {
 
 function Signup() {
   const [info, setInfo] = useState<Info>({
+    fullName: "",
+    email: "",
+    cpf: "",
     username: "",
     whatsapp: "",
     password: "",
@@ -57,6 +64,9 @@ function Signup() {
     setError(null);
     try {
       const response = await postData<APIRequest, APIResponse>("/api/signup", {
+        fullName: info.fullName,
+        email: info.email,
+        cpf: info.cpf,
         username: info.username,
         whatsapp: info.whatsapp,
         password: info.password,
@@ -99,8 +109,61 @@ function Signup() {
           >
             <div className={styles.heading}>
               <h1>Crie sua conta</h1>
-              <p>Salve seus Plays! e inicie partidas quando quiser.</p>
+              <p>Comece com 30 dias gratuitos para criar seus Plays!</p>
             </div>
+
+            <label className={styles.field}>
+              <span>Nome completo</span>
+              <div className={styles.inputShell}>
+                <FiUser aria-hidden="true" />
+                <input
+                  type="text"
+                  id="fullName"
+                  value={info.fullName}
+                  onChange={(event) => setInfo((current) => ({ ...current, fullName: event.target.value }))}
+                  placeholder="Nome e sobrenome"
+                  autoComplete="name"
+                  maxLength={160}
+                  required
+                />
+              </div>
+            </label>
+
+            <label className={styles.field}>
+              <span>E-mail</span>
+              <div className={styles.inputShell}>
+                <FiMail aria-hidden="true" />
+                <input
+                  type="email"
+                  id="email"
+                  value={info.email}
+                  onChange={(event) => setInfo((current) => ({ ...current, email: event.target.value.trimStart() }))}
+                  placeholder="voce@exemplo.com"
+                  autoComplete="email"
+                  inputMode="email"
+                  maxLength={254}
+                  required
+                />
+              </div>
+            </label>
+
+            <label className={styles.field}>
+              <span>CPF</span>
+              <div className={styles.inputShell}>
+                <FiCreditCard aria-hidden="true" />
+                <input
+                  type="text"
+                  id="cpf"
+                  value={info.cpf}
+                  onChange={(event) => setInfo((current) => ({ ...current, cpf: maskCpf(event.target.value) }))}
+                  placeholder="000.000.000-00"
+                  autoComplete="off"
+                  inputMode="numeric"
+                  maxLength={14}
+                  required
+                />
+              </div>
+            </label>
 
             <label className={styles.field}>
               <span>Usuário</span>
@@ -118,6 +181,7 @@ function Signup() {
                   }
                   placeholder="Digite seu nome de usuário"
                   autoComplete="username"
+                  required
                 />
               </div>
             </label>
@@ -133,13 +197,15 @@ function Signup() {
                   onChange={(event) =>
                     setInfo((current) => ({
                       ...current,
-                      whatsapp: event.target.value,
+                      whatsapp: maskPhone(event.target.value),
                     }))
                   }
                   placeholder="(91) 99999-9999"
                   autoComplete="tel"
                   inputMode="tel"
                   aria-describedby="whatsapp-hint"
+                  maxLength={15}
+                  required
                 />
               </div>
               <small id="whatsapp-hint">
@@ -163,6 +229,8 @@ function Signup() {
                   }
                   placeholder="Digite sua senha"
                   autoComplete="new-password"
+                  minLength={8}
+                  required
                 />
                 <button
                   type="button"

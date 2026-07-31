@@ -38,6 +38,48 @@ export function validateWhatsapp(whatsappValue: unknown) {
   return whatsapp;
 }
 
+export function validateFullName(value: unknown) {
+  const fullName = typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
+  if (
+    fullName.length < 5 ||
+    fullName.length > 160 ||
+    !/^[\p{L}][\p{L}'’-]+(?:\s+[\p{L}][\p{L}'’-]+)+$/u.test(fullName)
+  ) {
+    throw new ValidationError("Informe seu nome completo, com nome e sobrenome.");
+  }
+  return fullName;
+}
+
+export function validateEmail(value: unknown) {
+  const email = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (
+    email.length > 254 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/u.test(email)
+  ) {
+    throw new ValidationError("Informe um e-mail válido.");
+  }
+  return email;
+}
+
+export function validateCpf(value: unknown) {
+  const cpf = typeof value === "string" ? value.replace(/\D/g, "") : "";
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) {
+    throw new ValidationError("Informe um CPF válido.");
+  }
+  const digit = (length: number) => {
+    let sum = 0;
+    for (let index = 0; index < length; index += 1) {
+      sum += Number(cpf[index]) * (length + 1 - index);
+    }
+    const remainder = (sum * 10) % 11;
+    return remainder === 10 ? 0 : remainder;
+  };
+  if (digit(9) !== Number(cpf[9]) || digit(10) !== Number(cpf[10])) {
+    throw new ValidationError("Informe um CPF válido.");
+  }
+  return cpf;
+}
+
 export function validateCredentials(usernameValue: unknown, passwordValue: unknown) {
   return {
     username: validateUsername(usernameValue),

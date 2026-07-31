@@ -107,6 +107,51 @@ export async function getActiveAuthenticatedUser(
   };
 }
 
+export async function getSessionAuthenticatedUser(
+  req: NextApiRequest,
+  res?: NextApiResponse
+): Promise<auth.accessTokenPayload | null> {
+  const tokenUser = getAuthenticatedUser(req);
+  if (!tokenUser) {
+    if (res) clearSessionCookie(res);
+    return null;
+  }
+  const result = await query<{
+    id: string;
+    username: string;
+    whatsapp: string | null;
+    role: auth.UserRole;
+    is_enabled: boolean;
+    access_expires_at: Date | null;
+  }>(
+    `select id::text, username, whatsapp, role, is_enabled, access_expires_at
+     from users where id = $1::uuid limit 1`,
+    [tokenUser._id]
+  );
+  const user = result.rows[0];
+  if (!user || !user.is_enabled) {
+    if (res) clearSessionCookie(res);
+    return null;
+  }
+  return {
+    _id: user.id,
+    username: user.username,
+    whatsapp: user.whatsapp || "",
+    role: user.role,
+    isEnabled: user.is_enabled,
+    accessExpiresAt: user.access_expires_at?.toISOString() || null,
+  };
+}
+
+export async function requireSessionUser(req: NextApiRequest, res: NextApiResponse) {
+  const user = await getSessionAuthenticatedUser(req, res);
+  if (!user) {
+    res.status(401).json({ error: true, errorDescription: "Sessão inválida ou expirada" });
+    return null;
+  }
+  return user;
+}
+
 export async function requireAuthenticatedUser(
   req: NextApiRequest,
   res: NextApiResponse

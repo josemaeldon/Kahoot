@@ -87,18 +87,6 @@ export default async function handler(
       });
     }
 
-    if (
-      user.role !== "superadmin" &&
-      user.access_expires_at &&
-      user.access_expires_at.getTime() <= Date.now()
-    ) {
-      return res.status(403).json({
-        error: true,
-        errorDescription:
-          "Seu período de acesso terminou. Entre em contato com o administrador para reativar.",
-      });
-    }
-
     const payload: auth.accessTokenPayload = {
       _id: user.id,
       username: user.username,

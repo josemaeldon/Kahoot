@@ -1,7 +1,7 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { auth } from "../../play";
 import { NextApiRequest, NextApiResponse } from "next";
-import { getActiveAuthenticatedUser } from "@lib/auth";
+import { getSessionAuthenticatedUser } from "@lib/auth";
 
 export interface APIRequest {
   username: string;
@@ -27,7 +27,7 @@ export default async function handler(
   if (req.method !== "GET") {
     return res.status(405).json({ loggedIn: false, user: undefined });
   }
-  const user = await getActiveAuthenticatedUser(req, res);
+  const user = await getSessionAuthenticatedUser(req, res);
   if (!user) {
     const response: NotLoggedIn = { loggedIn: false, user: undefined };
     return res.status(200).json(response);

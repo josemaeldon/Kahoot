@@ -5,6 +5,9 @@ import bcrypt from "bcryptjs";
 import { requireSuperadmin } from "@lib/auth";
 import { query, withTransaction } from "@lib/db";
 import {
+  validateCpf,
+  validateEmail,
+  validateFullName,
   validatePassword,
   validateUsername,
   validateWhatsapp,
@@ -15,6 +18,9 @@ export type AccessOption = "30" | "60" | "90" | "unlimited" | "disabled";
 
 export interface ManagedUser {
   id: string;
+  fullName: string;
+  email: string;
+  cpf: string;
   username: string;
   whatsapp: string;
   role: auth.UserRole;
@@ -189,6 +195,9 @@ async function loadAdminData({
        where (
          $1 = ''
          or username ilike $2
+         or coalesce(full_name, '') ilike $2
+         or coalesce(email, '') ilike $2
+         or coalesce(cpf, '') ilike $2
          or coalesce(whatsapp, '') ilike $2
        )`,
       [search, searchPattern]
@@ -201,6 +210,9 @@ async function loadAdminData({
   const offset = (currentPage - 1) * pageSize;
   const users = await query<{
       id: string;
+      full_name: string | null;
+      email: string | null;
+      cpf: string | null;
       username: string;
       whatsapp: string | null;
       role: auth.UserRole;
@@ -210,6 +222,9 @@ async function loadAdminData({
     }>(
       `select
          id::text,
+         full_name,
+         email,
+         cpf,
          username,
          whatsapp,
          role,
@@ -220,6 +235,9 @@ async function loadAdminData({
        where (
          $1 = ''
          or username ilike $2
+         or coalesce(full_name, '') ilike $2
+         or coalesce(email, '') ilike $2
+         or coalesce(cpf, '') ilike $2
          or coalesce(whatsapp, '') ilike $2
        )
        order by
@@ -242,6 +260,9 @@ async function loadAdminData({
     registrationEnabled: settings.rows[0]?.registration_enabled !== false,
     users: users.rows.map((user) => ({
       id: user.id,
+      fullName: user.full_name || "",
+      email: user.email || "",
+      cpf: user.cpf || "",
       username: user.username,
       whatsapp: user.whatsapp || "",
       role: user.role,
@@ -298,6 +319,9 @@ export default async function handler(
     }
 
     if (req.body?.type === "createUser") {
+      const fullName = validateFullName(req.body?.fullName);
+      const email = validateEmail(req.body?.email);
+      const cpf = validateCpf(req.body?.cpf);
       const username = validateUsername(req.body?.username);
       const whatsapp = validateWhatsapp(req.body?.whatsapp);
       const password = validatePassword(req.body?.password);
@@ -309,6 +333,9 @@ export default async function handler(
       await withTransaction(async (client) => {
         const inserted = await client.query<{ id: string }>(
           `insert into users (
+             full_name,
+             email,
+             cpf,
              username,
              whatsapp,
              password_hash,
@@ -316,9 +343,9 @@ export default async function handler(
              is_enabled,
              access_expires_at
            )
-           values ($1, $2, $3, $4, true, null)
+           values ($1, $2, $3, $4, $5, $6, $7, true, null)
            returning id::text`,
-          [username, whatsapp, passwordHash, role]
+          [fullName, email, cpf, username, whatsapp, passwordHash, role]
         );
         await applyAccess(client, inserted.rows[0].id, role, access);
       });
@@ -327,6 +354,9 @@ export default async function handler(
 
     if (req.body?.type === "updateUser") {
       const userId = parseUserId(req.body?.userId);
+      const fullName = validateFullName(req.body?.fullName);
+      const email = validateEmail(req.body?.email);
+      const cpf = validateCpf(req.body?.cpf);
       const username = validateUsername(req.body?.username);
       const whatsapp = validateWhatsapp(req.body?.whatsapp);
       const role = parseRole(req.body?.role);
@@ -366,13 +396,16 @@ export default async function handler(
 
         await client.query(
           `update users
-           set username = $2,
-               whatsapp = $3,
-               role = $4,
-               password_hash = coalesce($5, password_hash),
+           set full_name = $2,
+               email = $3,
+               cpf = $4,
+               username = $5,
+               whatsapp = $6,
+               role = $7,
+               password_hash = coalesce($8, password_hash),
                updated_at = now()
            where id = $1::uuid`,
-          [userId, username, whatsapp, role, passwordHash]
+          [userId, fullName, email, cpf, username, whatsapp, role, passwordHash]
         );
         if (role === "superadmin") {
           await applyAccess(client, userId, role, "unlimited");
@@ -501,9 +534,14 @@ export default async function handler(
         .json({ error: true, errorDescription: error.message });
     }
     if ((error as { code?: string }).code === "23505") {
+      const constraint = (error as { constraint?: string }).constraint;
       return res.status(409).json({
         error: true,
-        errorDescription: "Este nome de usuário já está em uso.",
+        errorDescription: constraint?.includes("cpf")
+          ? "Este CPF já possui uma conta."
+          : constraint?.includes("email")
+            ? "Este e-mail já possui uma conta."
+            : "Este nome de usuário já está em uso.",
       });
     }
     console.error("Falha ao administrar usuários", error);

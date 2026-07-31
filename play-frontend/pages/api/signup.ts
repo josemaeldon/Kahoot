@@ -6,12 +6,18 @@ import bcrypt from "bcryptjs";
 import { withTransaction } from "@lib/db";
 import { setSessionCookie } from "@lib/auth";
 import {
+  validateCpf,
   validateCredentials,
+  validateEmail,
+  validateFullName,
   validateWhatsapp,
   ValidationError,
 } from "@lib/validation";
 
 export interface APIRequest {
+  fullName: string;
+  email: string;
+  cpf: string;
   username: string;
   whatsapp: string;
   password: string;
@@ -45,6 +51,9 @@ export default async function handler(
       req.body?.username,
       req.body?.password
     );
+    const fullName = validateFullName(req.body?.fullName);
+    const email = validateEmail(req.body?.email);
+    const cpf = validateCpf(req.body?.cpf);
     const whatsapp = validateWhatsapp(req.body?.whatsapp);
     const passwordHash = await bcrypt.hash(password, 12);
     const inserted = await withTransaction(async (client) => {
@@ -78,6 +87,9 @@ export default async function handler(
         access_expires_at: Date | null;
       }>(
         `insert into users (
+           full_name,
+           email,
+           cpf,
            username,
            whatsapp,
            password_hash,
@@ -90,8 +102,11 @@ export default async function handler(
            $2,
            $3,
            $4,
+           $5,
+           $6,
+           $7,
            true,
-           case when $4 = 'superadmin'
+           case when $7 = 'superadmin'
              then null
              else now() + interval '30 days'
            end
@@ -103,7 +118,7 @@ export default async function handler(
            role,
            is_enabled,
            access_expires_at`,
-        [username, whatsapp, passwordHash, isFirstAccess ? "superadmin" : "user"]
+        [fullName, email, cpf, username, whatsapp, passwordHash, isFirstAccess ? "superadmin" : "user"]
       );
     });
     const payload: auth.accessTokenPayload = {
@@ -130,9 +145,15 @@ export default async function handler(
         .json({ error: true, errorDescription: error.message });
     }
     if ((error as { code?: string }).code === "23505") {
+      const constraint = (error as { constraint?: string }).constraint;
+      const description = constraint?.includes("cpf")
+        ? "Este CPF já possui uma conta."
+        : constraint?.includes("email")
+          ? "Este e-mail já possui uma conta."
+          : "Este usuário já existe.";
       return res
         .status(409)
-        .json({ error: true, errorDescription: "Este usuário já existe." });
+        .json({ error: true, errorDescription: description });
     }
     console.error("Falha ao criar usuário", error);
     return res

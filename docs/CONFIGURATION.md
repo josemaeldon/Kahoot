@@ -7,7 +7,7 @@
 | Variável | Obrigatória | Padrão | Uso |
 | --- | --- | --- | --- |
 | `DATABASE_URL` | sim | — | conexão PostgreSQL usada pela API e migrações |
-| `JWT_SECRET` | sim | — | assinatura de sessões e derivação da chave das configurações de IA; mínimo de 32 caracteres |
+| `JWT_SECRET` | sim | — | assinatura de sessões e derivação da criptografia das configurações; mínimo de 32 caracteres |
 | `DATABASE_POOL_SIZE` | não | `10` | máximo de conexões no pool HTTP |
 | `COOKIE_SECURE` | não | depende de `NODE_ENV` | força `Secure` no cookie quando vale `true` |
 | `PORT` | não | `3000` | porta pública do processo Node |
@@ -18,10 +18,20 @@
 | `RUST_LOG` | não | `play-server=trace` | filtro de logs do backend |
 | `OPENAI_API_KEY` | não | — | chave alternativa à armazenada pela administração |
 | `OPENAI_API_BASE_URL` | não | `https://api.openai.com/v1` | base compatível com a Responses API |
+| `APP_URL` | não | origem da requisição | URL pública usada nos retornos do Checkout e Portal Stripe |
+| `STRIPE_SECRET_KEY` | não | configuração do `/admin` | chave secreta Stripe; a variável tem prioridade sobre o banco |
+| `STRIPE_WEBHOOK_SECRET` | não | configuração do `/admin` | segredo `whsec_` do endpoint `/api/stripe/webhook` |
+| `SMTP_HOST` | não | configuração do `/admin` | servidor SMTP; quando definido, a configuração do ambiente tem prioridade |
+| `SMTP_PORT` | não | `587` | porta do servidor SMTP |
+| `SMTP_SECURE` | não | `false` | usa TLS direto, normalmente na porta 465 |
+| `SMTP_USERNAME` | não | — | usuário de autenticação SMTP |
+| `SMTP_PASSWORD` | não | — | senha ou token SMTP |
+| `SMTP_FROM_NAME` | não | `Play!` | nome exibido no remetente |
+| `SMTP_FROM_EMAIL` | não | — | endereço remetente dos links de redefinição |
 | `NEXT_PUBLIC_APP_URL` | não | origem do navegador | URL usada na geração do QR Code; precisa existir no build do frontend |
 
 Mudar `JWT_SECRET` invalida sessões existentes e impede a leitura de uma chave
-de IA previamente criptografada. Planeje as duas consequências antes de
+de IA ou Stripe previamente criptografada. Planeje as duas consequências antes de
 rotacioná-lo.
 
 ### Stack
@@ -31,6 +41,9 @@ rotacioná-lo.
 | `PLAY_DB_PASSWORD` | sim | — | senha do usuário PostgreSQL |
 | `JWT_SECRET` | sim | — | repassado à aplicação |
 | `PLAY_IMAGE` | não | `ghcr.io/josemaeldon/play:latest` | imagem implantada |
+| `APP_URL` | não | `https://play.cloudbr.app` | origem pública da aplicação |
+| `STRIPE_SECRET_KEY` | não | — | chave Stripe fornecida por ambiente |
+| `STRIPE_WEBHOOK_SECRET` | não | — | segredo do webhook fornecido por ambiente |
 
 ## Banco e migrações
 

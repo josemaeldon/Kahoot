@@ -3,16 +3,22 @@ import type { auth } from "play";
 import type { AccessOption, ManagedUser } from "../pages/api/admin/users";
 import { getAccessPeriodSummary } from "@lib/accessPeriod";
 import {
+  FiCreditCard,
   FiClock,
   FiLock,
+  FiMail,
   FiPhone,
   FiShield,
   FiUser,
   FiX,
 } from "react-icons/fi";
+import { maskCpf, maskPhone } from "@lib/masks";
 import styles from "../styles/admin.module.css";
 
 export interface AdminUserFormValues {
+  fullName: string;
+  email: string;
+  cpf: string;
   username: string;
   whatsapp: string;
   password: string;
@@ -45,6 +51,9 @@ export default function AdminUserModal({
   onSubmit,
 }: AdminUserModalProps) {
   const isEditing = Boolean(user);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
   const [username, setUsername] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [password, setPassword] = useState("");
@@ -54,8 +63,11 @@ export default function AdminUserModal({
   const usernameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    setFullName(user?.fullName || "");
+    setEmail(user?.email || "");
+    setCpf(maskCpf(user?.cpf || ""));
     setUsername(user?.username || "");
-    setWhatsapp(user?.whatsapp || "");
+    setWhatsapp(maskPhone(user?.whatsapp || ""));
     setPassword("");
     setRole(user?.role || "user");
     setAccess(user ? "keep" : "30");
@@ -88,7 +100,7 @@ export default function AdminUserModal({
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    onSubmit({ username, whatsapp, password, role, access });
+    onSubmit({ fullName, email, cpf, username, whatsapp, password, role, access });
   }
 
   const currentAccess = user ? getAccessPeriodSummary(user) : null;
@@ -145,13 +157,28 @@ export default function AdminUserModal({
             </p>
           )}
 
+          <label className={styles.field}>
+            <span>Nome completo</span>
+            <div className={styles.inputShell}><FiUser aria-hidden="true" /><input ref={usernameRef} value={fullName} onChange={(event) => setFullName(event.target.value)} maxLength={160} autoComplete="off" placeholder="Nome e sobrenome" required /></div>
+          </label>
+
+          <div className={styles.formGrid}>
+            <label className={styles.field}>
+              <span>E-mail</span>
+              <div className={styles.inputShell}><FiMail aria-hidden="true" /><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} maxLength={254} autoComplete="off" placeholder="usuario@exemplo.com" required /></div>
+            </label>
+            <label className={styles.field}>
+              <span>CPF</span>
+              <div className={styles.inputShell}><FiCreditCard aria-hidden="true" /><input value={cpf} onChange={(event) => setCpf(maskCpf(event.target.value))} inputMode="numeric" maxLength={14} autoComplete="off" placeholder="000.000.000-00" required /></div>
+            </label>
+          </div>
+
           <div className={styles.formGrid}>
             <label className={styles.field}>
               <span>Usuário</span>
               <div className={styles.inputShell}>
                 <FiUser aria-hidden="true" />
                 <input
-                  ref={usernameRef}
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                   maxLength={40}
@@ -169,7 +196,8 @@ export default function AdminUserModal({
                 <input
                   type="tel"
                   value={whatsapp}
-                  onChange={(event) => setWhatsapp(event.target.value)}
+                  onChange={(event) => setWhatsapp(maskPhone(event.target.value))}
+                  maxLength={15}
                   inputMode="tel"
                   autoComplete="off"
                   placeholder="(91) 99999-9999"

@@ -4,10 +4,11 @@ import useUser from "@lib/useSSRUser";
 import { postData } from "@lib/postData";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { FiClock, FiFolder, FiHome, FiLogOut, FiShield } from "react-icons/fi";
+import { FiClock, FiCreditCard, FiFolder, FiHome, FiLogOut, FiShield } from "react-icons/fi";
 import { useState } from "react";
 import AccountModal from "./AccountModal";
 import NoticeModal from "./NoticeModal";
+import NotificationCenter from "./NotificationCenter";
 import { getAccessPeriodSummary } from "@lib/accessPeriod";
 
 function Header({ authMode = false }: { authMode?: boolean }) {
@@ -42,6 +43,15 @@ function Header({ authMode = false }: { authMode?: boolean }) {
                 <Link href="/" className={styles.navLink}>
                   <FiHome aria-hidden="true" />
                   Início
+                </Link>
+              )}
+              {loggedIn && (
+                <Link
+                  href="/plans"
+                  className={`${styles.navLink} ${router.pathname === "/plans" ? styles.navLinkActive : ""}`}
+                >
+                  <FiCreditCard aria-hidden="true" />
+                  Planos
                 </Link>
               )}
               {loggedIn && (
@@ -84,6 +94,9 @@ function Header({ authMode = false }: { authMode?: boolean }) {
                   Criar conta
                 </Link>
               </>
+            )}
+            {!authMode && loggedIn && user && accessPeriod && (
+              <NotificationCenter />
             )}
             {!authMode && loggedIn && user && accessPeriod && (
               <button

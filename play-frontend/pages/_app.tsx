@@ -10,6 +10,7 @@ const publicRoutes = new Set([
   "/auth/login",
   "/auth/signup",
   "/auth/forgotpassword",
+  "/auth/reset-password",
   "/",
   "/play",
 ]);

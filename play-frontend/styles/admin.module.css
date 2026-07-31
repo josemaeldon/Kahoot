@@ -156,6 +156,197 @@
   box-shadow: var(--shadow-sm);
 }
 
+.stripeWebhook {
+  display: grid;
+  gap: 5px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-canvas);
+  font-size: 12px;
+}
+
+.stripeWebhook code {
+  overflow-wrap: anywhere;
+  color: var(--color-brand-800);
+}
+
+.stripeWebhook span {
+  color: var(--color-text-muted);
+}
+
+.clearKeys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 14px;
+}
+
+.plansLayout {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.75fr) minmax(420px, 1.25fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.planFormCard,
+.planListCard {
+  padding: 26px 28px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.planFormCard h2,
+.planListCard h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 23px;
+  letter-spacing: -0.03em;
+}
+
+.planFormCard > p {
+  margin: 6px 0 20px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.planFormCard textarea {
+  min-height: 90px;
+}
+
+.planFormActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.planFormActions > button:not(.aiSaveButton) {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  background: white;
+  font-weight: 700;
+}
+
+.planAdminList {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.planAdminList article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px 18px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.planAdminList article > div:first-child > span {
+  color: var(--color-brand-700);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.planAdminList h3,
+.planAdminList p {
+  margin: 0;
+}
+
+.planAdminList h3 {
+  margin-top: 2px;
+  color: var(--color-text);
+  font-size: 15px;
+}
+
+.planAdminList p,
+.planAdminList small {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.planAdminList article > strong {
+  color: var(--color-text);
+  font-size: 17px;
+}
+
+.planRowActions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.planRowActions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--color-brand-700);
+  background: var(--color-brand-50);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.planRowActions button:last-child {
+  color: var(--color-danger);
+  background: #fff4f2;
+}
+
+.planArchived {
+  opacity: 0.62;
+}
+
+.notificationAdminList {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.notificationAdminList article {
+  padding: 17px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.notificationAdminList article > div:first-child > span {
+  color: var(--color-brand-700);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.notificationAdminList h3 {
+  margin: 3px 0 5px;
+  color: var(--color-text);
+  font-size: 15px;
+}
+
+.notificationAdminList p {
+  margin: 0 0 8px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.notificationAdminList small {
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
 .aiHeader {
   display: flex;
   align-items: center;
@@ -1075,6 +1266,10 @@
     grid-template-columns: 1fr;
   }
 
+  .plansLayout {
+    grid-template-columns: 1fr;
+  }
+
   .aiFooter {
     align-items: stretch;
     flex-direction: column;
@@ -1109,12 +1304,16 @@
 @media (max-width: 480px) {
   .adminTabs {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(4, 1fr);
   }
 
   .adminTabs button {
     justify-content: center;
     padding: 0 10px;
+  }
+
+  .adminTabs button > span {
+    display: none;
   }
 
   .hero {

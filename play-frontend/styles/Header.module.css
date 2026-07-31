@@ -92,6 +92,19 @@
     background var(--transition-fast), border-color var(--transition-fast);
 }
 
+.notificationRoot { position: relative; }
+.notificationButton { position: relative; width: 42px; height: 42px; display: grid; place-items: center; padding: 0; border: 1px solid var(--color-border); border-radius: 12px; color: var(--color-text-muted); background: white; }
+.notificationButton:hover { color: var(--color-brand-700); background: var(--color-brand-50); }
+.notificationButton > span { position: absolute; top: -5px; right: -5px; min-width: 19px; height: 19px; display: grid; place-items: center; padding: 0 4px; border: 2px solid white; border-radius: 99px; color: white; background: var(--color-danger); font-size: 9px; font-weight: 800; }
+.notificationPanel { position: absolute; z-index: 90; top: calc(100% + 10px); right: 0; width: min(390px, calc(100vw - 24px)); overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: white; box-shadow: 0 18px 55px rgba(24, 12, 56, .2); }
+.notificationPanel header { display: flex; align-items: center; justify-content: space-between; padding: 17px 18px; border-bottom: 1px solid var(--color-border); }
+.notificationPanel header strong,.notificationPanel header span { display: block; }.notificationPanel header strong { color: var(--color-text); font-size: 15px; }.notificationPanel header span { margin-top: 2px; color: var(--color-text-muted); font-size: 10px; }.notificationPanel header button { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 8px; color: var(--color-text-muted); background: var(--color-canvas); }
+.readAll { width: 100%; min-height: 38px; display: flex; align-items: center; justify-content: center; gap: 7px; border: 0; border-bottom: 1px solid var(--color-border); color: var(--color-brand-700); background: var(--color-brand-50); font-size: 11px; font-weight: 750; }
+.notificationList { max-height: min(480px, 65vh); overflow-y: auto; }.notificationList > p { margin: 0; padding: 40px 18px; color: var(--color-text-muted); font-size: 13px; text-align: center; }
+.notificationList > button { position: relative; width: 100%; display: grid; grid-template-columns: 8px 1fr; gap: 8px; padding: 15px 18px; border: 0; border-bottom: 1px solid var(--color-border); color: inherit; background: white; text-align: left; }.notificationList > button:hover { background: var(--color-canvas); }.notificationList > button:last-child { border-bottom: 0; }
+.notificationDot { width: 7px; height: 7px; margin-top: 5px; border-radius: 50%; background: transparent; }.unreadNotification .notificationDot { background: var(--color-brand-600); }.unreadNotification { background: #faf8ff !important; }
+.notificationList strong { color: var(--color-text); font-size: 12px; }.notificationList p { margin: 4px 0 7px; color: var(--color-text-muted); font-size: 11px; line-height: 1.45; white-space: pre-wrap; }.notificationList small { color: var(--color-text-muted); font-size: 9px; }
+
 .primaryAction {
   color: white;
   border: 1px solid var(--color-brand-600);

@@ -12,6 +12,9 @@ jogadores participam pelo navegador sem precisar de conta.
 - partidas ao vivo com PIN, pontuação, ranking e reconexão de jogadores;
 - administração de usuários, períodos de acesso e novos cadastros;
 - geração opcional de Plays! com a API da OpenAI;
+- planos recorrentes de 30, 60 ou 90 dias via Stripe Checkout;
+- recuperação de senha por e-mail com SMTP configurável;
+- notificações individuais ou gerais administradas pelo superadmin;
 - execução em Docker Swarm com PostgreSQL e publicação automática no GHCR.
 
 ## Arquitetura
@@ -72,6 +75,15 @@ docker stack deploy --with-registry-auth -c docker-compose.yml play
 A imagem padrão é `ghcr.io/josemaeldon/play:latest`. O workflow
 `.github/workflows/docker-publish.yml` publica `latest` e
 `sha-<commit>` para `linux/amd64` após alterações na branch `main`.
+
+### Assinaturas Stripe
+
+O superadmin configura a chave secreta e o segredo do webhook em
+`/admin` → **Configurações** → **Stripe**. No Dashboard da Stripe, aponte o
+webhook para `https://seu-dominio/api/stripe/webhook` e assine os eventos
+`checkout.session.completed` e `customer.subscription.*`. As credenciais
+também podem ser fornecidas por `STRIPE_SECRET_KEY` e
+`STRIPE_WEBHOOK_SECRET`; variáveis de ambiente têm prioridade.
 
 ## Documentação
 

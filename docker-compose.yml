@@ -37,6 +37,16 @@ services:
       PORT: "3000"
       BACKEND_PORT: "8000"
       PLAYER_RECONNECT_GRACE_SECONDS: "120"
+      APP_URL: "${APP_URL:-https://play.cloudbr.app}"
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_SECURE: "${SMTP_SECURE:-false}"
+      SMTP_USERNAME: "${SMTP_USERNAME:-}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
+      SMTP_FROM_NAME: "${SMTP_FROM_NAME:-Play!}"
+      SMTP_FROM_EMAIL: "${SMTP_FROM_EMAIL:-}"
       MIGRATIONS_DIR: /app/db/migrations
     ulimits:
       nofile:
