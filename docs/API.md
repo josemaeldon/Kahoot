@@ -43,7 +43,11 @@ Principais códigos:
 | `GET/POST/PUT/DELETE` | `/api/categories` | autenticado | lista e administra categorias conforme a propriedade/papel |
 | `POST` | `/api/ai/generate` | autenticado | gera dez perguntas para uma categoria |
 | `GET/POST` | `/api/admin/ai-settings` | superadmin | lê ou altera modelo, instruções e chave |
+| `GET/POST` | `/api/admin/stripe-settings` | superadmin | lê ou altera a integração Stripe; os segredos nunca são retornados |
+| `GET/POST` | `/api/admin/stripe-events` | superadmin | lista entregas recentes ou reprocessa um evento com falha |
+| `GET/POST` | `/api/admin/plans` | superadmin | lista, cria, atualiza ou arquiva planos recorrentes |
 | `GET/POST` | `/api/admin/users` | superadmin | lista e administra usuários e cadastros |
+| `POST` | `/api/stripe/webhook` | assinatura Stripe | recebe eventos no corpo bruto, valida a assinatura e sincroniza assinaturas |
 
 As estruturas detalhadas usadas pela interface estão tipadas nos próprios
 endpoints e em `play.d.ts`. Essa tabela documenta a superfície pública sem

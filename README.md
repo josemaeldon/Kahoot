@@ -81,7 +81,9 @@ A imagem padrão é `ghcr.io/josemaeldon/play:latest`. O workflow
 O superadmin configura a chave secreta e o segredo do webhook em
 `/admin` → **Configurações** → **Stripe**. No Dashboard da Stripe, aponte o
 webhook para `https://seu-dominio/api/stripe/webhook` e assine os eventos
-`checkout.session.completed` e `customer.subscription.*`. As credenciais
+`checkout.session.completed`, `customer.subscription.created`, `updated`,
+`deleted`, `paused` e `resumed`. O histórico e o reprocessamento ficam na
+mesma seção do painel. As credenciais
 também podem ser fornecidas por `STRIPE_SECRET_KEY` e
 `STRIPE_WEBHOOK_SECRET`; variáveis de ambiente têm prioridade.
 

@@ -183,6 +183,120 @@
   margin-top: 14px;
 }
 
+.stripeEvents {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid var(--color-border);
+}
+
+.stripeEventsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.stripeEventsHeader h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 17px;
+}
+
+.stripeEventsHeader button,
+.stripeEventList article > button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-brand-700);
+  background: white;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.stripeEventsEmpty {
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.stripeEventList {
+  display: grid;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.stripeEventList article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-canvas);
+}
+
+.stripeEventList article > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.stripeEventList strong,
+.stripeEventList code,
+.stripeEventList small {
+  overflow-wrap: anywhere;
+}
+
+.stripeEventList strong {
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.stripeEventList code,
+.stripeEventList small {
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.stripeEventList p {
+  margin: 3px 0 0;
+  color: var(--color-danger);
+  font-size: 10px;
+}
+
+.stripeEventStatus {
+  padding: 4px 7px;
+  border-radius: 99px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.stripeEvent_processed {
+  color: #17653a;
+  background: #eaf8f0;
+}
+
+.stripeEvent_failed {
+  color: var(--color-danger);
+  background: #fff0ee;
+}
+
+.stripeEvent_processing {
+  color: #73520b;
+  background: #fff5d8;
+}
+
 .plansLayout {
   display: grid;
   grid-template-columns: minmax(300px, 0.75fr) minmax(420px, 1.25fr);
@@ -1279,6 +1393,18 @@
     width: 100%;
   }
 
+  .stripeEventList article {
+    grid-template-columns: 1fr;
+  }
+
+  .stripeEventStatus {
+    justify-self: start;
+  }
+
+  .stripeEventList article > button {
+    justify-self: start;
+  }
+
   .stats {
     grid-template-columns: 1fr;
   }
@@ -1304,12 +1430,15 @@
 @media (max-width: 480px) {
   .adminTabs {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .adminTabs button {
+    min-width: 0;
     justify-content: center;
-    padding: 0 10px;
+    gap: 4px;
+    padding: 0 3px;
+    font-size: 10px;
   }
 
   .adminTabs button > span {

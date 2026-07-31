@@ -19,7 +19,7 @@
 | `OPENAI_API_KEY` | não | — | chave alternativa à armazenada pela administração |
 | `OPENAI_API_BASE_URL` | não | `https://api.openai.com/v1` | base compatível com a Responses API |
 | `APP_URL` | não | origem da requisição | URL pública usada nos retornos do Checkout e Portal Stripe |
-| `STRIPE_SECRET_KEY` | não | configuração do `/admin` | chave secreta Stripe; a variável tem prioridade sobre o banco |
+| `STRIPE_SECRET_KEY` | não | configuração do `/admin` | chave secreta `sk_*` ou restrita `rk_*` da Stripe; a variável tem prioridade sobre o banco |
 | `STRIPE_WEBHOOK_SECRET` | não | configuração do `/admin` | segredo `whsec_` do endpoint `/api/stripe/webhook` |
 | `SMTP_HOST` | não | configuração do `/admin` | servidor SMTP; quando definido, a configuração do ambiente tem prioridade |
 | `SMTP_PORT` | não | `587` | porta do servidor SMTP |

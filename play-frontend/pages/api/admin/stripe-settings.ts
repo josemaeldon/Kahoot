@@ -5,6 +5,7 @@ import {
   encryptStripeSecret,
   getStripeClient,
   getStripeSettings,
+  validateStripePermissions,
 } from "@lib/stripeSettings";
 
 export interface PublicStripeSettings {
@@ -62,8 +63,8 @@ export default async function handler(
     const clearWebhookSecret = req.body?.clearWebhookSecret === true;
 
     if (typeof enabled !== "boolean") throw new Error("Estado da Stripe inválido.");
-    if (secretKey && !/^sk_(?:test|live)_/.test(secretKey)) {
-      throw new Error("A chave secreta deve começar com sk_test_ ou sk_live_.");
+    if (secretKey && !/^(?:sk|rk)_(?:test|live)_/.test(secretKey)) {
+      throw new Error("Use uma chave secreta sk_* ou uma chave restrita rk_* da Stripe.");
     }
     if (webhookSecret && !webhookSecret.startsWith("whsec_")) {
       throw new Error("O segredo do webhook deve começar com whsec_.");
@@ -105,7 +106,7 @@ export default async function handler(
     }
     if (enabled) {
       const { stripe } = await getStripeClient();
-      await stripe.balance.retrieve();
+      await validateStripePermissions(stripe);
     }
     return res.status(200).json({ error: false, settings: publicSettings(saved) });
   } catch (error) {

@@ -17,6 +17,10 @@ import type {
   PublicStripeSettings,
   StripeSettingsResponse,
 } from "./api/admin/stripe-settings";
+import type {
+  AdminStripeEvent,
+  StripeEventsResponse,
+} from "./api/admin/stripe-events";
 import type { SubscriptionPlan } from "./api/admin/plans";
 import type { PublicSmtpSettings, SmtpSettingsResponse } from "./api/admin/smtp-settings";
 import type { AdminNotification, AdminNotificationsResponse, NotificationUser } from "./api/admin/notifications";
@@ -35,6 +39,7 @@ import {
   FiMessageCircle,
   FiMail,
   FiPlus,
+  FiRefreshCw,
   FiSave,
   FiSearch,
   FiSend,
@@ -159,6 +164,13 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
 export default function Admin() {
   const { user } = useUser();
   const [data, setData] = useState<AdminData | null>(null);
@@ -180,6 +192,9 @@ export default function Admin() {
   const [stripeDraft, setStripeDraft] = useState<StripeSettingsDraft | null>(null);
   const [stripeSaving, setStripeSaving] = useState(false);
   const [stripeError, setStripeError] = useState("");
+  const [stripeEvents, setStripeEvents] = useState<AdminStripeEvent[]>([]);
+  const [stripeEventsLoading, setStripeEventsLoading] = useState(true);
+  const [stripeEventRetrying, setStripeEventRetrying] = useState<string | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
   const [planDraft, setPlanDraft] = useState<PlanDraft>(emptyPlan);
@@ -268,6 +283,23 @@ export default function Admin() {
     }
   }, []);
 
+  const loadStripeEvents = useCallback(async () => {
+    setStripeEventsLoading(true);
+    try {
+      const response = await fetch("/api/admin/stripe-events", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const payload = (await response.json()) as StripeEventsResponse;
+      if (!("events" in payload)) throw new Error(payload.errorDescription);
+      setStripeEvents(payload.events);
+    } catch (error) {
+      setStripeError(error instanceof Error ? error.message : "Não foi possível carregar os eventos.");
+    } finally {
+      setStripeEventsLoading(false);
+    }
+  }, []);
+
   const loadPlans = useCallback(async () => {
     setPlansLoading(true);
     try {
@@ -317,11 +349,12 @@ export default function Admin() {
     if (user?.role === "superadmin") {
       void loadAiSettings();
       void loadStripeSettings();
+      void loadStripeEvents();
       void loadPlans();
       void loadSmtpSettings();
       void loadNotifications();
     }
-  }, [loadAiSettings, loadNotifications, loadPlans, loadSmtpSettings, loadStripeSettings, user?.role]);
+  }, [loadAiSettings, loadNotifications, loadPlans, loadSmtpSettings, loadStripeEvents, loadStripeSettings, user?.role]);
 
   function listContext(page = userPage) {
     return {
@@ -501,6 +534,28 @@ export default function Admin() {
       setNotice({ title: "Stripe configurada", message: response.settings.enabled ? "Pagamentos recorrentes estão ativos." : "A integração permanece desativada.", tone: "info" });
     } catch { setStripeError("Não foi possível conectar ao servidor."); }
     finally { setStripeSaving(false); }
+  }
+
+  async function retryStripeEvent(eventId: string) {
+    setStripeEventRetrying(eventId);
+    setStripeError("");
+    try {
+      const response = await postData<{ eventId: string }, StripeEventsResponse>(
+        "/api/admin/stripe-events",
+        { eventId }
+      );
+      if (!("events" in response)) throw new Error(response.errorDescription);
+      setStripeEvents(response.events);
+      setNotice({
+        title: "Evento reprocessado",
+        message: "A assinatura e o acesso do usuário foram sincronizados novamente.",
+        tone: "info",
+      });
+    } catch (error) {
+      setStripeError(error instanceof Error ? error.message : "Não foi possível reprocessar o evento.");
+    } finally {
+      setStripeEventRetrying(null);
+    }
   }
 
   async function savePlan() {
@@ -862,7 +917,7 @@ export default function Admin() {
                   <div className={styles.aiKeyInput}><FiKey aria-hidden="true" /><input
                     type="password" autoComplete="new-password" value={stripeDraft.secretKey}
                     disabled={stripeSaving || stripeDraft.clearSecretKey || stripeSettings?.secretKeyFromEnvironment}
-                    placeholder={stripeSettings?.secretKeyConfigured ? "sk_•••• configurada. Digite para substituir." : "sk_live_... ou sk_test_..."}
+                    placeholder={stripeSettings?.secretKeyConfigured ? "Chave •••• configurada. Digite para substituir." : "rk_test_... ou sk_test_..."}
                     onChange={(event) => setStripeDraft((current) => current ? { ...current, secretKey: event.target.value } : current)}
                   /></div>
                   {stripeSettings?.secretKeyFromEnvironment && <small>Definida por STRIPE_SECRET_KEY no ambiente.</small>}
@@ -881,7 +936,8 @@ export default function Admin() {
               <div className={styles.stripeWebhook}>
                 <strong>Endpoint do webhook</strong>
                 <code>{typeof window === "undefined" ? "https://seu-dominio" : window.location.origin}/api/stripe/webhook</code>
-                <span>Eventos: checkout.session.completed e customer.subscription.*</span>
+                <span>Permissão pública: somente requisições com assinatura Stripe válida.</span>
+                <span>Eventos: checkout.session.completed, customer.subscription.created, updated, deleted, paused e resumed.</span>
               </div>
               <div className={styles.clearKeys}>
                 {stripeSettings?.secretKeyConfigured && !stripeSettings.secretKeyFromEnvironment && <label className={styles.clearKey}><input type="checkbox" checked={stripeDraft.clearSecretKey} disabled={stripeSaving} onChange={(event) => setStripeDraft((current) => current ? { ...current, clearSecretKey: event.target.checked, secretKey: "", enabled: event.target.checked ? false : current.enabled } : current)} /> Remover chave secreta armazenada</label>}
@@ -892,6 +948,43 @@ export default function Admin() {
                 <p>Os segredos são criptografados e nunca voltam a ser exibidos.</p>
                 <button type="submit" className={styles.aiSaveButton} disabled={stripeSaving}><FiSave /> {stripeSaving ? "Validando..." : "Salvar Stripe"}</button>
               </div>
+              <section className={styles.stripeEvents} aria-labelledby="stripe-events-title">
+                <div className={styles.stripeEventsHeader}>
+                  <div>
+                    <span className={styles.cardLabel}>Auditoria</span>
+                    <h3 id="stripe-events-title">Eventos recebidos</h3>
+                  </div>
+                  <button type="button" onClick={() => void loadStripeEvents()} disabled={stripeEventsLoading}>
+                    <FiRefreshCw aria-hidden="true" /> Atualizar
+                  </button>
+                </div>
+                {stripeEventsLoading ? (
+                  <div className={styles.stripeEventsEmpty}><span className="appSpinner" /> Carregando eventos...</div>
+                ) : stripeEvents.length === 0 ? (
+                  <div className={styles.stripeEventsEmpty}>Nenhum evento recebido ainda.</div>
+                ) : (
+                  <div className={styles.stripeEventList}>
+                    {stripeEvents.map((item) => (
+                      <article key={item.id}>
+                        <span className={`${styles.stripeEventStatus} ${styles[`stripeEvent_${item.status}`]}`}>
+                          {item.status === "processed" ? "Processado" : item.status === "failed" ? "Falhou" : "Processando"}
+                        </span>
+                        <div>
+                          <strong>{item.type}</strong>
+                          <code>{item.id}</code>
+                          <small>{item.livemode ? "Produção" : "Teste"} · {formatDateTime(item.createdAt)} · {item.attempts} tentativa{item.attempts === 1 ? "" : "s"}</small>
+                          {item.error ? <p>{item.error}</p> : null}
+                        </div>
+                        {item.status === "failed" ? (
+                          <button type="button" disabled={stripeEventRetrying === item.id} onClick={() => void retryStripeEvent(item.id)}>
+                            <FiRefreshCw aria-hidden="true" /> {stripeEventRetrying === item.id ? "Reprocessando..." : "Reprocessar"}
+                          </button>
+                        ) : null}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
             </form>
           )}
         </section>

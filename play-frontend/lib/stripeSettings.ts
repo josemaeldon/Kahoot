@@ -56,10 +56,10 @@ export async function getStripeSettings() {
   const environmentSecretKey = process.env.STRIPE_SECRET_KEY?.trim() || null;
   const environmentWebhookSecret =
     process.env.STRIPE_WEBHOOK_SECRET?.trim() || null;
-  const storedSecretKey = row?.secret_key_encrypted
+  const storedSecretKey = !environmentSecretKey && row?.secret_key_encrypted
     ? decryptStripeSecret(row.secret_key_encrypted)
     : null;
-  const storedWebhookSecret = row?.webhook_secret_encrypted
+  const storedWebhookSecret = !environmentWebhookSecret && row?.webhook_secret_encrypted
     ? decryptStripeSecret(row.webhook_secret_encrypted)
     : null;
 
@@ -86,4 +86,15 @@ export async function getStripeClient(options: { requireEnabled?: boolean } = {}
     throw new Error("Configure a chave secreta da Stripe.");
   }
   return { stripe: new Stripe(settings.secretKey), settings };
+}
+
+export async function validateStripePermissions(stripe: Stripe) {
+  await Promise.all([
+    stripe.customers.list({ limit: 1 }),
+    stripe.products.list({ limit: 1 }),
+    stripe.prices.list({ limit: 1 }),
+    stripe.subscriptions.list({ limit: 1, status: "all" }),
+    stripe.events.list({ limit: 1 }),
+    stripe.billingPortal.configurations.list({ limit: 1 }),
+  ]);
 }
