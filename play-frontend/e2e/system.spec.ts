@@ -416,6 +416,14 @@ test("cadastro, criação de Play! e partida completa", async ({ browser }) => {
   await expect(player.getByText("Jogador E2E")).toBeVisible();
   await expect(player.getByText("Jogador atrasado")).toBeVisible();
   await expect(player.getByText("1000 pontos")).toBeVisible();
+
+  await host.getByRole("button", { name: "Jogar outro Play! da categoria" }).click();
+  await expect(host.getByText("Sala pronta para começar")).toBeVisible();
+  await expect(player.getByText("Vê seu nome na tela?")).toBeVisible();
+  await host.getByRole("button", { name: "Começar", exact: true }).click();
+  await expect(host.getByText("Quanto é 2 + 2?")).toBeVisible();
+  await expect(player.getByText("Toque na sua resposta")).toBeVisible();
+
   await player
     .getByRole("button", { name: "Entrar em uma nova sala" })
     .click();

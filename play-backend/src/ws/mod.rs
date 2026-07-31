@@ -408,6 +408,23 @@ async fn create_room(mut host: WebSocket, state: SharedState, mut questions: Vec
                 room.scores.lock().unwrap().values_mut().for_each(|score| *score = 0);
                 questions = next_questions;
                 let _ = result_tx.send(GameEvent::NextGame);
+
+                // Give players time to render the new lobby before the first
+                // round event is published. The watch channel keeps only the
+                // latest value, so starting immediately could replace
+                // `NextGame` with `RoundBegin` before players receive it.
+                loop {
+                    match host_rx.next_action().await {
+                        Some(Action::BeginRound) if room.users.connected_player_count() > 0 => break,
+                        Some(_) => (),
+                        None => {
+                            tracing::debug!("Closing room...");
+                            state.remove_room(&room_id).await;
+                            heartbeat.abort();
+                            return;
+                        }
+                    }
+                }
                 continue 'game;
             }
             Some(_) => (),
