@@ -11,6 +11,7 @@ import { useRouter } from "next/router";
 import { postData } from "@lib/postData";
 import { APIResponse, APIRequest } from "./api/create";
 import NoticeModal from "../Components/NoticeModal";
+import FolderModal from "../Components/FolderModal";
 import {
   APIResponse as GetGameRes,
   APIRequest as GetGameReq,
@@ -20,6 +21,8 @@ import {
   FiCpu,
   FiDownload,
   FiFileText,
+  FiFolder,
+  FiFolderPlus,
   FiGlobe,
   FiLock,
   FiPlus,
@@ -31,6 +34,10 @@ import {
 } from "react-icons/fi";
 import { PlayCsvError, parsePlayCsv } from "@lib/playCsv";
 import type { APIResponse as CategoriesResponse } from "./api/categories";
+import type {
+  APIRequest as FolderRequest,
+  APIResponse as FolderResponse,
+} from "./api/folders";
 import SelectField from "@components/SelectField";
 import type { AiGenerationResponse } from "./api/ai/generate";
 
@@ -142,6 +149,10 @@ function Create() {
   const [aiError, setAiError] = useState("");
   const [categories, setCategories] = useState<db.PlayCategory[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [folders, setFolders] = useState<db.PlayFolder[]>([]);
+  const [foldersLoading, setFoldersLoading] = useState(true);
+  const [folderDialogOpen, setFolderDialogOpen] = useState(false);
+  const [folderSaving, setFolderSaving] = useState(false);
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [categorySaving, setCategorySaving] = useState(false);
@@ -176,6 +187,34 @@ function Create() {
         }
       })
       .finally(() => setCategoriesLoading(false));
+    return () => aborter.abort();
+  }, [loggedIn]);
+
+  useEffect(() => {
+    if (!loggedIn) return;
+    const aborter = new AbortController();
+    setFoldersLoading(true);
+    fetch("/api/folders", {
+      credentials: "same-origin",
+      cache: "no-store",
+      signal: aborter.signal,
+    })
+      .then((response) => response.json() as Promise<FolderResponse>)
+      .then((response) => {
+        if ("folders" in response && response.folders) {
+          setFolders(response.folders);
+        }
+      })
+      .catch((error) => {
+        if ((error as Error).name !== "AbortError") {
+          setNotice({
+            title: "Não foi possível carregar as pastas",
+            messages: ["Você poderá salvar o Play sem pasta."],
+            tone: "warning",
+          });
+        }
+      })
+      .finally(() => setFoldersLoading(false));
     return () => aborter.abort();
   }, [loggedIn]);
 
@@ -255,6 +294,47 @@ function Create() {
       });
     } finally {
       setCategorySaving(false);
+    }
+  }
+
+  async function createNewFolder(name: string) {
+    setFolderSaving(true);
+    try {
+      const response = await postData<FolderRequest, FolderResponse>(
+        "/api/folders",
+        { action: "create", name }
+      );
+      if (response.error) {
+        setNotice({
+          title: "Não foi possível criar a pasta",
+          messages: [response.errorDescription],
+          tone: "error",
+        });
+        return;
+      }
+      if (!("folder" in response) || !response.folder) {
+        setNotice({
+          title: "Não foi possível criar a pasta",
+          messages: ["A pasta criada não foi retornada pelo servidor."],
+          tone: "error",
+        });
+        return;
+      }
+      const folder = {
+        ...response.folder,
+        gameCount: response.folder.gameCount ?? 0,
+      };
+      setFolders((current) => [...current, folder]);
+      setGame((current) => ({ ...current, folderId: folder.id }));
+      setFolderDialogOpen(false);
+    } catch {
+      setNotice({
+        title: "Não foi possível criar a pasta",
+        messages: ["Verifique sua conexão e tente novamente."],
+        tone: "error",
+      });
+    } finally {
+      setFolderSaving(false);
     }
   }
 
@@ -510,14 +590,16 @@ function Create() {
               </option>
             ))}
           </SelectField>
-          <button
-            type="button"
-            className={styles.newCategoryButton}
-            onClick={() => setCreatingCategory(true)}
-          >
-            <FiPlus aria-hidden="true" />
-            Nova categoria
-          </button>
+          {user?.role === "superadmin" && (
+            <button
+              type="button"
+              className={styles.newCategoryButton}
+              onClick={() => setCreatingCategory(true)}
+            >
+              <FiPlus aria-hidden="true" />
+              Nova categoria
+            </button>
+          )}
           {(() => {
             const selected = categories.find(
               (category) => category.id === game.categoryId
@@ -577,6 +659,39 @@ function Create() {
             </button>
           </form>
         )}
+        <div className={styles.folderSelector}>
+          <FiFolder aria-hidden="true" />
+          <label htmlFor="play-folder">Pasta</label>
+          <SelectField
+            id="play-folder"
+            containerClassName={styles.folderSelect}
+            value={game.folderId || ""}
+            disabled={foldersLoading || folderSaving}
+            onChange={(event) =>
+              setGame((current) => ({
+                ...current,
+                folderId: event.target.value || null,
+              }))
+            }
+          >
+            <option value="">
+              {foldersLoading ? "Carregando..." : "Sem pasta"}
+            </option>
+            {folders.map((folder) => (
+              <option value={folder.id} key={folder.id}>
+                {folder.name}
+              </option>
+            ))}
+          </SelectField>
+          <button
+            type="button"
+            className={styles.newCategoryButton}
+            onClick={() => setFolderDialogOpen(true)}
+          >
+            <FiFolderPlus aria-hidden="true" />
+            Nova pasta
+          </button>
+        </div>
         <fieldset className={styles.visibilitySelector}>
           <legend>Visibilidade</legend>
           <label>
@@ -686,6 +801,13 @@ function Create() {
         actionTone="danger"
         onClose={() => setPendingCategoryDelete(null)}
         onAction={() => void deletePendingCategory()}
+      />
+      <FolderModal
+        open={folderDialogOpen}
+        title="Criar pasta"
+        pending={folderSaving}
+        onClose={() => setFolderDialogOpen(false)}
+        onSubmit={(name) => void createNewFolder(name)}
       />
       <NoticeModal
         open={notice !== null}

@@ -212,6 +212,10 @@ export function validateGame(input: unknown): db.PlayGame {
     author_username: "",
     title,
     isPublic: candidate.isPublic === true,
+    folderId:
+      typeof candidate.folderId === "string" && UUID_PATTERN.test(candidate.folderId)
+        ? candidate.folderId
+        : null,
     categoryId,
     date: 0,
     questions,

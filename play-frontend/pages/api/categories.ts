@@ -30,6 +30,12 @@ export default async function handler(
       });
     }
     if (req.method === "POST") {
+      if (user.role !== "superadmin") {
+        return res.status(403).json({
+          error: true,
+          errorDescription: "Somente o superadmin pode criar categorias.",
+        });
+      }
       const category = await createCategory(req.body?.name, user._id);
       return res.status(201).json({
         error: false,

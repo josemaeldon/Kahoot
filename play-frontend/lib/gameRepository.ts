@@ -293,18 +293,22 @@ export async function createGame(
   return withTransaction(async (client) => {
     const inserted = await client.query<{ id: string }>(
       `insert into games (
-         author_id, category_id, title, is_public, published_at
+         author_id, category_id, folder_id, title, is_public, published_at
        )
        select
          $1::uuid,
          c.id,
+         f.id,
          $2,
-         $4::boolean,
-         case when $4::boolean then now() else null end
+         $5::boolean,
+         case when $5::boolean then now() else null end
        from categories c
+       left join game_folders f
+         on f.id = $4::uuid and f.owner_id = $1::uuid
        where c.id = $3::uuid
+         and ($4::uuid is null or f.id is not null)
        returning id::text`,
-      [author._id, game.title, game.categoryId, game.isPublic]
+      [author._id, game.title, game.categoryId, game.folderId || null, game.isPublic]
     );
     if (!inserted.rows[0]) {
       throw new Error("Categoria não encontrada.");
@@ -326,20 +330,24 @@ export async function updateGame(
       `update games g
        set title = $1,
            category_id = c.id,
-           is_public = $6::boolean,
+           folder_id = f.id,
+           is_public = $7::boolean,
            published_at = case
-             when $6::boolean and g.is_public = false then now()
-             when $6::boolean then g.published_at
+             when $7::boolean and g.is_public = false then now()
+             when $7::boolean then g.published_at
              else null
            end,
            updated_at = now()
        from categories c
+       left join game_folders f
+         on f.id = $6::uuid and f.owner_id = $3::uuid
        where g.id = $2::uuid
          and (
            g.author_id = $3::uuid
            or ($4::boolean = true and g.is_public = true)
          )
          and c.id = $5::uuid
+         and ($6::uuid is null or f.id is not null)
        returning g.id::text`,
       [
         game.title,
@@ -347,6 +355,7 @@ export async function updateGame(
         userId,
         isSuperadmin,
         game.categoryId,
+        game.folderId || null,
         game.isPublic,
       ]
     );

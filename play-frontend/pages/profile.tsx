@@ -508,18 +508,21 @@ function Profile() {
                 <span>Organização por assunto</span>
                 <h2>Gerenciar categorias</h2>
                 <p>
-                  Crie e gerencie suas categorias personalizadas.
-                  Categorias padrão são protegidas para usuários comuns.
+                  {user?.role === "superadmin"
+                    ? "Crie e gerencie as categorias disponíveis para os Plays!."
+                    : "Escolha categorias disponíveis e organize seus Plays! em pastas pessoais."}
                 </p>
               </div>
-              <button
-                type="button"
-                className={styles.createButton}
-                onClick={() => setCategoryDialog({ mode: "create" })}
-              >
-                <FiPlus aria-hidden="true" />
-                Nova categoria
-              </button>
+              {user?.role === "superadmin" && (
+                <button
+                  type="button"
+                  className={styles.createButton}
+                  onClick={() => setCategoryDialog({ mode: "create" })}
+                >
+                  <FiPlus aria-hidden="true" />
+                  Nova categoria
+                </button>
+              )}
             </div>
             <div className={styles.categoryGrid}>
               {categories.map((category) => {

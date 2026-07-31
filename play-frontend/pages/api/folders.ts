@@ -3,10 +3,12 @@ import { requireAuthenticatedUser } from "@lib/auth";
 import {
   createFolder,
   deleteFolder,
+  listFolderOrganization,
   renameFolder,
 } from "@lib/folderRepository";
 
 export type APIRequest =
+  | { action?: "list" }
   | { action: "create"; name: string }
   | { action: "rename"; folderId: string; name: string }
   | { action: "delete"; folderId: string };
@@ -15,6 +17,7 @@ type APIResponse =
   | {
       error: false;
       folder?: { id: string; name: string; gameCount?: number };
+      folders?: { id: string; name: string; gameCount: number }[];
     }
   | { error: true; errorDescription: string };
 
@@ -33,7 +36,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<APIResponse>
 ) {
-  if (req.method !== "POST") {
+  if (req.method !== "GET" && req.method !== "POST") {
     return res
       .status(405)
       .json({ error: true, errorDescription: "Método não permitido" });
@@ -45,6 +48,18 @@ export default async function handler(
   const request = req.body as APIRequest;
 
   try {
+    if (req.method === "GET") {
+      const organization = await listFolderOrganization(user._id);
+      return res.status(200).json({
+        error: false,
+        folders: organization.folders,
+      });
+    }
+    if (req.method !== "POST") {
+      return res
+        .status(405)
+        .json({ error: true, errorDescription: "Método não permitido" });
+    }
     if (request.action === "create") {
       const folder = await createFolder(user._id, validateName(request.name));
       return res.status(201).json({ error: false, folder });
