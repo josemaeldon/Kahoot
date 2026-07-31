@@ -8,6 +8,7 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
 function price(cents: number) {
+  if (cents === 0) return "Grátis";
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
@@ -21,6 +22,22 @@ export default function Plans() {
   const [loading, setLoading] = useState(true);
   const [action, setAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  async function cancelPlan() {
+    if (!currentPlan || currentPlan.cancelAtPeriodEnd || !window.confirm("Cancelar este plano ao fim do período atual? Seus dias restantes continuarão válidos.")) return;
+    setAction("cancel");
+    setError(null);
+    try {
+      const response = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancel" }) });
+      const payload = await response.json();
+      if (payload.error) throw new Error(payload.errorDescription || "Não foi possível cancelar o plano.");
+      setCurrentPlan((plan) => plan ? { ...plan, cancelAtPeriodEnd: true } : plan);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível cancelar o plano.");
+    } finally {
+      setAction(null);
+    }
+  }
 
   useEffect(() => {
     fetch("/api/plans", { cache: "no-store" })
@@ -49,7 +66,7 @@ export default function Plans() {
       if (payload.error) throw new Error(payload.errorDescription || "Não foi possível continuar.");
       if (payload.upgraded) {
         const upgradedPlan = plans.find((plan) => plan.id === body.planId);
-        if (upgradedPlan) setCurrentPlan({ ...upgradedPlan, source: "subscription", subscriptionId: currentPlan?.subscriptionId || null });
+        if (upgradedPlan) setCurrentPlan({ ...upgradedPlan, source: "subscription", subscriptionId: currentPlan?.subscriptionId || null, periodEnd: currentPlan?.periodEnd || null, cancelAtPeriodEnd: false });
         setAction(null);
         return;
       }
@@ -86,7 +103,8 @@ export default function Plans() {
         {currentPlan && (
           <div className={styles.currentPlan}>
             <div><span>Seu plano atual</span><strong>{currentPlan.name}</strong><small>{currentPlan.durationDays} dias · {price(currentPlan.amountCents)}</small></div>
-            <p>{currentPlan.source === "subscription" ? "Assinatura ativa" : "Plano atribuído à sua conta"}</p>
+            <p>{currentPlan.cancelAtPeriodEnd ? `Cancelado ao fim do período${currentPlan.periodEnd ? ` · válido até ${new Intl.DateTimeFormat("pt-BR").format(new Date(currentPlan.periodEnd))}` : ""}` : currentPlan.source === "subscription" ? "Assinatura ativa" : "Plano atribuído à sua conta"}</p>
+            {!currentPlan.cancelAtPeriodEnd && <button type="button" onClick={() => void cancelPlan()} disabled={action !== null}>{action === "cancel" ? "Cancelando..." : "Cancelar plano"}</button>}
           </div>
         )}
 

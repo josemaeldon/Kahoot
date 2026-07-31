@@ -152,6 +152,7 @@ async function applyPlan(client: PoolClient, userId: string, planId: string) {
      set is_enabled = true,
          access_expires_at = now() + make_interval(days => $2::int),
          assigned_plan_id = $3::uuid,
+         assigned_plan_cancelled_at = null,
          updated_at = now()
      where id = $1::uuid`,
     [userId, plan.rows[0].duration_days, planId]

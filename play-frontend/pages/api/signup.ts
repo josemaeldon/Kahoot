@@ -110,7 +110,8 @@ export default async function handler(
            role,
            is_enabled,
            access_expires_at,
-           assigned_plan_id
+           assigned_plan_id,
+           assigned_plan_cancelled_at
          )
          values (
            $1,
@@ -124,7 +125,8 @@ export default async function handler(
            case when $7 = 'superadmin' then null
              else now() + make_interval(days => $8::int)
            end,
-           case when $7 = 'superadmin' then null else $9::uuid end
+           case when $7 = 'superadmin' then null else $9::uuid end,
+           null
          )
          returning
            id::text,
