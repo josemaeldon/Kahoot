@@ -65,6 +65,13 @@ export default async function handler(
         .status(400)
         .json({ error: true, errorDescription: error.message });
     }
+    if (error instanceof Error && error.message === "PUBLIC_QUESTION_DUPLICATE") {
+      return res.status(409).json({
+        error: true,
+        errorDescription:
+          "Cada pergunta de um Play! público deve ser original e não pode repetir outro Play! público.",
+      });
+    }
     console.error("Falha ao salvar Play!", error);
     return res.status(500).json({
       error: true,

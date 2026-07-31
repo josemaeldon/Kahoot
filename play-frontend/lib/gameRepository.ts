@@ -21,6 +21,40 @@ interface GameSummaryRow {
   categoryName: string;
 }
 
+function normalizeQuestion(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLocaleLowerCase("pt-BR");
+}
+
+async function ensurePublicQuestionsAreOriginal(
+  client: PoolClient,
+  questions: db.Question[],
+  isPublic: boolean,
+  excludeGameId?: string
+) {
+  if (!isPublic) return;
+
+  const normalizedQuestions = questions.map((question) =>
+    normalizeQuestion(question.question)
+  );
+  if (new Set(normalizedQuestions).size !== normalizedQuestions.length) {
+    throw new Error("PUBLIC_QUESTION_DUPLICATE");
+  }
+
+  for (const question of normalizedQuestions) {
+    const duplicate = await client.query<{ title: string }>(
+      `select g.title
+       from games g
+       join questions q on q.game_id = g.id
+       where g.is_public = true
+         and ($2::uuid is null or g.id <> $2::uuid)
+         and lower(regexp_replace(trim(q.question_text), '\\s+', ' ', 'g')) = $1
+       limit 1`,
+      [question, excludeGameId || null]
+    );
+    if (duplicate.rows[0]) throw new Error("PUBLIC_QUESTION_DUPLICATE");
+  }
+}
+
 const gameProjection = `
   select
     g.id::text as "_id",
@@ -291,6 +325,11 @@ export async function createGame(
   author: auth.accessTokenPayload
 ) {
   return withTransaction(async (client) => {
+    await ensurePublicQuestionsAreOriginal(
+      client,
+      game.questions,
+      game.isPublic
+    );
     const inserted = await client.query<{ id: string }>(
       `insert into games (
          author_id, category_id, folder_id, title, is_public, published_at
@@ -326,6 +365,12 @@ export async function updateGame(
   isSuperadmin: boolean
 ) {
   return withTransaction(async (client) => {
+    await ensurePublicQuestionsAreOriginal(
+      client,
+      game.questions,
+      game.isPublic,
+      gameId
+    );
     const updated = await client.query<{ id: string }>(
       `update games g
        set title = $1,
