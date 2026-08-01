@@ -9692,6 +9692,7 @@ begin
     for edition in 1..50
     loop
       seed := (category_record->>'slug') || '-' || lpad(edition::text, 2, '0');
+      game_uuid := null;
 
       insert into games (
         author_id,
@@ -9720,8 +9721,13 @@ begin
       returning id into game_uuid;
 
       if game_uuid is null then
-        continue;
+        select id into game_uuid
+        from games
+        where seed_key = seed;
       end if;
+
+      delete from questions
+      where game_id = game_uuid;
 
       question_position := 0;
       for question_record in
