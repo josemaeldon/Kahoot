@@ -34,5 +34,7 @@ set question_text = upper(left(clean_base.question_text, 1)) || substring(clean_
 from ranked_games rg
 join clean_base
   on clean_base.category_id = rg.category_id
- and clean_base.position = q.position
-where q.game_id = rg.id;
+join questions source_q
+  on source_q.game_id = rg.id
+ and source_q.position = clean_base.position
+where q.id = source_q.id;
