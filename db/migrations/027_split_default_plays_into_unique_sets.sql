@@ -22,7 +22,7 @@ declare
   bank_record record;
   edition integer;
   question_offset integer;
-  bank_position integer;
+  target_bank_position integer;
   correct_position integer;
   choice_position integer;
   wrong_index integer;
@@ -42,12 +42,12 @@ begin
 
     for question_offset in 0..9
     loop
-      bank_position := (edition - 1 + question_offset) % 50;
+      target_bank_position := (edition - 1 + question_offset) % 50;
 
       select * into bank_record
       from default_question_bank
       where category_id = game_record.category_id
-        and bank_position = default_question_bank.bank_position;
+        and default_question_bank.bank_position = target_bank_position;
 
       if not found then
         continue;
