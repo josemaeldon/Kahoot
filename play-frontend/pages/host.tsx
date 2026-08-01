@@ -317,6 +317,8 @@ interface QuestionDisplayProps {
   nextScreenHandler: () => void;
   timeLeft: number;
   answered: number;
+  questionNumber: number;
+  totalQuestions: number;
 }
 
 function AnswerShape({ index }: { index: number }) {
@@ -343,6 +345,8 @@ function QuestionDisplay({
   nextScreenHandler,
   answered,
   timeLeft,
+  questionNumber,
+  totalQuestions,
 }: QuestionDisplayProps) {
   const { players, requestExit, roomId } = useContext(HostContext);
   const colors = [qStyles.red, qStyles.blue, qStyles.yellow, qStyles.green];
@@ -354,6 +358,12 @@ function QuestionDisplay({
         <strong>Play!</strong>
         <div className={qStyles.sessionData}>
           <span>PIN {formatPin(roomId)}</span>
+          <span
+            className={qStyles.questionProgress}
+            aria-label={`Pergunta ${questionNumber} de ${totalQuestions}`}
+          >
+            {questionNumber} de {totalQuestions}
+          </span>
           <span>
             <IoMdPerson aria-hidden="true" /> {players.length}
           </span>
@@ -454,9 +464,10 @@ function Leaderboard({
 }
 
 function QuestionsPhase() {
-  const { players, setPhase, setPlayers, socket, gameFinishedRef } =
+  const { game, players, setPhase, setPlayers, socket, gameFinishedRef } =
     useContext(HostContext);
   const [question, setQuestion] = useState<rustServerQuestion | null>(null);
+  const [questionNumber, setQuestionNumber] = useState(0);
   const [answered, setAnswered] = useState<string[]>([]);
   const [timer, setTimer] = useState<{ timer: number; timeLeft: number }>({
     timer: 0,
@@ -476,6 +487,7 @@ function QuestionsPhase() {
         switch (hostEvent.type) {
           case "roundBegin":
             setQuestion(hostEvent.question);
+            setQuestionNumber((current) => current + 1);
             setSubscreen("question");
             setAnswered([]);
             break;
@@ -614,6 +626,8 @@ function QuestionsPhase() {
           nextScreenHandler={nextScreenHandler}
           timeLeft={timer.timeLeft}
           answered={answered.length}
+          questionNumber={questionNumber}
+          totalQuestions={game.questions.length}
         />
       )}
       {subscreen === "results" && (
@@ -623,6 +637,8 @@ function QuestionsPhase() {
           nextScreenHandler={nextScreenHandler}
           timeLeft={timer.timeLeft}
           answered={answered.length}
+          questionNumber={questionNumber}
+          totalQuestions={game.questions.length}
         />
       )}
       {subscreen === "leaderboard" && (
