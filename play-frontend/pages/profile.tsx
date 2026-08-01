@@ -2,6 +2,7 @@ import Header from "@components/Header";
 import FolderModal from "@components/FolderModal";
 import NoticeModal from "@components/NoticeModal";
 import SelectField from "@components/SelectField";
+import PlaySettings from "@components/PlaySettings";
 import styles from "@styles/profile.module.css";
 import React, { useEffect, useState } from "react";
 import useUser from "@lib/useSSRUser";
@@ -31,6 +32,7 @@ import {
   FiCreditCard,
   FiChevronLeft,
   FiChevronRight,
+  FiClock,
   FiEdit2,
   FiFolder,
   FiFolderPlus,
@@ -43,7 +45,7 @@ import {
   FiTrash2,
 } from "react-icons/fi";
 
-type LibraryScope = "mine" | "public" | "categories";
+type LibraryScope = "mine" | "public" | "categories" | "config";
 type FolderFilter = "all" | "unfiled" | string;
 type PageSize = 10 | 20 | 50;
 type PublicSort = "newest" | "oldest";
@@ -112,7 +114,7 @@ function Profile() {
 
   useEffect(() => {
     if (!loggedIn) return;
-    if (scope === "categories") return;
+    if (scope === "categories" || scope === "config") return;
 
     const aborter = new AbortController();
     setGames(null);
@@ -499,9 +501,23 @@ function Profile() {
             Categorias
             <span>{categories.length}</span>
           </button>
+          {user?.role === "superadmin" && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={scope === "config"}
+              className={scope === "config" ? styles.activeTab : ""}
+              onClick={() => changeScope("config")}
+            >
+              <FiClock aria-hidden="true" />
+              Config Play
+            </button>
+          )}
         </div>
 
-        {scope === "categories" ? (
+        {scope === "config" ? (
+          <PlaySettings />
+        ) : scope === "categories" ? (
           <section className={styles.categoryManager}>
             <div className={styles.categoryManagerHeading}>
               <div>

@@ -118,6 +118,52 @@
   background: rgba(70, 23, 143, 0.04);
 }
 
+.playSettingsPanel {
+  margin-top: 28px;
+  padding: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.playSettingsForm {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.playSettingsForm label {
+  display: grid;
+  gap: 8px;
+  min-width: 230px;
+}
+
+.playSettingsForm label > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.settingsSuccess,
+.settingsError {
+  margin: 16px 0 0;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.settingsSuccess {
+  color: var(--color-success, #16794c);
+}
+
+.settingsError {
+  color: var(--color-danger);
+}
+
 .libraryTabs .activeTab {
   color: var(--color-brand-800);
   border-bottom-color: var(--color-brand-700);

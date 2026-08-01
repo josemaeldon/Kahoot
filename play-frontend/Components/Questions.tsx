@@ -13,6 +13,7 @@ function Questions() {
     formErrors,
     validateForm,
     validateFormAndIgnoreError,
+    defaultPlayTime,
   } = useContext(GameContext);
 
   function duplicateQuestion(questionIndex: number) {
@@ -49,7 +50,7 @@ function Questions() {
       correctAnswer: 0,
       question: "",
       image: null,
-      time: 15,
+      time: defaultPlayTime,
     };
     const nextGame = {
       ...game,

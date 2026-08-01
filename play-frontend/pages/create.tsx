@@ -40,6 +40,7 @@ import type {
 } from "./api/folders";
 import SelectField from "@components/SelectField";
 import type { AiGenerationResponse } from "./api/ai/generate";
+import type { APIResponse as PlaySettingsResponse } from "./api/play-settings";
 
 interface Notice {
   title: string;
@@ -71,6 +72,7 @@ interface GameContextValue {
     game: db.PlayGame,
     questionIndex: number
   ) => void;
+  defaultPlayTime: number;
 }
 
 const defaultGame: db.PlayGame = {
@@ -151,6 +153,7 @@ function Create() {
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [folders, setFolders] = useState<db.PlayFolder[]>([]);
   const [foldersLoading, setFoldersLoading] = useState(true);
+  const [defaultPlayTime, setDefaultPlayTime] = useState(15);
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [folderSaving, setFolderSaving] = useState(false);
   const [creatingCategory, setCreatingCategory] = useState(false);
@@ -189,6 +192,38 @@ function Create() {
       .finally(() => setCategoriesLoading(false));
     return () => aborter.abort();
   }, [loggedIn]);
+
+  useEffect(() => {
+    if (!loggedIn) return;
+    const aborter = new AbortController();
+    fetch("/api/play-settings", {
+      credentials: "same-origin",
+      cache: "no-store",
+      signal: aborter.signal,
+    })
+      .then((response) => response.json() as Promise<PlaySettingsResponse>)
+      .then((response) => {
+        if (!("defaultPlayTime" in response)) return;
+        setDefaultPlayTime(response.defaultPlayTime);
+        if (router.query.editingId) return;
+        setGame((current) => {
+          if (
+            current._id ||
+            current.questions.length !== 1 ||
+            current.questions[0].question.trim() ||
+            current.questions[0].time !== 15
+          ) {
+            return current;
+          }
+          return {
+            ...current,
+            questions: [{ ...current.questions[0], time: response.defaultPlayTime }],
+          };
+        });
+      })
+      .catch(() => undefined);
+    return () => aborter.abort();
+  }, [loggedIn, router.query.editingId]);
 
   useEffect(() => {
     if (!loggedIn) return;
@@ -778,6 +813,7 @@ function Create() {
           formErrors,
           validateForm,
           validateFormAndIgnoreError,
+          defaultPlayTime,
         }}
       >
         <div className={styles.layout}>
