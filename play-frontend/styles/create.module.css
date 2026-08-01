@@ -379,15 +379,25 @@
 
 @media (min-width: 1051px) {
   .editingLayout {
-    height: calc(100vh - 204px);
+    position: fixed;
+    top: 204px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: auto;
     min-height: 0;
     overflow: hidden;
   }
 
   .editingLayout > * {
+    height: 100%;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
+  }
+
+  .editingLayout > :global(*) {
+    scrollbar-gutter: stable;
   }
 }
 
