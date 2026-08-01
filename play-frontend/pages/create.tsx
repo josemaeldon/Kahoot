@@ -816,7 +816,11 @@ function Create() {
           defaultPlayTime,
         }}
       >
-        <div className={styles.layout}>
+        <div
+          className={`${styles.layout} ${
+            router.query.editingId ? styles.editingLayout : ""
+          }}`}
+        >
           <Questions />
           <Editor />
           <Options />

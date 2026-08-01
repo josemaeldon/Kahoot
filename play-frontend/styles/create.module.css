@@ -377,6 +377,20 @@
   grid-template-areas: "questions editor options";
 }
 
+@media (min-width: 1051px) {
+  .editingLayout {
+    height: calc(100vh - 204px);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .editingLayout > * {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 @media (max-width: 1050px) {
   .layout {
     grid-template-columns: 190px minmax(0, 1fr);
