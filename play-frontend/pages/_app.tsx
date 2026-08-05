@@ -64,6 +64,9 @@ function MyApp({ Component, pageProps }) {
           name="description"
           content="Jogo multiplayer de perguntas e respostas"
         />
+        <link rel="icon" href="/playIcon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/playIcon-32.png" sizes="32x32" type="image/png" />
+        <link rel="apple-touch-icon" href="/playIcon-180.png" />
       </Head>
       <AuthGuard>
         <Component {...pageProps} />
