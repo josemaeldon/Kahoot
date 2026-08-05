@@ -61,6 +61,20 @@ cargo fmt --check
 cargo test --locked
 ```
 
+Aplicativo Android/iOS:
+
+```bash
+cd play-mobile
+flutter pub get
+flutter analyze
+flutter test
+flutter run --dart-define=PLAY_BASE_URL=http://endereco-alcancavel:3000/play
+```
+
+O `PLAY_BASE_URL` é opcional: quando ausente, o aplicativo descobre a origem
+pela URL `/play?pin=...` contida no QR Code da sala. Consulte o README da pasta
+`play-mobile` para os detalhes.
+
 Auditoria de dependências:
 
 ```bash

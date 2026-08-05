@@ -28,7 +28,7 @@
 | `SMTP_PASSWORD` | não | — | senha ou token SMTP |
 | `SMTP_FROM_NAME` | não | `Play!` | nome exibido no remetente |
 | `SMTP_FROM_EMAIL` | não | — | endereço remetente dos links de redefinição |
-| `NEXT_PUBLIC_APP_URL` | não | origem do navegador | URL usada na geração do QR Code; precisa existir no build do frontend |
+| `NEXT_PUBLIC_APP_URL` | não | origem do navegador | origem usada no QR Code; qualquer rota informada é descartada e o destino final é sempre `/play?pin=...`; precisa existir no build do frontend |
 
 Mudar `JWT_SECRET` invalida sessões existentes e impede a leitura de uma chave
 de IA ou Stripe previamente criptografada. Planeje as duas consequências antes de

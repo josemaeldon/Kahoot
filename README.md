@@ -100,6 +100,7 @@ também podem ser fornecidas por `STRIPE_SECRET_KEY` e
 | --- | --- |
 | `play-frontend/` | Interface Next.js, API HTTP e proxy de produção |
 | `play-backend/` | servidor de partidas WebSocket em Rust |
+| `play-mobile/` | aplicativo Flutter Android/iOS exclusivo para jogadores |
 | `db/migrations/` | esquema, índices e dados iniciais do PostgreSQL |
 | `.github/workflows/` | build e publicação da imagem Docker |
 | `Dockerfile` | build multi-stage e imagem única da aplicação |

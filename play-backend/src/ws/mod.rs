@@ -24,7 +24,9 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use axum::extract::ws::{WebSocket, Message};
-use axum::extract::WebSocketUpgrade;
+use axum::extract::{Path, WebSocketUpgrade};
+use axum::http::StatusCode;
+use axum::Json;
 use axum::response::Response;
 use axum::routing::get;
 use axum::{Extension, Router};
@@ -35,6 +37,14 @@ use futures::{SinkExt, StreamExt};
 use rand::{seq::SliceRandom, Rng};
 
 use self::state::State;
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RoomSummary {
+    room_id: RoomId,
+    status: &'static str,
+    player_count: usize,
+}
 
 fn randomize_answer_positions<R: Rng + ?Sized>(questions: &mut [Question], rng: &mut R) {
     for question in questions {
@@ -68,8 +78,31 @@ pub fn router() -> Router {
     Router::new()
         // GET /
         .route("/", get(handle_ws_connection))
+        // GET /rooms/:room_id
+        .route("/rooms/:room_id", get(get_room_summary))
         // Includes the shared state in routes
         .layer(Extension(state))
+}
+
+/// Returns only public, non-gameplay-sensitive room metadata. Mobile clients
+/// use this lightweight preflight before opening the real-time connection.
+async fn get_room_summary(
+    Path(room_id): Path<RoomId>,
+    Extension(state): Extension<SharedState>,
+) -> Result<Json<RoomSummary>, StatusCode> {
+    let room = state.find_room(&room_id).ok_or(StatusCode::NOT_FOUND)?;
+    let status = match &*room.result_stream.borrow() {
+        GameEvent::InLobby | GameEvent::NextGame => "lobby",
+        GameEvent::RoundBegin { .. } => "round",
+        GameEvent::RoundEnd { .. } => "result",
+        GameEvent::GameEnd { .. } => "finished",
+    };
+
+    Ok(Json(RoomSummary {
+        room_id,
+        status,
+        player_count: room.users.connected_player_count(),
+    }))
 }
 
 /// Passes an upgraded websocket to `handle_socket`.
@@ -655,6 +688,7 @@ mod tests {
     use std::collections::HashSet;
     use std::sync::atomic::{AtomicU16, Ordering};
     use std::{net::SocketAddr, time::Duration};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpStream;
     use tokio_tungstenite::{connect_async, tungstenite::Message, WebSocketStream, MaybeTlsStream};
 
@@ -699,6 +733,25 @@ mod tests {
                 .unwrap();
 
             ws
+        }
+
+        async fn get(&self, path: &str) -> (String, String) {
+            let mut stream = TcpStream::connect(("127.0.0.1", self.port))
+                .await
+                .unwrap();
+            stream
+                .write_all(
+                    format!(
+                        "GET {path} HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n"
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .unwrap();
+            let mut response = String::new();
+            stream.read_to_string(&mut response).await.unwrap();
+            let (headers, body) = response.split_once("\r\n\r\n").unwrap();
+            (headers.to_owned(), body.to_owned())
         }
 
         async fn create_room(&self, questions: Vec<Question>) -> (HostSocket, RoomId) {
@@ -886,6 +939,29 @@ mod tests {
         }
 
         assert!(observed_orders.len() > 1);
+    }
+
+    #[tokio::test]
+    async fn exposes_public_room_summary() {
+        let server = TestServer::new().await;
+        let (_host, room_id) = server
+            .create_room(vec![question! {
+                "Room summary?", time: 30 => [
+                    true => "yes",
+                    false => "no",
+                ]
+            }])
+            .await;
+
+        let (headers, body) = server.get(&format!("/rooms/{room_id}")).await;
+        assert!(headers.starts_with("HTTP/1.1 200 OK"));
+        let summary: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(summary["roomId"], room_id);
+        assert_eq!(summary["status"], "lobby");
+        assert_eq!(summary["playerCount"], 0);
+
+        let (headers, _) = server.get("/rooms/999999").await;
+        assert!(headers.starts_with("HTTP/1.1 404 Not Found"));
     }
 
     /// Tests a simple situation where there is one player and only one question.

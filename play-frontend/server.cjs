@@ -55,6 +55,11 @@ async function main() {
       proxy.web(request, response);
       return;
     }
+    if (request.url?.startsWith("/api/rooms/")) {
+      request.url = `/ws${request.url.slice(4)}`;
+      proxy.web(request, response);
+      return;
+    }
     void handle(request, response);
   });
   server.on("upgrade", (request, socket, head) => {

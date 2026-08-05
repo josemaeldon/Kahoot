@@ -141,11 +141,16 @@ function HostTopbar({
 function JoinHeader() {
   const { roomId } = useContext(HostContext);
   const [isQrExpanded, setIsQrExpanded] = useState(false);
-  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
-  const playUrl =
-    configuredUrl ||
-    (typeof window !== "undefined" ? window.location.origin : "");
-  const qrPlayUrl = `${playUrl}/play?pin=${roomId}`;
+  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  let playOrigin = typeof window !== "undefined" ? window.location.origin : "";
+  if (configuredUrl) {
+    try {
+      playOrigin = new URL(configuredUrl).origin;
+    } catch {
+      // An invalid override falls back to the origin serving the host screen.
+    }
+  }
+  const qrPlayUrl = `${playOrigin}/play?pin=${roomId}`;
 
   useEffect(() => {
     if (!isQrExpanded) return;
@@ -172,7 +177,7 @@ function JoinHeader() {
           <span>Game Pin:</span>
           <strong>{formatPin(roomId)}</strong>
           <p>
-            Acesse <b>{playUrl ? `${playUrl}/play` : "/play"}</b>
+            Acesse <b>{playOrigin ? `${playOrigin}/play` : "/play"}</b>
           </p>
         </div>
         <button

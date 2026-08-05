@@ -29,6 +29,7 @@ Principais códigos:
 | --- | --- | --- | --- |
 | `GET` | `/api/health` | público | saúde da aplicação e do banco |
 | `GET` | `/api/registration-status` | público | informa se novos cadastros estão abertos |
+| `GET` | `/api/rooms/:pin` | público | valida uma sala e retorna somente fase e total de jogadores |
 | `POST` | `/api/signup` | público | cria conta e inicia sessão |
 | `POST` | `/api/login` | público | autentica e inicia sessão |
 | `POST` | `/api/signout` | público | encerra a sessão |
@@ -54,6 +55,21 @@ endpoints e em `play.d.ts`. Essa tabela documenta a superfície pública sem
 duplicar tipos que mudariam em dois lugares.
 
 ## WebSocket
+
+Antes de abrir o WebSocket, clientes móveis podem consultar uma sala sem
+baixar perguntas ou qualquer dado sensível:
+
+```json
+{
+  "roomId": 123456,
+  "status": "lobby",
+  "playerCount": 4
+}
+```
+
+`status` pode ser `lobby`, `round`, `result` ou `finished`. Uma sala ausente
+retorna `404`. Essa consulta é apenas uma otimização; os eventos da partida
+continuam sendo entregues em tempo real pelo WebSocket.
 
 Conecte-se a `/ws`. Todas as mensagens de aplicação são objetos JSON com um
 campo discriminador `type`. Frames Ping/Pong são usados para manter conexões
