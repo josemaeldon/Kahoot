@@ -6,7 +6,8 @@ Configuração iOS preparada para a conta Apple:
 - Team ID: `DHLAYBVJ2Z`
 - Bundle ID: `app.cloudbr.Play-Mobile`
 - Nome público: `Play! Quiz CloudBR`
-- Versão inicial: `1.0.0 (1)`
+- Versão: `1.0.1`
+- Build técnico: `3`
 
 ## Gerar o arquivo para envio
 
@@ -15,8 +16,8 @@ flutter pub get
 flutter analyze
 flutter test
 flutter build ipa --release \
-  --build-name=1.0.0 \
-  --build-number=1 \
+  --build-name=1.0.1 \
+  --build-number=3 \
   --dart-define=PLAY_BASE_URL=https://SEU-DOMINIO
 ```
 
