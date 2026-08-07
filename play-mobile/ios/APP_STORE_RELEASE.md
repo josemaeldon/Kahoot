@@ -4,7 +4,7 @@ Configuração iOS preparada para a conta Apple:
 
 - Equipa: `OBRAS SOCIAIS DA DIOCESE DE BRAGANCA`
 - Team ID: `DHLAYBVJ2Z`
-- Bundle ID: `app.cloudbr.playMobile`
+- Bundle ID: `app.cloudbr.Play-Mobile`
 - Nome público: `Play! Quiz Bragança`
 - Versão inicial: `1.0.0 (1)`
 
@@ -26,7 +26,7 @@ digitação manual do PIN antes da leitura de um QR Code.
 
 ## Antes do primeiro envio
 
-1. No Apple Developer, registrar o Bundle ID `app.cloudbr.playMobile` na equipa
+1. No Apple Developer, registrar o Bundle ID `app.cloudbr.Play-Mobile` na equipa
    `DHLAYBVJ2Z` e habilitar a assinatura automática para o app.
 2. No App Store Connect, criar o app com o nome `Play!`, plataforma iOS e o
    mesmo Bundle ID.
