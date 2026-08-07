@@ -14,6 +14,7 @@ if [ ! -x "$flutter_path/bin/flutter" ]; then
 fi
 
 export PATH="$flutter_path/bin:$PATH"
+export FLUTTER_ROOT="$flutter_path"
 
 flutter --version
 cd "$mobile_path"
