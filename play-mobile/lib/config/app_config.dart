@@ -3,7 +3,7 @@ class AppConfig {
 
   static const String baseUrl = String.fromEnvironment(
     'PLAY_BASE_URL',
-    defaultValue: '',
+    defaultValue: 'https://play.cloudbr.app',
   );
 
   static Uri? get configuredOrigin {

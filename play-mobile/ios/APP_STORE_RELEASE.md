@@ -21,9 +21,9 @@ flutter build ipa --release \
   --dart-define=PLAY_BASE_URL=https://SEU-DOMINIO
 ```
 
-O domínio deve ser o endereço HTTPS público que hospeda o Play. O QR Code
-continua podendo apontar para outros domínios; o valor acima apenas habilita a
-digitação manual do PIN antes da leitura de um QR Code.
+O app usa `https://play.cloudbr.app` por padrão, permitindo a entrada manual
+com Game PIN. O QR Code continua podendo apontar para outros domínios; nesse
+caso, o endereço do QR Code tem prioridade.
 
 ## Antes do primeiro envio
 
