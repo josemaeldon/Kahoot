@@ -8,8 +8,9 @@ flutter_version="${FLUTTER_VERSION:-3.44.9}"
 flutter_path="${HOME}/flutter-${flutter_version}"
 
 if [ ! -x "$flutter_path/bin/flutter" ]; then
-  echo "Flutter SDK is missing at $flutter_path" >&2
-  exit 127
+  rm -rf "$flutter_path"
+  git clone --depth 1 --branch "$flutter_version" \
+    https://github.com/flutter/flutter.git "$flutter_path"
 fi
 
 export PATH="$flutter_path/bin:$PATH"
@@ -18,3 +19,11 @@ cd "$mobile_path"
 
 flutter pub get
 flutter build ios --config-only --no-codesign
+
+generated_package="$mobile_path/ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift"
+if [ ! -f "$generated_package" ]; then
+  echo "Flutter did not generate the plugin Swift package: $generated_package" >&2
+  exit 1
+fi
+
+echo "Generated Flutter plugin package: $generated_package"
