@@ -1,15 +1,18 @@
 class AppConfig {
   AppConfig._();
 
+  static final Uri fallbackOrigin = Uri.parse('https://play.cloudbr.app');
+
   static const String baseUrl = String.fromEnvironment(
     'PLAY_BASE_URL',
     defaultValue: 'https://play.cloudbr.app',
   );
 
   static Uri? get configuredOrigin {
-    if (baseUrl.trim().isEmpty) return null;
     final uri = Uri.tryParse(baseUrl.trim());
-    if (uri == null || !uri.hasScheme || uri.host.isEmpty) return null;
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      return fallbackOrigin;
+    }
     return originOf(uri);
   }
 

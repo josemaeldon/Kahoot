@@ -7,7 +7,7 @@ Configuração iOS preparada para a conta Apple:
 - Bundle ID: `app.cloudbr.Play-Mobile`
 - Nome público: `Play! Quiz CloudBR`
 - Versão: `1.0.1`
-- Build técnico: `3`
+- Build técnico: `4`
 
 ## Gerar o arquivo para envio
 
