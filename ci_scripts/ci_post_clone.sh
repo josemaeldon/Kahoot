@@ -25,3 +25,4 @@ flutter pub get
 # referenced by Runner.xcodeproj. It must exist before Xcode Cloud invokes
 # xcodebuild to resolve package dependencies.
 flutter build ios --config-only --no-codesign
+flutter build macos --config-only --no-codesign

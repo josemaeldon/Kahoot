@@ -19,6 +19,7 @@ cd "$mobile_path"
 
 flutter pub get
 flutter build ios --config-only --no-codesign
+flutter build macos --config-only --no-codesign
 
 generated_package="$mobile_path/ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift"
 if [ ! -f "$generated_package" ]; then
@@ -27,3 +28,11 @@ if [ ! -f "$generated_package" ]; then
 fi
 
 echo "Generated Flutter plugin package: $generated_package"
+
+macos_generated_package="$mobile_path/macos/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift"
+if [ ! -f "$macos_generated_package" ]; then
+  echo "Flutter did not generate the macOS plugin Swift package: $macos_generated_package" >&2
+  exit 1
+fi
+
+echo "Generated macOS plugin package: $macos_generated_package"
