@@ -2,8 +2,8 @@
 
 ## Identificação
 
-- Nome: `Play!`
-- Subtítulo: `Entre na partida e jogue ao vivo`
+- Nome: `Play! Quiz Bragança`
+- Subtítulo: `Quiz ao vivo para jogar em grupo`
 - Categoria principal: `Jogos — Trivia`
 - Categoria secundária: `Entretenimento`
 - Classificação sugerida: `4+`
@@ -14,7 +14,7 @@ Entre na partida em segundos: escaneie o QR Code ou digite o PIN, responda em te
 
 ## Descrição
 
-Play! é o app para participar de partidas ao vivo com sua turma.
+Play! Quiz Bragança é o app para participar de quizzes e partidas ao vivo com sua turma.
 
 Entre na sala usando o QR Code ou o Game PIN mostrado pelo apresentador, escolha seu nome e fique pronto para jogar. Responda às perguntas em tempo real, acompanhe os resultados de cada rodada e veja sua posição no ranking até a partida terminar.
 
