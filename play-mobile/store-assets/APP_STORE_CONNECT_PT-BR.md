@@ -59,6 +59,15 @@ Usar o formato `1284 × 2778 px` para iPhone grande.
 
 A captura inicial foi feita numa execução normal no simulador iPhone 17 Pro. As telas de resposta, resultado e ranking foram capturadas numa execução local de demonstração, com dados fictícios de apresentação (`Ana`, `Miguel`, `Sofia` e `João`); substitua-os por uma partida real se preferir publicar nomes e pontuações reais.
 
+### iPad Pro 13"
+
+Formato: `2064 × 2752 px`, pronto para o campo de capturas de tela do iPad no App Store Connect.
+
+1. `ipad-13/01-entrada-2064x2752.png` — entrada na sala.
+2. `ipad-13/02-responder-2064x2752.png` — respostas em tempo real.
+3. `ipad-13/03-resultado-2064x2752.png` — resultado da rodada.
+4. `ipad-13/04-ranking-2064x2752.png` — ranking final.
+
 ## URLs a preencher no App Store Connect
 
 - URL de suporte: `https://SEU-DOMINIO`
