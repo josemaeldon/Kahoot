@@ -382,7 +382,7 @@
 				DEVELOPMENT_TEAM = DHLAYBVJ2Z;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Play!";
+				INFOPLIST_KEY_CFBundleDisplayName = "Play! Quiz CloudBR";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.educational-games";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -572,7 +572,7 @@
 				DEVELOPMENT_TEAM = DHLAYBVJ2Z;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Play!";
+				INFOPLIST_KEY_CFBundleDisplayName = "Play! Quiz CloudBR";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.educational-games";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -598,7 +598,7 @@
 				DEVELOPMENT_TEAM = DHLAYBVJ2Z;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Play!";
+				INFOPLIST_KEY_CFBundleDisplayName = "Play! Quiz CloudBR";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.educational-games";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

@@ -2,7 +2,7 @@
 
 ## Identificação
 
-- Nome: `Play! Quiz Bragança`
+- Nome: `Play! Quiz CloudBR`
 - Subtítulo: `Quiz ao vivo para jogar em grupo`
 - Categoria principal: `Jogos — Trivia`
 - Categoria secundária: `Entretenimento`
@@ -14,7 +14,7 @@ Entre na partida em segundos: escaneie o QR Code ou digite o PIN, responda em te
 
 ## Descrição
 
-Play! Quiz Bragança é o app para participar de quizzes e partidas ao vivo com sua turma.
+Play! Quiz CloudBR é o app para participar de quizzes e partidas ao vivo com sua turma.
 
 Entre na sala usando o QR Code ou o Game PIN mostrado pelo apresentador, escolha seu nome e fique pronto para jogar. Responda às perguntas em tempo real, acompanhe os resultados de cada rodada e veja sua posição no ranking até a partida terminar.
 

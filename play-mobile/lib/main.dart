@@ -53,7 +53,7 @@ class _PlayAppState extends State<PlayApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Play! Quiz Bragança',
+      title: 'Play! Quiz CloudBR',
       debugShowCheckedModeBanner: false,
       theme: buildPlayTheme(),
       home: PlayScreen(controller: _controller),

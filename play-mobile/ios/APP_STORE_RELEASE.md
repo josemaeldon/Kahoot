@@ -5,7 +5,7 @@ Configuração iOS preparada para a conta Apple:
 - Equipa: `OBRAS SOCIAIS DA DIOCESE DE BRAGANCA`
 - Team ID: `DHLAYBVJ2Z`
 - Bundle ID: `app.cloudbr.Play-Mobile`
-- Nome público: `Play! Quiz Bragança`
+- Nome público: `Play! Quiz CloudBR`
 - Versão inicial: `1.0.0 (1)`
 
 ## Gerar o arquivo para envio
