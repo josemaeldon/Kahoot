@@ -1,6 +1,7 @@
 import Header from "@components/Header";
 import styles from "@styles/index.module.css";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import {
   FiArrowRight,
   FiEdit3,
@@ -118,6 +119,18 @@ function Index() {
           ))}
         </div>
       </section>
+
+      <footer className={styles.footer}>
+        <div className={styles.footerInner}>
+          <span className={styles.footerBrand}>Play!</span>
+          <nav aria-label="Links institucionais" className={styles.footerLinks}>
+            <Link href="/marketing">Conheça o Play!</Link>
+            <Link href="/suporte">Suporte</Link>
+            <Link href="/politica-de-privacidade">Política de privacidade</Link>
+          </nav>
+          <span className={styles.footerCopyright}>© {new Date().getFullYear()} Play!</span>
+        </div>
+      </footer>
     </main>
   );
 }

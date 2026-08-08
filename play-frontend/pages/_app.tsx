@@ -13,6 +13,9 @@ const publicRoutes = new Set([
   "/auth/reset-password",
   "/",
   "/play",
+  "/marketing",
+  "/suporte",
+  "/politica-de-privacidade",
 ]);
 
 function AuthGuard({ children }: { children: ReactNode }) {

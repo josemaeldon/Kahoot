@@ -70,5 +70,6 @@ Formato: `2064 × 2752 px`, pronto para o campo de capturas de tela do iPad no A
 
 ## URLs a preencher no App Store Connect
 
-- URL de suporte: `https://SEU-DOMINIO`
-- URL da política de privacidade: `https://SEU-DOMINIO/politica-de-privacidade`
+- URL de suporte: `https://play.cloudbr.app/suporte`
+- URL de marketing: `https://play.cloudbr.app/marketing`
+- URL da política de privacidade: `https://play.cloudbr.app/politica-de-privacidade`
